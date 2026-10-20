@@ -194,17 +194,6 @@ test('read-only decorations are stripped from all selected assets and prompt par
   const changed = { ...s, action: '另一动作' };
   assert.deepEqual(shotPatch(s, changed), { action: '另一动作' });
 });
-test('production exposes one complete prompt and media preview instead of redundant action/dialogue forms', async () => {
-  await mount();
-  assert.match(document.querySelector('.xy-production-breadcrumb')!.textContent!, /上集 重逢/);
-  assert.equal(document.querySelector('.sb-toolbar'), null);
-  assert.equal(document.querySelector('[aria-label="镜头动作"]'), null);
-  assert.equal(document.querySelector('[aria-label="完整对白 1"]'), null);
-  assert.ok(document.querySelector('[aria-label="视频制作"]'));
-  assert.match(document.querySelector('[aria-label="视频提示词"]')!.textContent!, /你自己决定/);
-  assert.equal(document.querySelectorAll('.sb-mention').length, 5);
-  assert.equal(writes().length, 0);
-});
 test('video duration follows each shot and rounds historical fractions up without rewriting the storyboard', async () => {
   await mount('shot-durations');
   assert.equal(button('时长').textContent?.trim(), '6 秒');
@@ -698,6 +687,12 @@ test('script progress stays in dock; opening and closing details preserves readi
   });
   await flush();
   assert.match(document.querySelector('[role=dialog]')!.textContent!, /已保存 7\/7/);
+  assert.ok(document.querySelector('.script-parse-steps'));
+  assert.equal(document.querySelector('.script-parse-index'), null);
+  assert.doesNotMatch(
+    document.querySelector('[role=dialog]')!.textContent!,
+    /查看分集识别结果|查看过程|查看生成过程/,
+  );
   assert.equal(document.querySelector('[role=progressbar]')!.getAttribute('aria-valuenow'), '75');
   assert.ok(button('取消解析'));
   await act(() => button('关闭').click());
@@ -707,45 +702,34 @@ test('script progress stays in dock; opening and closing details preserves readi
   assert.equal(writes().length, 0);
 });
 
-test('reference panel and relocated navigation retain shot drafts and saved asset bindings', async () => {
+test('production prompt and reference browsing preserve bound assets and shot drafts', async () => {
   await mount();
-  assert.equal(document.querySelector('.sb-layout')!.children.length, 2);
+  assert.match(document.querySelector('.xy-production-breadcrumb')!.textContent!, /上集 重逢/);
+  assert.equal(document.querySelector('[aria-label="镜头动作"]'), null);
+  assert.equal(document.querySelector('[aria-label="完整对白 1"]'), null);
+  assert.ok(document.querySelector('[aria-label="视频制作"]'));
+  assert.match(document.querySelector('[aria-label="视频提示词"]')!.textContent!, /你自己决定/);
   assert.equal(document.querySelector('.sb-reference-dialog'), null);
   assert.equal(document.querySelector('.sb-video-composer')!.textContent!.includes('复制'), false);
   assert.equal(button('选择资产'), undefined);
   assert.doesNotMatch(document.querySelector('.sb-filmstrip')!.textContent!, /分镜列表|个镜头/);
-  assert.equal(document.querySelector('.sb-scenes .sb-strip-items'), null);
-  assert.equal(document.querySelector('.sb-status-row'), null);
-  assert.equal(document.querySelector('.sb-strip-tools'), null);
   assert.equal(document.querySelector('.sb-toolbar'), null);
   assert.ok(document.querySelector('.xy-project-titlebar [aria-label="返回分集视频"]'));
   assert.ok(document.querySelector('.sb-shot-heading .sb-composer-hint'));
   assert.equal(document.querySelectorAll('.sb-referenced-asset').length, 4);
-  assert.equal(document.querySelector('.sb-shot-heading small'), null);
-  assert.ok(document.querySelector('.sb-main>.sb-filmstrip'));
   assert.ok(document.querySelector('.sb-scenes .sb-scene-list'));
-  assert.equal(document.querySelector('.sb-scenes .sb-library-content'), null);
   assert.equal(document.querySelector('.sb-scenes')!.getAttribute('aria-label'), '场景列表');
-  assert.equal(document.querySelector('.media-shot-resources'), null);
-  assert.ok(document.querySelector('.media-preview-heading>.media-shot-settings'));
   assert.equal(button('本集更多操作'), undefined);
-  assert.ok(
-    document.querySelector('.media-video-layout>.media-composer-column>.sb-video-composer'),
-  );
-  assert.ok(button('生成视频').closest('.sb-prompt-shell'));
   assert.equal(button('生成视频').closest('[contenteditable]'), null);
   assert.equal(document.querySelector('.sb-save-toolbar'), null);
-  assert.ok(document.querySelector('.media-video-layout>.media-preview-column'));
   assert.equal(document.querySelectorAll('.sb-scene-item[aria-current]').length, 1);
   assert.match(document.querySelector('.sb-scene-item[aria-current]')!.textContent!, /客厅 · 钥匙与决定/);
-  assert.ok(button('添加素材').closest('.sb-video-composer'));
   assert.equal(document.querySelector('.sb-scenes')!.textContent!.includes('资产库'), false);
   assert.equal(document.querySelector('.sb-video-workspace [aria-label="视频生成模型"]'), null);
   await appendPrompt('留在镜头 01 的局部草稿');
   await act(() => button('参考资料').click());
   await flush();
   assert.ok(document.querySelector('[role=dialog].sb-reference-dialog'));
-  assert.equal(document.querySelector('.sb-layout')!.children.length, 2);
   await act(() => button('原文').click());
   await flush();
   assert.match(document.querySelector('.sb-reference-dialog')!.textContent!, /你自己决定/);
@@ -2362,16 +2346,6 @@ test('batch image entry disappears for complete category and Look images without
   assert.equal(button('批量生成图片'), undefined);
   assert.equal(writes().length,0);
   assert.equal(fixture.requests.some(r => r.path.endsWith('/quote')),false);
-});
-
-test('parser retains the original progress panel without recognition-result or process links', async () => {
-  await mount('normal', '/playlet/p5_free/outline');
-  await act(() => button('查看解析进度').click());
-  await flush();
-  assert.ok(document.querySelector('.script-parse-steps'));
-  assert.equal(document.querySelector('.script-parse-index'),null);
-  assert.doesNotMatch(document.querySelector('[role=dialog]')!.textContent!,/查看分集识别结果|查看过程|查看生成过程/);
-  assert.equal(writes().length,0);
 });
 
 test('closing a multi-batch image quote aborts four pending reads and sends no later quotes', async () => {

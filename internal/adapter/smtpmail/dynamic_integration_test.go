@@ -141,7 +141,20 @@ func tlsMailSink(t *testing.T, mode string) (string, *x509.CertPool, <-chan loca
 			}()
 		}
 	}()
-	t.Cleanup(func() { listener.Close(); <-done; wg.Wait() })
+	t.Cleanup(func() {
+		listener.Close()
+		<-done
+		closed := make(chan struct{})
+		go func() {
+			wg.Wait()
+			close(closed)
+		}()
+		select {
+		case <-closed:
+		case <-time.After(6 * time.Second):
+			t.Error("SMTP connections were not closed")
+		}
+	})
 	return listener.Addr().String(), roots, received, cert
 }
 func TestDynamicSMTPRealPGHTTPAndTLS(t *testing.T) {
@@ -379,16 +392,25 @@ func TestSMTPStartTLSAndCertificateVerification(t *testing.T) {
 			if err := (SMTP{Config: config}).SendCode(context.Background(), "recipient@example.test", "login", "fictional-code"); err == nil {
 				t.Fatal("untrusted TLS certificate accepted")
 			}
-			if err := (SMTP{Config: config, roots: roots}).SendCode(context.Background(), "recipient@example.test", "login", "fictional-code"); err != nil {
+			if err := (SMTP{Config: config, roots: roots}).SendCode(context.Background(), "recipient@example.test", "register", "fictional-code"); err != nil {
 				t.Fatal("verified SMTP submission", err)
 			}
 			select {
 			case message := <-messages:
-				if message.password != config.Password || !strings.Contains(message.body, "fictional-code") {
+				if message.username != config.Username || message.password != config.Password || !strings.Contains(message.body, "fictional-code") || !strings.Contains(message.body, "register") {
 					t.Fatal("verified transport body/auth mismatch")
 				}
 			case <-time.After(6 * time.Second):
 				t.Fatal("verified transport did not submit")
+			}
+			err := (SMTP{Config: config, roots: roots}).SendCode(context.Background(), "reject@example.test", "register", "fictional-code")
+			if rejection, ok := err.(*textproto.Error); !ok || rejection.Code != 550 {
+				t.Fatal("recipient rejection did not return SMTP 550", err)
+			}
+			select {
+			case <-messages:
+				t.Fatal("rejected recipient received a message")
+			default:
 			}
 		})
 	}

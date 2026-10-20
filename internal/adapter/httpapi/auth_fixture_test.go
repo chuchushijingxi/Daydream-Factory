@@ -26,7 +26,6 @@ func authenticatedFixture(h *httpapi.Handler, next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
-func (s recordReadStore) ForProjectOwner(owner string) ports.ProjectStore { return s }
 func (s *fileProjectStore) ForProjectOwner(owner string) ports.ProjectStore {
 	return &ownedFixtureProject{fileProjectStore: s, owner: owner}
 }

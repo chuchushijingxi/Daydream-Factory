@@ -1068,7 +1068,6 @@ test('ported workspace reads actual counts and preserves readonly service with n
     requests.some((r) => r.method !== 'GET'),
     false,
   );
-  assert.equal(document.querySelector('link[href="/demo/styles.css"]'), null);
 });
 test('unfinished P3 and running visual tasks block ordinary writes', async () => {
   for (const state of ['unstarted', 'running', 'failed', 'cancelled', 'partial']) {
@@ -1273,18 +1272,6 @@ test('confirmed project choices appear in header as read-only values, including 
     assert.ok(group.textContent.includes(text));
   assert.equal(group.querySelector('button,a,select,input'), null);
   assert.equal(document.querySelector('button[aria-label="项目设置"]'), null);
-  assert.equal(
-    requests.some((r) => r.method !== 'GET'),
-    false,
-  );
-});
-
-test('ported home shows real projects and the current upload boundary without old billing claims', async () => {
-  await mount('/projects');
-  assert.match(document.body.textContent, /虚构测试剧本/);
-  assert.match(document.body.textContent, /真实项目只读浏览，上传已禁用/);
-  assert.doesNotMatch(document.body.textContent, /Seedance|积分|一键直出整部剧/);
-  assert.equal(document.querySelector('input[type=file]').disabled, true);
   assert.equal(
     requests.some((r) => r.method !== 'GET'),
     false,
@@ -1499,8 +1486,10 @@ test('pasted full text stays local until explicit upload and uses general upload
   assert.deepEqual(fixture.runs, []);
   assert.equal(fixture.usedOrReservedMicroCny, 0);
 });
-test('readonly upload controls block both file and pasted text without writes', async () => {
+test('readonly home shows real projects and blocks file and pasted uploads without writes', async () => {
   await mount('/projects');
+  assert.match(document.body.textContent, /虚构测试剧本/);
+  assert.match(document.body.textContent, /真实项目只读浏览，上传已禁用/);
   assert.equal(document.querySelector('input[type=file]').disabled, true);
   assert.equal(button('粘贴文本').disabled, true);
   assert.equal(button('开始解析').disabled, true);

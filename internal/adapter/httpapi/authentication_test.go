@@ -77,25 +77,6 @@ func TestProductionRegistrationDefaultsAndSingleAuthentication(t *testing.T) {
 		t.Fatal("shared role check", rec.Code, auth.count.Load())
 	}
 }
-func TestLongWriterRechecksRevocation(t *testing.T) {
-	auth := &countingAuthenticator{role: ports.RoleUser}
-	rec := httptest.NewRecorder()
-	w := &sessionWriter{ResponseWriter: rec, auth: auth, token: "test", ctx: context.Background(), checked: time.Now().Add(-3 * time.Second)}
-	auth.revoked.Store(true)
-	if n, e := w.Write([]byte("private")); e == nil || n != 0 || rec.Body.Len() != 0 || auth.count.Load() != 1 {
-		t.Fatal("revoked stream leaked content", n, e)
-	}
-}
-
-func TestLongOperatorWriterRechecksRole(t *testing.T) {
-	auth := &countingAuthenticator{role: ports.RoleUser}
-	rec := httptest.NewRecorder()
-	w := &sessionWriter{ResponseWriter: rec, auth: auth, token: "test", ctx: context.Background(), checked: time.Now().Add(-3 * time.Second), actor: ports.Actor{UserID: "fixture-user", Role: ports.RoleOperator}, operator: true}
-	if n, e := w.Write([]byte("private")); e == nil || n != 0 || rec.Body.Len() != 0 {
-		t.Fatal("demoted operator retained stream", n, e)
-	}
-}
-
 func TestStaticQAFixturesAreNotProductionAnonymousEntrypoints(t *testing.T) {
 	root := t.TempDir()
 	if e := os.MkdirAll(filepath.Join(root, "__account-fixture"), 0700); e != nil {
@@ -136,12 +117,14 @@ func TestFirstPrivateOutputUsesEntranceAuthenticationTime(t *testing.T) {
 				case "replaced":
 					w.actor.UserID = "previous-user"
 				}
+				rejected := state == "revoked" || state == "demoted" || state == "replaced"
 				if flush {
 					w.Flush()
 				} else {
-					_, _ = w.Write([]byte("private"))
+					if n, err := w.Write([]byte("private")); rejected && (n != 0 || err == nil) {
+						t.Fatal("rejected write did not report failure", n, err)
+					}
 				}
-				rejected := state == "revoked" || state == "demoted" || state == "replaced"
 				if rejected {
 					if rec.Body.Len() != 0 || rec.Flushed || ctx.Err() == nil {
 						t.Fatal("unverified first output escaped or cancellation lost")

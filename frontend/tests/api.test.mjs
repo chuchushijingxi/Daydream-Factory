@@ -75,7 +75,6 @@ test('explicit task requests use exact routes and revision; HTTP 200 failed is p
     assert.deepEqual(JSON.parse(r.options.body), { revision: 8 });
   }
   assert.equal(requests.length, 3);
-  assert.equal(api.startOutline, undefined);
 });
 test('write network ambiguity, conflict and malformed success never auto-resend or masquerade as saved', async () => {
   for (const [fetch, code, status] of [

@@ -5,13 +5,17 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
+
+	"drama-agent/internal/adapter/appconfig"
 )
 
 func TestLocalBGEOfflineLearnedEmbeddingsAndNoTruncation(t *testing.T) {
 	if os.Getenv("DRAMA_TEST_LOCAL_EMBEDDING") != "1" {
 		t.Skip("explicit local free model opt-in")
 	}
-	e, err := New("../../../.data/evidence-embedding/runtime/bin/python", "../../../.data/evidence-embedding/model")
+	// 与生产装配一样显式配置超时，避免只覆盖零超时路径。
+	e, err := New("../../../.data/evidence-embedding/runtime/bin/python", "../../../.data/evidence-embedding/model", appconfig.Evidence{EmbeddingTimeout: 2 * time.Minute, ProcessWaitDelay: 5 * time.Second})
 	if err != nil {
 		t.Fatal(err)
 	}

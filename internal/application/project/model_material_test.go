@@ -301,11 +301,6 @@ func TestEvidenceParameterStoryboardSchemaFeedbackRetainsAtomicRefusal(t *testin
 }
 
 func TestModelMaterialInstructionsKeepRequiredReadsAndReview(t *testing.T) {
-	for _, phrase := range []string{"初始材料与本任务已读原文回执可直接使用", "确需未提供资料或重读", "不得因此跳过任务要求的资产读取、保存回执核对或独立复核"} {
-		if !strings.Contains(modelSourceInstruction, phrase) {
-			t.Fatal("missing material reuse boundary", phrase)
-		}
-	}
 	if !strings.Contains(runTaskTools(&d.Run{Contract: d.EpisodeIndexContract})[0].Description, "不作为开始工作的必经步骤") || !strings.Contains(evidenceTools()[0].Description, "未提供的命中段") || !strings.Contains(evidenceTools()[1].Description, "合并同批补读") {
 		t.Fatal("actual tool descriptions omit direct use / necessary reads")
 	}

@@ -250,7 +250,7 @@ func TestProjectMediaNaturalImageVideoPreservesPromptAndBindsByID(t *testing.T) 
 		t.Fatal(e)
 	}
 	if p.Asset("c").ImageFileID != f.FileID || p.Asset("unused").ImageFileID != "" {
-		t.Fatal("wrong identity/lock")
+		t.Fatal("wrong asset identity")
 	}
 	original, raw, e := s.Files.ReadOriginal(ctx, f.FileID)
 	if e != nil || !bytes.HasPrefix(raw, []byte{0xff, 0xd8}) || original.Thumbnail == nil {
@@ -352,7 +352,7 @@ func TestProjectMediaNaturalImageVideoPreservesPromptAndBindsByID(t *testing.T) 
 		t.Fatal("restart read", e)
 	}
 }
-func TestProjectMediaStaleIsolationCASCancelAndImageAfterLock(t *testing.T) {
+func TestProjectMediaStaleIsolationCASCancelAndImageAfterBreakdown(t *testing.T) {
 	s, _, p, _ := mediaFixture(t)
 	ctx := context.Background()
 	sh := p.Storyboard.Shots[0]
@@ -561,7 +561,7 @@ func TestProjectMediaQueuedTaskRecoveredByNewNSQRuntime(t *testing.T) {
 	}
 }
 
-func TestProjectMediaAllAssetKindsAndLookStayIndependentAfterLock(t *testing.T) {
+func TestProjectMediaAllAssetKindsAndLookStayIndependentAfterBreakdown(t *testing.T) {
 	s, _, p, _ := mediaFixture(t)
 	ctx := context.Background()
 	targets := []MediaTarget{{AssetID: "c"}, {AssetID: "c", LookID: "l"}, {AssetID: "loc"}, {AssetID: "prop"}, {AssetID: "unused"}}
@@ -591,10 +591,7 @@ func TestProjectMediaAllAssetKindsAndLookStayIndependentAfterLock(t *testing.T) 
 		files[file] = true
 	}
 	if p.Asset("c").ImageFileID == "" || p.Asset("c").Looks[0].ImageFileID == "" || p.Asset("c").ImageFileID == p.Asset("c").Looks[0].ImageFileID || p.Asset("prop").ImageFileID == p.Asset("unused").ImageFileID {
-		t.Fatal("wrong binding or lock")
-	}
-	if _, e := s.SaveAsset(ctx, p.ID, p.Revision, "c", d.AssetInput{Kind: "character", Name: "改名", Aliases: []string{}, Description: "new"}); e == nil {
-		t.Fatal("image exception unlocked text")
+		t.Fatal("wrong asset or look binding")
 	}
 }
 

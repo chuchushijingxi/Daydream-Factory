@@ -7,10 +7,8 @@ import (
 	"drama-agent/internal/domain/identity"
 	"fmt"
 	"reflect"
-	"sort"
 	"sync"
 	"testing"
-	"time"
 )
 
 func TestCreditOperationsBatchPreservesAllLedgerFields(t *testing.T) {
@@ -51,9 +49,7 @@ func TestCreditOperationsBatchPreservesAllLedgerFields(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	start := time.Now()
 	got, err = store.CreditOperations(ctx, ids)
-	elapsed := time.Since(start)
 	if err != nil || !reflect.DeepEqual(got, expected) {
 		t.Fatal(err)
 	}
@@ -64,31 +60,17 @@ func TestCreditOperationsBatchPreservesAllLedgerFields(t *testing.T) {
 	} else {
 		t.Log("pg_stat_statements absent: SQL count not verified in this environment")
 	}
-	// Bounded concurrent local batch reads, no writes or model calls in timing window.
+	// 并发读也必须逐字段保留账本事实，不能只核对返回数量。
 	var wg sync.WaitGroup
-	var mu sync.Mutex
-	samples := []time.Duration{}
 	for i := 0; i < 4; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for j := 0; j < 5; j++ {
-				start := time.Now()
-				rows, err := store.CreditOperations(ctx, ids)
-				if err != nil || len(rows) != 100 {
-					t.Error(err, len(rows))
-					return
-				}
-				mu.Lock()
-				samples = append(samples, time.Since(start))
-				mu.Unlock()
+			rows, err := store.CreditOperations(ctx, ids)
+			if err != nil || !reflect.DeepEqual(rows, expected) {
+				t.Error("concurrent batch changed ledger fields", err)
 			}
 		}()
 	}
 	wg.Wait()
-	sort.Slice(samples, func(i, j int) bool { return samples[i] < samples[j] })
-	if len(samples) != 20 {
-		t.Fatal(samples)
-	}
-	t.Logf("100 ledger rows: 1 SQL, serial=%s; 4 clients x 5 reads: p50=%s p95=%s (local synthetic batch only)", elapsed, samples[9], samples[18])
 }
