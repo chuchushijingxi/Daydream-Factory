@@ -1,0 +1,39 @@
+# syntax=docker/dockerfile:1
+# NSQ 1.3.0, rebuilt without changing its disk queue or wire protocol.
+# Official Go image tags currently stop at 1.26.9; pin the compiler separately.
+FROM golang:1.26.9-bookworm@sha256:d9c68c2c51161e12fd77e4c6320687c9cd86e1af1e3ad6e6cd63ff970641453c AS build
+ENV GOTOOLCHAIN=go1.26.10 GOTELEMETRY=off CGO_ENABLED=0
+ARG GOPROXY=https://proxy.golang.org,direct
+WORKDIR /src
+# v1.3.0 commit f580340fd5be61a94d0fef388458f027925c7fc0; reject changed archives.
+ADD --checksum=sha256:30da118a5d272762d6a8edf5a062c1b18bd745f6bfd411b541783f4fd8ccac2e \
+    https://codeload.github.com/nsqio/nsq/tar.gz/f580340fd5be61a94d0fef388458f027925c7fc0 /tmp/nsq.tar.gz
+RUN tar -xzf /tmp/nsq.tar.gz --strip-components=1 -C /src && rm /tmp/nsq.tar.gz
+COPY deploy/nsq/go.mod deploy/nsq/go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    go build -mod=readonly -trimpath -buildvcs=false -ldflags="-s -w" -o /out/nsqd ./apps/nsqd \
+    && mkdir -p /out/licenses \
+    && cp "$(go env GOROOT)/LICENSE" /out/licenses/Go-LICENSE \
+    && go list -deps -f '{{if .Module}}{{.Module.Path}} {{.Module.Dir}}{{end}}' ./apps/nsqd > /tmp/modules \
+    && sort -u /tmp/modules | while read -r module directory; do \
+           [ -n "$module" ] || continue; \
+           target="/out/licenses/$(printf '%s' "$module" | tr '/' '_')"; \
+           mkdir -p "$target"; \
+           find "$directory" -maxdepth 1 -type f \
+             \( -iname 'LICENSE*' -o -iname 'NOTICE*' -o -iname 'COPYING*' \) \
+             -exec cp {} "$target/" \;; \
+       done
+
+FROM alpine:3.23@sha256:85fe1e81d6758c208f3e1eed4338a1997e19d4be002d4dd32d3100c9a8c010a0
+LABEL org.opencontainers.image.source="https://github.com/nsqio/nsq" \
+      org.opencontainers.image.revision="f580340fd5be61a94d0fef388458f027925c7fc0" \
+      org.opencontainers.image.version="1.3.0-go1.26.10"
+# Apply available security revisions to the pinned base's runtime packages.
+RUN apk upgrade --no-cache \
+    && test -s /etc/ssl/certs/ca-certificates.crt && mkdir -p /data
+WORKDIR /data
+COPY --from=build /out/nsqd /nsqd
+COPY --from=build /out/licenses/ /usr/share/licenses/nsq/
+EXPOSE 4150 4151
+CMD ["/nsqd"]

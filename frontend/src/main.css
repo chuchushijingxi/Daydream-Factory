@@ -1,0 +1,332 @@
+@import 'tailwindcss';
+
+@import './styles/misans.css';
+@import './styles/globals.css';
+@import './styles/design-tokens.css';
+@import './styles/auth-page.css';
+
+/**
+ * 使用小米官方静态 Web 字体的 CSS 字重：Regular 400 / Medium 500 /
+ * Semibold 650 / Bold 700。此映射不同于原 VF 的 wght 轴值，保留原命名字重层级。
+ * 只分发这四档；其余未使用的语义档位映射到最近的已加载字体，不暗示额外字重资源。
+ * 页面与组件统一消费 token，不写 font-weight 数字字面量。
+ */
+@theme static {
+  --font-sans: 'MiSans', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+  --font-weight-thin: var(--font-weight-normal);
+  --font-weight-extralight: var(--font-weight-normal);
+  --font-weight-light: var(--font-weight-normal);
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 650;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: var(--font-weight-bold);
+  --font-weight-black: var(--font-weight-bold);
+}
+
+@layer base {
+  html {
+    overscroll-behavior: none;
+  }
+  body {
+    overscroll-behavior: none;
+    font-family: var(--font-sans);
+    /* 正文与回退字体均使用公开 CSS 字重的 Regular 档位。 */
+    font-weight: var(--font-weight-normal);
+  }
+
+  /* 保留现有强调层级，避免 bolder 随继承字重跳到其他档位。 */
+  b,
+  strong {
+    font-weight: var(--font-weight-semibold);
+  }
+  #root {
+    overscroll-behavior: none;
+  }
+
+  :root {
+    /* Dramora 产品主题（供侧栏、后续新组件复用；未全局替换旧页面） */
+    --dramora-primary: #0030ff;
+    --dramora-secondary: #a600ff;
+    --dramora-gradient: linear-gradient(105.42deg, #0030ff 7.35%, #a600ff 100%);
+    --dramora-gradient-hover: linear-gradient(105.42deg, #0028e0 7.35%, #9400e8 100%);
+
+    /* 微信品牌色（扫码支付等场景） */
+    --wechat-green: #07c160;
+
+    --dramora-sidebar-width-expanded: 264px;
+    --dramora-sidebar-width-collapsed: 80px;
+    --dramora-sidebar-bg: #0a1b310a;
+    --dramora-sidebar-inset-shadow: inset -1px 0 1px 0 #0000001a;
+    --dramora-sidebar-logo-w: 164px;
+    --dramora-sidebar-logo-h: 58px;
+    --dramora-sidebar-header-h: 80px;
+    --dramora-sidebar-nav-w: 232px;
+    --dramora-sidebar-nav-h: 48px;
+    --dramora-sidebar-icon-size: 24px;
+    --dramora-sidebar-nav-active-bg: #ffffff;
+    --dramora-sidebar-nav-active-shadow: 0 2px 12px rgb(0 0 0 / 6%);
+    --dramora-sidebar-nav-text: #1a1a1a;
+    --dramora-sidebar-nav-text-muted: #525866;
+
+    --playlet-page: #f5f5f5;
+    --playlet-surface: #ffffff;
+    --playlet-muted-surface: #f5f5f5;
+    --playlet-border: #ececec;
+    --playlet-dashed: #d9d9d9;
+    --playlet-title: #1f1f1f;
+    --playlet-text-50: rgb(0 0 0 / 50%);
+    --playlet-text-40: rgb(0 0 0 / 40%);
+    --playlet-text-muted: #8c8c8c;
+
+    --playlet-radius-panel: 20px;
+    --playlet-radius-inner: 16px;
+    --playlet-radius-card: 20px;
+
+    --playlet-shadow-panel: 0 8px 18px rgb(0 0 0 / 4%);
+    --playlet-shadow-card: 0 3px 10px rgb(0 0 0 / 3%);
+    --playlet-shadow-card-hover: 0 8px 18px rgb(0 0 0 / 8%);
+
+    --playlet-title-size: 32px;
+    --playlet-title-weight: var(--font-weight-semibold);
+    --playlet-subtitle-size: 16px;
+    --playlet-subtitle-weight: var(--font-weight-normal);
+    --playlet-note-size: 12px;
+    --playlet-note-weight: var(--font-weight-normal);
+  }
+
+  .dark {
+    --dramora-sidebar-bg: rgb(15 23 42 / 92%);
+    --dramora-sidebar-nav-active-bg: rgb(255 255 255 / 10%);
+    --dramora-sidebar-nav-active-shadow: 0 2px 12px rgb(0 0 0 / 35%);
+    --dramora-sidebar-nav-text: #e2e8f0;
+    --dramora-sidebar-nav-text-muted: #94a3b8;
+  }
+}
+
+@layer utilities {
+  .bg-dramora-workspace-sidebar {
+    background-color: var(--dramora-sidebar-bg);
+    box-shadow: var(--dramora-sidebar-inset-shadow);
+  }
+  .text-dramora-primary {
+    color: var(--dramora-primary);
+  }
+  .bg-dramora-gradient {
+    background-image: var(--dramora-gradient);
+  }
+  .hover\:bg-dramora-gradient-hover:hover {
+    background-image: var(--dramora-gradient-hover);
+  }
+
+  /** 工作区顶栏会员胶囊：渐变 12% 透明度 */
+  .bg-dramora-topbar-membership-pill {
+    background: linear-gradient(96.4deg, rgb(0 48 255 / 12%) 9.45%, rgb(166 0 255 / 12%) 111.19%);
+  }
+
+  .bg-playlet-page {
+    background-color: var(--playlet-page);
+  }
+  .bg-playlet-title {
+    background-color: #1c6dd0;
+  }
+  .bg-playlet-surface {
+    background-color: var(--playlet-surface);
+  }
+  .bg-playlet-muted-surface {
+    background-color: var(--playlet-muted-surface);
+  }
+  .border-playlet-border {
+    border-color: var(--playlet-border);
+  }
+  .border-playlet-dashed {
+    border-color: var(--playlet-dashed);
+  }
+  .text-playlet-title {
+    color: var(--playlet-title);
+  }
+  .text-playlet-text-muted {
+    color: var(--playlet-text-muted);
+  }
+  .rounded-playlet-panel {
+    border-radius: var(--playlet-radius-panel);
+  }
+  .rounded-playlet-inner {
+    border-radius: var(--playlet-radius-inner);
+  }
+  .rounded-playlet-card {
+    border-radius: var(--playlet-radius-card);
+  }
+  .shadow-playlet-panel {
+    box-shadow: var(--playlet-shadow-panel);
+  }
+  .shadow-playlet-card {
+    box-shadow: var(--playlet-shadow-card);
+  }
+  .shadow-playlet-card-hover {
+    box-shadow: var(--playlet-shadow-card-hover);
+  }
+
+  .surface-floating-panel {
+    background-color: #fff;
+    color: var(--foreground);
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 16px 40px rgb(15 23 42 / 14%);
+  }
+  .dark .surface-floating-panel {
+    background-color: #020617;
+    color: #f8fafc;
+    border-color: #1e293b;
+  }
+
+  .surface-floating-item {
+    color: inherit;
+  }
+  .surface-floating-item:hover,
+  .surface-floating-item:focus,
+  .surface-floating-item[data-state='open'] {
+    background-color: rgb(15 23 42 / 6%);
+    color: inherit;
+  }
+  .dark .surface-floating-item:hover,
+  .dark .surface-floating-item:focus,
+  .dark .surface-floating-item[data-state='open'] {
+    background-color: rgb(148 163 184 / 12%);
+    color: inherit;
+  }
+
+  .surface-floating-separator {
+    background-color: rgb(226 232 240);
+  }
+  .dark .surface-floating-separator {
+    background-color: rgb(30 41 59);
+  }
+
+  .surface-floating-shortcut {
+    color: #64748b;
+  }
+  .dark .surface-floating-shortcut {
+    color: #94a3b8;
+  }
+
+  .workspace-tabs-underline-list {
+    height: auto;
+    width: 100%;
+    justify-content: flex-start;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+    gap: 1.5rem;
+    color: inherit;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+  .workspace-tabs-underline-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 滑块仅随实际滚动显现，保持尺寸避免显隐引起内容位移。
+     Chromium/WebKit 不混用标准 scrollbar-width/color，防止覆盖定制滑块；
+     不支持定制伪元素的浏览器使用下方标准属性后备规则。 */
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: transparent;
+  }
+
+  /* 滚动中的元素由 scrollbar-reveal.ts 挂 sb-scrolling：滚动即显现，停止约 600ms 后隐藏。 */
+  .sb-scrolling::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.28);
+  }
+
+  .dark .sb-scrolling::-webkit-scrollbar-thumb,
+  .dark.sb-scrolling::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.32);
+  }
+
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: transparent transparent;
+    }
+    .sb-scrolling {
+      scrollbar-color: rgba(0, 0, 0, 0.28) transparent;
+    }
+    .dark .sb-scrolling,
+    .dark.sb-scrolling {
+      scrollbar-color: rgba(255, 255, 255, 0.32) transparent;
+    }
+  }
+
+  .workspace-tabs-underline-trigger {
+    position: relative;
+    min-width: fit-content;
+    height: auto;
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    gap: 0.25rem;
+    border-radius: 0;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    padding: 0 0 0.75rem;
+    box-shadow: none;
+    font-size: 0.9375rem;
+    font-weight: var(--font-weight-medium);
+    color: rgb(100 116 139);
+    background: transparent;
+  }
+  .workspace-tabs-underline-trigger:hover {
+    color: rgb(15 23 42);
+  }
+  .workspace-tabs-underline-trigger[data-state='active'] {
+    border-bottom-color: var(--primary);
+    color: rgb(15 23 42);
+    background: transparent;
+    font-weight: var(--font-weight-semibold);
+  }
+  .workspace-tabs-icon {
+    opacity: 0.8;
+  }
+  .dark .workspace-tabs-underline-trigger {
+    color: rgb(148 163 184);
+  }
+  .dark .workspace-tabs-underline-trigger:hover {
+    color: rgb(248 250 252);
+  }
+  .dark .workspace-tabs-underline-trigger[data-state='active'] {
+    border-bottom-color: rgb(139 92 246);
+    color: rgb(248 250 252);
+  }
+  .workspace-tabs-underline-trigger[data-state='active'] .workspace-tabs-icon {
+    opacity: 1;
+  }
+
+  .workspace-tabs-count {
+    margin-left: 0.125rem;
+    font-size: 0.8125rem;
+    font-weight: var(--font-weight-normal);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: rgb(148 163 184);
+  }
+  .workspace-tabs-underline-trigger[data-state='active'] .workspace-tabs-count {
+    color: rgb(100 116 139);
+  }
+  .dark .workspace-tabs-count {
+    color: rgb(100 116 139);
+  }
+  .dark .workspace-tabs-underline-trigger[data-state='active'] .workspace-tabs-count {
+    color: rgb(148 163 184);
+  }
+}

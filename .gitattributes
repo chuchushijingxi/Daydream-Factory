@@ -1,0 +1,5 @@
+* text=auto
+*.sh text eol=lf
+*.sql text eol=lf
+# Keep bundled upstream license texts byte-for-byte across Git exports.
+deploy/licenses/* -text

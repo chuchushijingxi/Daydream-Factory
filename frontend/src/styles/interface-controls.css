@@ -1,0 +1,41 @@
+/* Clear navigation, status and action hierarchy for the current product. */
+:root{--view-tab-accent:#245ec7;--view-tab-soft:#edf3ff;--view-tab-line:#b8cef4}
+:root.dark{--view-tab-accent:#aac9ff;--view-tab-soft:#24344e;--view-tab-line:#49658c}
+/* Primary navigation is underlined; secondary filters are separate pills. */
+.view-tabs{display:flex;align-items:center;gap:24px;max-width:100%;min-width:0;padding:0;border:0;background:transparent;overflow-x:auto;flex-shrink:0}
+.view-tabs>button{position:relative;flex:none;min-height:40px;padding:0 2px 10px;border:0;border-radius:0;background:transparent;color:var(--jm-muted);font:inherit;font-size:14px;line-height:20px;font-weight:var(--font-weight-medium);white-space:nowrap;cursor:pointer}
+.view-tabs>button:hover{color:var(--jm-text)}
+.view-tabs>button[aria-selected=true]{color:var(--jm-text);font-weight:var(--font-weight-semibold)}
+.view-tabs>button:focus-visible{outline:2px solid var(--view-tab-accent);outline-offset:-2px}
+.view-tabs[data-variant=line]>button[aria-selected=true]:after{content:"";position:absolute;bottom:0;left:0;right:0;height:2px;background:currentColor}
+.view-tabs[data-variant=pill]{display:inline-flex;gap:8px}
+.view-tabs[data-variant=pill]>button{min-height:32px;padding:5px 16px;border:1px solid var(--jm-border);border-radius:999px;font-size:13px;line-height:20px}
+.view-tabs[data-variant=pill]>button:hover{background:var(--jm-hover)}
+.view-tabs[data-variant=pill]>button[aria-selected=true]{background:var(--jm-inset);border-color:transparent}
+.op-view-panel{margin-top:24px}
+.op-shell{--jm-action:#245ec7;--jm-on-action:#fff}
+.dark .op-shell{--jm-action:#386dd6;--jm-on-action:#fff}
+.op-status-badge{--badge-color:#616b7a;--badge-background:#f1f3f6;display:inline-flex;align-items:center;padding:2px 7px;border:0;border-radius:4px;color:var(--badge-color);background:var(--badge-background);font-size:11px;line-height:18px;font-weight:var(--font-weight-medium);white-space:nowrap}
+.op-status-badge[data-tone=info]{--badge-color:#245ec7;--badge-background:#edf3ff}
+.op-status-badge[data-tone=success]{--badge-color:#197047;--badge-background:#eaf7ef}
+.op-status-badge[data-tone=warning]{--badge-color:#a1630d;--badge-background:#fff6e5}
+.op-status-badge[data-tone=danger]{--badge-color:#b42331;--badge-background:#fff0f0}
+.dark .op-status-badge{--badge-color:#b5becc;--badge-background:#282d35}
+.dark .op-status-badge[data-tone=info]{--badge-color:#aecbff;--badge-background:#24344e}
+.dark .op-status-badge[data-tone=success]{--badge-color:#9cd9b8;--badge-background:#203c2e}
+.dark .op-status-badge[data-tone=warning]{--badge-color:#edc27d;--badge-background:#3b3020}
+.dark .op-status-badge[data-tone=danger]{--badge-color:#ffadb5;--badge-background:#40262c}
+.op-table .op-row-actions{justify-content:flex-start;gap:8px;flex-wrap:nowrap;width:max-content}
+.op-table .op-row-actions>.jm-button{flex:0 0 auto;width:auto;min-width:64px;margin:0;height:32px;padding:0 12px;font-size:13px;line-height:20px;font-weight:var(--font-weight-medium);border-radius:8px}
+.op-table .op-row-actions>.jm-button svg{width:14px;height:14px}
+.notification-detail-mask{z-index:90;background:rgb(0 0 0 / .36)}
+.notification-detail-dialog{z-index:91;width:min(640px,calc(100vw - 32px));max-height:calc(100dvh - 48px);padding:28px;overflow:auto;border:1px solid var(--jm-border);border-radius:18px;background:var(--jm-panel);color:var(--jm-text);box-shadow:0 24px 80px #00000030}
+.notification-detail-dialog>.jm-dialog-title{font-size:18px;line-height:28px;padding-right:32px;margin:0;overflow-wrap:anywhere}
+.notification-detail-dialog .notification-detail{padding:0;overflow:visible}
+.notification-detail-dialog .notification-detail>time{margin-top:10px}
+.notification-detail-dialog .notification-empty{min-height:160px}
+.notification-detail-dialog .notification-markdown{font-size:14px;line-height:25px}
+.notification-detail-close{position:absolute;right:18px;top:18px}
+@media(max-width:600px){.view-tabs>button{padding-inline:12px}.view-tabs[data-variant=line]{gap:20px}.notification-detail-dialog{padding:22px 20px;max-height:calc(100dvh - 32px)}}
+
+.notification-card:focus-visible{outline:2px solid var(--view-tab-accent);outline-offset:-2px}

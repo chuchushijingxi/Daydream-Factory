@@ -1,0 +1,12 @@
+PostgreSQL remains the unmodified upstream PostgreSQL 17 server under the
+PostgreSQL License: https://www.postgresql.org/about/licence/
+
+The two upstream database entrypoint scripts invoke Alpine's su-exec 0.3
+instead of gosu to switch to the postgres user. Their arguments and execution
+paths remain unchanged. No PostgreSQL source code or data format is modified.
+The su-exec package is verified by Alpine's signed package index and is used
+under the MIT license retained in su-exec-LICENSE.
+
+su-exec source: https://github.com/ncopa/su-exec
+Alpine package: https://pkgs.alpinelinux.org/package/v3.24/main/aarch64/su-exec
+Build and security-update instructions: deploy/Dockerfile.postgres

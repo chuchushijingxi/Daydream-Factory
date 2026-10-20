@@ -1,0 +1,45 @@
+Daydream Factory / 白日梦工厂
+Copyright 2026 Daydream Factory contributors.
+Project code is licensed under Apache License 2.0; see LICENSE.
+
+This application uses MiSans by Xiaomi. The original font software has its own
+MiSans license and is not relicensed under Apache-2.0. Its license and notice
+are supplied under frontend/public/fonts/ (and the built app's fonts/).
+The unmodified static WOFF2 font slices are fetched from Xiaomi during
+setup/build with SHA-256 verification against misans-manifest.json; the source
+repository does not redistribute the font binaries.
+Official source: https://hyperos.mi.com/font/zh/
+
+Provider icons from LobeHub retain their MIT license in
+ demo/assets/providers/LOBEHUB-LICENSE.
+
+The container downloads BAAI/bge-small-zh-v1.5 at revision
+7999e1d3359715c523056ef9478215996d62a620. Its model card declares MIT.
+See deploy/licenses/bge-small-zh-v1.5-LICENSE and the container's model folder.
+Model source: https://huggingface.co/BAAI/bge-small-zh-v1.5
+Other software dependencies retain their respective licenses.
+
+The Compose object storage service uses PGSTY Silo, a maintained MinIO fork,
+licensed separately under AGPL-3.0-or-later.
+Source and license: https://github.com/pgsty/silo/tree/RELEASE.2026-10-18T00-00-00Z
+Other Compose services retain their upstream licenses and sources.
+The Redis 8 container uses the upstream AGPLv3 licensing option. Original
+Redis notices and the AGPL license are retained under deploy/redis/ and
+in that container's license directory. Source: https://github.com/redis/redis
+Milvus 3.0.3 (Apache-2.0) and NSQ 1.3.0 (MIT) have their Go products rebuilt
+using the pinned source and independent dependency locks in deploy/.
+Their containers retain original Go/dependency licenses under
+/usr/share/licenses/milvus-rebuild/ and /usr/share/licenses/nsq/ respectively.
+
+The application container builds separate FFmpeg 9.0.2 tools with libx264
+under GPL-2.0-or-later, and libwebp 1.6.0 tools under their BSD-style license.
+Their original licenses, exact corresponding source archives, build inputs
+and configuration are included in /opt/media/licenses/ and /opt/media/source/;
+see deploy/media/NOTICE.txt. These tools are not relicensed under Apache-2.0.
+
+License texts and copyright notices for compiled Go and frontend dependencies:
+ deploy/licenses/go-dependencies.txt
+ deploy/licenses/frontend-dependencies.txt
+These are also included under /usr/share/licenses/drama-agent/third-party/
+in the application container. Python distributions and OS packages retain
+licenses in their installed package metadata and system copyright files.

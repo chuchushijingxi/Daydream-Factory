@@ -1,0 +1,49 @@
+/* Shared Jimeng feedback recipes. Page styles own the business content only. */
+:root{--jm-feedback-info:#009efa;--jm-feedback-error:#e51739;--jm-feedback-warning:#f59000}
+:root.dark{--jm-feedback-error:#ff3355;--jm-feedback-warning:#ffad33}
+.jm-dialog-content[data-dialog-kind]{width:min(560px,calc(100vw - 32px));max-width:calc(100vw - 32px);max-height:calc(100dvh - 48px);padding:24px;border:0;border-radius:16px;gap:0;overflow:auto;box-shadow:var(--jm-shadow);font-size:14px;line-height:22px;animation:jm-dialog-in 400ms cubic-bezier(.3,1.3,.3,1)}
+.jm-dialog-content[data-dialog-kind][data-state=closed]{animation:jm-dialog-out 400ms cubic-bezier(.3,1.3,.3,1);pointer-events:none}
+.jm-dialog-content[data-dialog-kind] .jm-dialog-title{margin:0;font-size:16px;line-height:22px;font-weight:var(--font-weight-medium)}
+.jm-dialog-content[data-dialog-kind] .jm-dialog-description{margin:8px 0 0;font-size:13px;line-height:22px;font-weight:var(--font-weight-normal)}
+.jm-dialog-content[data-dialog-kind] .jm-dialog-close{position:absolute;top:12px;right:12px;width:36px;min-width:36px;height:36px;padding:0;border-radius:8px;color:var(--jm-muted);background:transparent}
+.jm-dialog-content[data-dialog-kind] .jm-dialog-close:hover{background:var(--jm-hover);color:var(--jm-text)}
+.jm-dialog-content[data-dialog-kind] .jm-dialog-close svg{width:20px;height:20px}
+.jm-dialog-content[data-dialog-kind=confirm]{width:min(360px,calc(100vw - 32px));border-radius:12px}
+.jm-dialog-content[data-dialog-kind=confirm]>.jm-dialog-title{padding:0 24px 0 8px}
+.jm-dialog-content[data-dialog-kind=confirm]>.jm-dialog-description{padding:24px 8px 12px;margin:0;font-size:14px;line-height:22px}
+.jm-dialog-content[data-dialog-kind=confirm]>:is(footer,.jm-dialog-actions,.mc-form-footer,.project-delete-actions,.session-replacement-actions){display:flex;flex-direction:row;justify-content:flex-end;margin:24px 0 0;padding:0;gap:8px;border:0}
+.jm-dialog-content[data-dialog-kind=confirm]>:is(footer,.jm-dialog-actions,.mc-form-footer,.project-delete-actions,.session-replacement-actions)>.jm-button{flex:0 0 auto;width:auto;min-width:72px;height:36px;margin:0;padding:0 16px;border-radius:8px;font-size:13px;line-height:20px;font-weight:var(--font-weight-medium)}
+.jm-dialog-content[data-dialog-kind=confirm] .jm-button--outline{border-color:transparent;background:transparent;box-shadow:none}
+.jm-dialog-content[data-dialog-kind=confirm] .jm-button--outline:not(:disabled):hover{background:var(--jm-hover)}
+.jm-dialog-content[data-dialog-kind=settings]{width:min(616px,calc(100vw - 32px));padding:32px;box-shadow:0 8px 20px -4px rgba(8,12,20,.12)}
+.jm-dialog-content[data-dialog-kind=settings] .jm-dialog-title{font-size:20px;line-height:36px}
+.jm-dialog-content[data-dialog-kind=picker]{width:min(896px,calc(100vw - 32px))}
+.jm-dialog-content[data-dialog-kind=panel]{width:min(976px,calc(100vw - 32px));padding:0;overflow:hidden}
+.jm-dialog-content[data-dialog-kind=panel].notification-editor-dialog{padding:24px;overflow:auto}
+.jm-dialog-content[data-dialog-kind=panel].op-wallet-dialog{padding:24px}
+.jm-dialog-content[data-dialog-kind=panel].sb-reference-dialog{padding:24px}
+.jm-dialog-mask[data-dialog-kind]{background:rgb(0 0 0 / .6);animation:jm-mask-in 400ms cubic-bezier(.3,1.3,.3,1)}
+.jm-dialog-mask[data-dialog-kind][data-state=closed]{animation:jm-mask-out 400ms cubic-bezier(.3,1.3,.3,1);pointer-events:none}
+.jm-dialog-mask[data-dialog-kind=preview]{background:rgb(0 0 0 / .8)}
+.jm-dialog-content[data-dialog-kind=preview]{width:calc(100vw - 64px);max-width:none;height:calc(100dvh - 64px);max-height:none;padding:0;border:0;box-shadow:none;background:transparent;color:#fff;overflow:visible;align-items:center;justify-content:center;animation:jm-preview-in 200ms cubic-bezier(.2,0,.4,1)}
+.jm-dialog-content[data-dialog-kind=preview]>:is(img,video){max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
+.jm-dialog-content[data-dialog-kind=preview] .jm-dialog-close{color:#fff;background:rgb(38 38 38 / .8);top:0;right:0}
+/* Keep the content mounted until the 400ms mask finishes; visual exit is 10ms. */
+.jm-dialog-content[data-dialog-kind=preview][data-state=closed]{animation:jm-preview-out 400ms linear forwards}
+@keyframes jm-preview-in{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+@keyframes jm-preview-out{0%{opacity:1;transform:scale(1)}2.5%,100%{opacity:0;transform:scale(.1)}}
+.jm-dialog-mask[data-dialog-kind=drawer]{background:transparent;z-index:80;animation:notification-mask-in 300ms cubic-bezier(.34,.69,.1,1)}
+.jm-dialog-mask[data-dialog-kind=drawer][data-state=closed]{animation:notification-mask-out 300ms cubic-bezier(.34,.69,.1,1)}
+.jm-dialog-content[data-dialog-kind=drawer]{inset:8px 8px 8px auto;translate:none;width:min(360px,calc(100vw - 16px));max-width:calc(100vw - 16px);height:calc(100dvh - 16px);max-height:none;padding:12px;border-radius:20px;overflow:hidden;z-index:81;animation:notification-slide-in 300ms cubic-bezier(.34,.69,.1,1)}
+.jm-dialog-content[data-dialog-kind=drawer][data-state=closed]{animation:notification-slide-out 300ms cubic-bezier(.34,.69,.1,1)}
+.jm-toast-icon{color:var(--jm-feedback-info)}
+.jm-toast[data-kind=success] .jm-toast-icon{fill:var(--jm-feedback-info);stroke:white}
+.jm-toast[data-kind=error] .jm-toast-icon{color:var(--jm-feedback-error)}
+.jm-toast[data-kind=warning] .jm-toast-icon{color:var(--jm-feedback-warning)}
+.jm-toast[data-kind=info] .jm-toast-icon{color:var(--jm-feedback-info)}
+@media(max-width:600px){.jm-dialog-content[data-dialog-kind]{max-height:calc(100dvh - 32px)}.jm-dialog-content[data-dialog-kind=settings]{padding:24px}.jm-dialog-content[data-dialog-kind=preview]{width:calc(100vw - 32px);height:calc(100dvh - 48px);max-height:none}.jm-dialog-content[data-dialog-kind=drawer]{max-height:none}}
+@media(prefers-reduced-motion:reduce){.jm-dialog-content[data-dialog-kind],.jm-dialog-content[data-dialog-kind][data-state=closed],.jm-dialog-mask[data-dialog-kind],.notification-drawer-inner{animation:none!important}}
+
+.jm-toaster[hidden]{display:none}
+
+.jm-dialog-content[data-dialog-kind] :is(.jm-button--accent,.jm-button--success){background:var(--jm-primary);color:var(--jm-on-primary)}

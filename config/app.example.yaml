@@ -1,0 +1,35 @@
+# 独立本地开发的完整示例；已有服务请填写自己的实际连接信息。
+# 复制为 app.local.yaml 后 chmod 600；Compose 会自动生成独立随机密码，无需复制。
+# server 和 task-worker 共用此文件；修改后重启生效。
+database:
+  url: postgres://drama:local-postgres@127.0.0.1:55432/drama_agent?sslmode=disable
+redis:
+  address: 127.0.0.1:6379
+  password: local-redis-secret
+  namespace: drama:local
+  dialTimeout: 2s
+  operationTimeout: 2s
+  lease: 30s
+  requestsPerMinute: 1200
+  ipRequestsPerMinute: 12000
+  providerConcurrency: 8
+  providerRequestsPerMinute: 120
+nsq:
+  address: 127.0.0.1:54150
+  topic: drama.tasks
+  channel: workers
+storage:
+  endpoint: http://127.0.0.1:59000
+  region: us-east-1
+  bucket: drama-agent
+  accessKey: drama
+  secretKey: local-minio-secret
+  pathStyle: true
+# 以下可省略，程序使用这里展示的默认值。
+tasks:
+  submitConcurrency: 8
+  queryConcurrency: 16
+  saveConcurrency: 4
+  pollInterval: 1s
+
+# SMTP 在运营平台动态配置，并加密保存在 PG。

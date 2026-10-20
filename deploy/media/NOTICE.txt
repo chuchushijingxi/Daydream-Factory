@@ -1,0 +1,28 @@
+This distribution uses the independently executed FFmpeg, ffprobe, cwebp and
+dwebp tools.
+FFmpeg 9.0.2 is built with GPL support and libx264, and the resulting tools are
+licensed under GPL-2.0-or-later. They are not covered by the application's Apache
+License. No FFmpeg source files have been modified. This software is based in
+part on the work of the Independent JPEG Group; its FFmpeg JPEG sources are
+unmodified.
+
+Statically linked libraries:
+- x264 0.164.3108+git31e19f9 (Debian revision 2): GPL-2.0-or-later.
+- libwebp 1.6.0, including SharpYUV: BSD-style licenses.
+- libpng 1.6.48 (Debian security revision 1+deb13u6): libpng license.
+- libjpeg-turbo 2.1.5 (Debian revision 4): IJG/BSD-style licenses.
+- zlib 1.3.1 (Debian revision 1): zlib license.
+
+The complete corresponding source archives, Debian patches, checksums, exact
+build script and generated FFmpeg configuration are included in
+/opt/media/source. License texts and copyright notices are in
+/opt/media/licenses. These directories must accompany redistributed binaries.
+
+Upstream sources:
+https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz
+https://www.videolan.org/developers/x264.html
+https://developers.google.com/speed/webp/
+https://libpng.org/pub/png/libpng.html
+https://libjpeg-turbo.org/
+https://zlib.net/
+Debian source packages: https://deb.debian.org/debian/pool/main/

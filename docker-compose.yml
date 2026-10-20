@@ -1,0 +1,197 @@
+name: daydream-factory
+
+services:
+  config-init:
+    container_name: daydream-factory-config-init
+    image: daydream-factory:local
+    pull_policy: never
+    command: ["python", "/usr/local/lib/drama-agent/bootstrap-compose.py"]
+    volumes:
+      - runtime-config:/runtime
+    restart: "no"
+
+  postgres:
+    container_name: daydream-factory-postgres
+    image: daydream-postgres:17
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.postgres
+    ports:
+      - "127.0.0.1:55432:5432"
+    environment:
+      POSTGRES_USER: drama
+      POSTGRES_DB: drama_agent
+      POSTGRES_PASSWORD_FILE: /runtime/config/postgres-password
+    volumes:
+      - runtime-config:/runtime:ro
+      - postgres-data:/var/lib/postgresql/data
+    depends_on:
+      config-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "drama", "-d", "drama_agent"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  database-init:
+    image: daydream-factory:local
+    pull_policy: never
+    command: ["drama-accounts-init", "-config", "/app/config/app.local.yaml"]
+    volumes:
+      - runtime-config:/runtime:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  minio:
+    container_name: daydream-factory-minio
+    image: docker.io/pgsty/silo:RELEASE.2026-10-18T00-00-00Z@sha256:2636fc4155d9a7e41ff58cdb65ddd13ba9304e67184e13c25bc5cb34016269d7
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER_FILE: /runtime/config/minio-user
+      MINIO_ROOT_PASSWORD_FILE: /runtime/config/minio-password
+    volumes:
+      - runtime-config:/runtime:ro
+      - objects-data:/data
+    depends_on:
+      config-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "silo", "healthcheck", "--timeout", "2s", "ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  app:
+    container_name: daydream-factory-backend
+    image: daydream-factory:local
+    build: .
+    init: true
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - runtime-config:/runtime:ro
+      - app-data:/app/.data
+    depends_on:
+      database-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8787/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+  redis:
+    container_name: daydream-factory-redis
+    image: daydream-redis:8
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.redis
+    command: ["/bin/sh", "-ec", "exec docker-entrypoint.sh redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy noeviction --requirepass \"$$(cat /runtime/config/redis-password)\""]
+    volumes:
+      - runtime-config:/runtime:ro
+      - redis-data:/data
+    depends_on:
+      config-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$(cat /runtime/config/redis-password)\" redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  # 共享回环网络以保持 NSQ/Milvus 现有本机地址合同，不向宿主机发布依赖端口。
+  nsq:
+    container_name: daydream-factory-nsq
+    image: daydream-nsq:1.3.0-go1.26.10
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.nsq
+    network_mode: service:app
+    command: ["/nsqd", "--data-path=/data", "--tcp-address=127.0.0.1:4150", "--http-address=127.0.0.1:4151", "--broadcast-address=127.0.0.1", "--mem-queue-size=0", "--sync-every=1", "--sync-timeout=1s"]
+    volumes:
+      - nsq-data:/data
+    depends_on:
+      app:
+        condition: service_healthy
+        restart: true
+    healthcheck:
+      test: ["CMD", "/bin/sh", "-c", "wget -q -O /dev/null http://127.0.0.1:4151/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+  milvus:
+    container_name: daydream-factory-milvus
+    image: daydream-milvus:3.0.3-go1.26.10
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.milvus
+    network_mode: service:app
+    command: ["milvus", "run", "standalone"]
+    environment:
+      ETCD_USE_EMBED: "true"
+      ETCD_DATA_DIR: /var/lib/milvus/etcd
+      ETCD_CONFIG_PATH: /milvus/configs/embedEtcd.yaml
+      COMMON_STORAGETYPE: local
+      DEPLOY_MODE: STANDALONE
+    volumes:
+      - milvus-data:/var/lib/milvus
+      - ./deploy/milvus-embedded.yaml:/milvus/configs/embedEtcd.yaml:ro
+    depends_on:
+      app:
+        condition: service_healthy
+        restart: true
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9091/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+  task-worker:
+    container_name: daydream-factory-worker
+    image: daydream-factory:local
+    pull_policy: never
+    profiles: ["workers"]
+    init: true
+    network_mode: service:app
+    command: ["drama-task-worker", "-config", "/app/config/app.local.yaml"]
+    volumes:
+      - runtime-config:/runtime:ro
+      - app-data:/app/.data
+    depends_on:
+      app:
+        condition: service_healthy
+        restart: true
+      nsq:
+        condition: service_healthy
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+volumes:
+  runtime-config:
+  postgres-data:
+  objects-data:
+  app-data:
+  nsq-data:
+  milvus-data:
+  redis-data:

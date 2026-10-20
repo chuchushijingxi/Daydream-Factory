@@ -1,0 +1,196 @@
+@custom-variant dark (&:is(.dark *));
+
+/* Light Theme (Default) — 与 Dramora 设计规范对齐（见 dramora-design-tokens.css） */
+:root {
+  --font-size: 14px;
+  --background: #f7f9ff;
+  --background-solid: #f7f9ff;
+  --foreground: #0a1b31;
+  --card: #ffffff;
+  --card-foreground: #0a1b31;
+  --popover: #ffffff;
+  --popover-foreground: #0a1b31;
+  --primary: #0030ff;
+  --primary-dark: #0028e0;
+  --primary-foreground: #fbfbfb;
+  --secondary: #f5f6f7;
+  --secondary-foreground: #0a1b31;
+  --muted: #f5f6f7;
+  --muted-foreground: rgb(10 27 49 / 64%);
+  --accent: rgb(0 48 255 / 10%);
+  --accent-foreground: #0030ff;
+  --destructive: #fd4b4b;
+  --destructive-foreground: #ffffff;
+  --border: rgb(10 27 49 / 12%);
+  --input: rgb(10 27 49 / 12%);
+  --input-background: #ffffff;
+  --switch-background: #e8ebf2;
+  --ring: #0030ff;
+  --chart-1: #0030ff;
+  --chart-2: #00c907;
+  --chart-3: #ff981e;
+  --chart-4: #fd4b4b;
+  --chart-5: #a600ff;
+  --radius: 0.75rem;
+  --sidebar: rgba(255, 255, 255, 0.95);
+  --sidebar-foreground: #0a1b31;
+  --sidebar-primary: #0030ff;
+  --sidebar-primary-foreground: #fbfbfb;
+  --sidebar-accent: #f5f6f7;
+  --sidebar-accent-foreground: #0a1b31;
+  --sidebar-border: rgb(10 27 49 / 12%);
+  --sidebar-ring: #0030ff;
+}
+
+/* Dark Theme — 与 Dramora 设计令牌深色档一致 */
+.dark {
+  --background: #0b1020;
+  --background-solid: #0b1020;
+  --foreground: #f4f7ff;
+  --card: #141b2d;
+  --card-foreground: #f4f7ff;
+  --popover: #141b2d;
+  --popover-foreground: #f4f7ff;
+  --primary: #4d7aff;
+  --primary-dark: #3d6aef;
+  --primary-foreground: #fbfbfb;
+  --secondary: #1c2438;
+  --secondary-foreground: #f4f7ff;
+  --muted: #1c2438;
+  --muted-foreground: rgb(244 247 255 / 72%);
+  --accent: rgb(77 122 255 / 18%);
+  --accent-foreground: #a8c4ff;
+  --destructive: #ff6b6b;
+  --destructive-foreground: #fbfbfb;
+  --border: rgb(244 247 255 / 14%);
+  --input: rgb(244 247 255 / 14%);
+  --input-background: #141b2d;
+  --switch-background: #2a3142;
+  --ring: #4d7aff;
+  --chart-1: #4d7aff;
+  --chart-2: #2ee04a;
+  --chart-3: #ffb04a;
+  --chart-4: #ff6b6b;
+  --chart-5: #c266ff;
+  --radius: 0.75rem;
+  --sidebar: rgb(20 27 45 / 95%);
+  --sidebar-foreground: #f4f7ff;
+  --sidebar-primary: #4d7aff;
+  --sidebar-primary-foreground: #fbfbfb;
+  --sidebar-accent: #1c2438;
+  --sidebar-accent-foreground: rgb(244 247 255 / 88%);
+  --sidebar-border: rgb(244 247 255 / 14%);
+  --sidebar-ring: #4d7aff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/**
+ * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
+ * 标题/表单/按钮沿用原设计强调档（旧 --font-weight-medium 曾被覆盖为 600），
+ * 在官方静态 Web 字体里对应 semibold 650；正文 normal 400。
+ */
+@layer base {
+  :where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) {
+    h1 {
+      font-size: var(--text-2xl);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1.5;
+    }
+
+    h2 {
+      font-size: var(--text-xl);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1.5;
+    }
+
+    h3 {
+      font-size: var(--text-lg);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1.5;
+    }
+
+    h4 {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1.5;
+    }
+
+    p {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.5;
+    }
+
+    label {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1.5;
+    }
+
+    button {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1.5;
+    }
+
+    input {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.5;
+    }
+  }
+}
+
+html {
+  font-size: var(--font-size);
+}

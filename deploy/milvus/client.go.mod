@@ -1,0 +1,52 @@
+module github.com/milvus-io/milvus/client/v3
+
+go 1.26.0
+
+require (
+	github.com/RoaringBitmap/roaring/v2 v2.8.0
+	github.com/blang/semver/v4 v4.0.0
+	github.com/bytedance/mockey v1.4.6
+	github.com/cespare/xxhash/v2 v2.3.0
+	github.com/cockroachdb/errors v1.9.1
+	github.com/google/uuid v1.6.0
+	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
+	github.com/milvus-io/milvus-proto/go-api/v3 v3.0.3
+	github.com/quasilyte/go-ruleguard/dsl v0.3.23
+	github.com/samber/lo v1.52.0
+	github.com/stretchr/testify v1.11.1
+	github.com/tidwall/gjson v1.17.1
+	github.com/x448/float16 v0.8.4
+	go.uber.org/atomic v1.11.0
+	golang.org/x/sync v0.23.0
+	google.golang.org/grpc v1.83.2
+	google.golang.org/protobuf v1.36.11
+)
+
+require (
+	github.com/bits-and-blooms/bitset v1.12.0 // indirect
+	github.com/cockroachdb/logtags v0.0.0-20211118104740-dabe8e521a4f // indirect
+	github.com/cockroachdb/redact v1.1.3 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/getsentry/sentry-go v0.12.0 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/gopherjs/gopherjs v1.12.80 // indirect
+	github.com/jtolds/gls v4.20.0+incompatible // indirect
+	github.com/kr/pretty v0.3.1 // indirect
+	github.com/kr/text v0.2.0 // indirect
+	github.com/mschoch/smat v0.2.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rogpeppe/go-internal v1.14.1 // indirect
+	github.com/smartystreets/assertions v1.2.0 // indirect
+	github.com/smartystreets/goconvey v1.7.2 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
+	golang.org/x/arch v0.11.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
+)

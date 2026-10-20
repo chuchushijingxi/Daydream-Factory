@@ -1,0 +1,16 @@
+This deployment selects the GNU Affero General Public License version 3
+(AGPLv3) option for the unmodified Redis 8.10.2 server and CLI. Redis's complete
+upstream LICENSE.txt and historical contributor notice accompany this file.
+The application's Apache License does not replace Redis's license.
+
+The thin image applies Alpine security updates and omits unused optional
+Search, JSON, TimeSeries and Bloom module binaries. It retains the upstream
+core server, CLI, entrypoint, data path and RESP/Lua/AOF behavior; Redis source
+code has not been modified.
+
+Corresponding upstream source and build instructions:
+https://github.com/redis/redis/tree/8.10.2
+https://github.com/redis/redis/archive/refs/tags/8.10.2.tar.gz
+https://github.com/redis/docker-library-redis
+Thin image changes and fixed upstream image digest: deploy/Dockerfile.redis
+Licensing overview: https://redis.io/legal/licenses/

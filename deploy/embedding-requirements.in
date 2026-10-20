@@ -1,0 +1,3 @@
+# CPU-only local BGE inference; no remote generation service.
+torch==2.14.1+cpu
+transformers==5.20.2

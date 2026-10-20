@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>短剧 Agent</title></head>
+<body><p>正在打开工作台… <a id="entry" href="/demo/app/">打开工作台</a></p>
+<script>
+'use strict';
+const query = new URLSearchParams(location.search);
+const project = query.get('project');
+const route = project ? '/playlet/' + encodeURIComponent(project) + '/' + (query.get('view') === 'outline' ? 'outline' : ({character:'characters',location:'scenes',prop:'props'}[query.get('kind')] || 'characters')) : '/projects';
+const entry = new URL('/demo/app/',location.origin);
+entry.hash = route;
+document.getElementById('entry').href = entry.href;
+location.replace(entry.href);
+</script></body></html>

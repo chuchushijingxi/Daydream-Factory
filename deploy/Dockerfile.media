@@ -1,0 +1,14 @@
+# syntax=docker/dockerfile:1
+# The application Dockerfile uses the same build script in its media stage.
+FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f AS build
+COPY deploy/media/ /setup/media/
+RUN sh /setup/media/build.sh
+# Rebuild from the exported /opt/media/source in an empty directory:
+# copy build-inputs/ to deploy/media/ and Dockerfile.media to deploy/Dockerfile.media,
+# then run: docker build -f deploy/Dockerfile.media .
+COPY deploy/Dockerfile.media /opt/media/source/Dockerfile.media
+
+# Export /opt/media into a Debian 13 runtime. Codec libraries are linked
+# statically; the binaries require only the runtime's glibc/libm/loader.
+FROM scratch AS media
+COPY --from=build /opt/media/ /opt/media/

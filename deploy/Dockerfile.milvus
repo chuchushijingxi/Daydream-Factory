@@ -1,0 +1,63 @@
+# syntax=docker/dockerfile:1
+# Rebuild only Milvus's two Go products and their tiny C++ bridge. The native
+# storage/search libraries must remain from the exact same upstream release.
+FROM milvusdb/milvus:v3.0.3@sha256:08747249b27c64f158db79a53ba008f89314ee240c731e585a7ec4fb7140731e AS upstream
+FROM golang:1.26.9-bookworm@sha256:d9c68c2c51161e12fd77e4c6320687c9cd86e1af1e3ad6e6cd63ff970641453c AS compiler
+FROM ubuntu:22.04@sha256:0a9887931b0e38af2e3487ed39e29436b0535c4f3f52e57745baaf79d1898956 AS headers
+RUN awk '$1 == "deb" && $4 == "main" { print $1, $2, $3, "main" }' /etc/apt/sources.list > /tmp/sources.list \
+    && mv /tmp/sources.list /etc/apt/sources.list \
+    && apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update \
+    && apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y --no-install-recommends \
+      ca-certificates curl g++ pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=compiler /usr/local/go /usr/local/go
+COPY --from=upstream /milvus/lib/ /milvus/lib/
+# C++ dependencies also link libaio from the upstream operating system.
+COPY --from=upstream /usr/lib/*-linux-gnu/libaio.so* /milvus/lib/
+ENV PATH=/usr/local/go/bin:$PATH GOTOOLCHAIN=go1.26.10 GOTELEMETRY=off \
+    CGO_ENABLED=1 GOMAXPROCS=2 GOFLAGS=-p=2 GOPATH=/go \
+    PKG_CONFIG_PATH=/milvus/lib/pkgconfig LD_LIBRARY_PATH=/milvus/lib \
+    LIBRARY_PATH=/milvus/lib
+ARG GOPROXY=https://proxy.golang.org,direct
+WORKDIR /src
+# v3.0.3 commit 328df0cd2f323c2d3c50cef91bfc9f2c412bcb09.
+ADD --checksum=sha256:9cef481c72a472d4a0c768b1378a570d9e3d4a17c8ee180b79c61c6b14269aba \
+    https://codeload.github.com/milvus-io/milvus/tar.gz/v3.0.3 /tmp/milvus.tar.gz
+ADD --checksum=sha256:786c5da6342cc75fc2ec565df0306c7f0a2f23ac76570cb30c80a2bf17aebaf6 \
+    https://codeload.github.com/zilliztech/milvus-common/tar.gz/45fca32 /tmp/common.tar.gz
+ADD --checksum=sha256:e66acc50596c8633865bef259d4933a027938df60b2b23707681689abfb572bf \
+    https://codeload.github.com/milvus-io/milvus-storage/tar.gz/f38765d /tmp/storage.tar.gz
+ADD --checksum=sha256:0f26a9efe4a0a63facd179ff880ef5c6ee5b52a9b4ee2e7f34d1b31d412a8d66 \
+    https://raw.githubusercontent.com/apache/arrow/apache-arrow-17.0.0/cpp/src/arrow/c/abi.h /milvus/include/arrow/c/abi.h
+ADD --checksum=sha256:7f4439d7d3f0a258851e9c6c1e9f90bdb3fa7e954c3761dadf94e4f9104ae96b \
+    https://raw.githubusercontent.com/apache/arrow/apache-arrow-17.0.0/cpp/src/arrow/c/helpers.h /milvus/include/arrow/c/helpers.h
+ADD --checksum=sha256:981210446c732d19e1de1feced64899fbef8daaf881c2bc7e2c1ac67953da970 \
+    https://raw.githubusercontent.com/confluentinc/librdkafka/v2.6.1/src/rdkafka.h /milvus/include/librdkafka/rdkafka.h
+ADD --checksum=sha256:2d4d52168b669257fbe936554af6af543fa0fa4f2cccc5a201a2c7d301dad500 \
+    https://raw.githubusercontent.com/confluentinc/librdkafka/v2.6.1/src/rdkafka_mock.h /milvus/include/librdkafka/rdkafka_mock.h
+ADD --checksum=sha256:02cd268bf1d144bc937b2c1e53c7ed80b50a7be8fef27ab2cbbe444ddce7ac72 \
+    https://raw.githubusercontent.com/facebook/rocksdb/v6.29.5/include/rocksdb/c.h /milvus/include/rocksdb/c.h
+COPY deploy/milvus/prepare-headers.sh /tmp/prepare-headers.sh
+RUN tar -xzf /tmp/milvus.tar.gz --strip-components=1 -C /src \
+    && sh /tmp/prepare-headers.sh
+
+FROM headers AS build
+COPY deploy/milvus/go.mod deploy/milvus/go.sum ./
+COPY deploy/milvus/pkg.go.mod ./pkg/go.mod
+COPY deploy/milvus/pkg.go.sum ./pkg/go.sum
+COPY deploy/milvus/client.go.mod ./client/go.mod
+COPY deploy/milvus/client.go.sum ./client/go.sum
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+COPY deploy/milvus/build.sh /tmp/build.sh
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    sh /tmp/build.sh
+
+FROM upstream
+LABEL org.opencontainers.image.source="https://github.com/milvus-io/milvus" \
+      org.opencontainers.image.revision="328df0cd2f323c2d3c50cef91bfc9f2c412bcb09" \
+      org.opencontainers.image.version="3.0.3-go1.26.10"
+COPY --from=build /out/milvus /milvus/bin/milvus
+COPY --from=build /out/libmilvus-planparser.so /out/libmilvus-planparser-cpp.so /milvus/lib/
+COPY --from=build /out/licenses/ /usr/share/licenses/milvus-rebuild/
+COPY deploy/milvus/NOTICE /usr/share/licenses/milvus-rebuild/REBUILD-NOTICE
+COPY deploy/milvus/Avro-original-LICENCE /usr/share/licenses/milvus-rebuild/Avro-original-LICENCE

@@ -1,0 +1,86 @@
+{
+  "assets": [
+    {
+      "id": "asset_422da3bce5d5523b1c1fb077ca0efb62",
+      "kind": "character",
+      "name": "林雨",
+      "aliases": [
+        "小雨"
+      ],
+      "description": "第1集在工具间从左侧桌上拿起铜钥匙，说大家叫她小雨，并说这把铜钥匙是祖父留下的。第2集换上蓝色外套后，仍握着那把铜钥匙。",
+      "sourceIds": [
+        "v6-p000003",
+        "v6-p000004",
+        "v6-p000007"
+      ]
+    },
+    {
+      "id": "asset_85d4b251fa1dad0336cd3fb178bf2edb",
+      "kind": "character",
+      "name": "另一个同名的林雨",
+      "description": "第2集走进工具间，他不是小雨。他拿起右侧桌上的另一把铜钥匙。",
+      "sourceIds": [
+        "v6-p000008"
+      ]
+    },
+    {
+      "id": "asset_21de7e00ac8ef5c0e04f8dcd08ccaac9",
+      "kind": "character",
+      "name": "祖父",
+      "description": "姓名没有说明；铜钥匙是他留下的（由林雨/小雨说出）。",
+      "sourceIds": [
+        "v6-p000004"
+      ]
+    },
+    {
+      "id": "asset_21da059499a6ba42380d01a3117f3424",
+      "kind": "location",
+      "name": "工具间",
+      "description": "第1集（日）与第2集（夜）的室内地点。内有左侧桌、右侧桌和窗帘。林雨/小雨在此从左侧桌上拿起并握着铜钥匙、换蓝色外套；另一个同名的林雨进入后从右侧桌上拿起另一把铜钥匙。",
+      "sourceIds": [
+        "v6-p000002",
+        "v6-p000003",
+        "v6-p000006",
+        "v6-p000007",
+        "v6-p000008"
+      ]
+    },
+    {
+      "id": "asset_70470412ed787474c6de52d287e00dd8",
+      "kind": "prop",
+      "name": "铜钥匙",
+      "aliases": [
+        "左侧桌上的铜钥匙",
+        "祖父留下的铜钥匙",
+        "那把铜钥匙"
+      ],
+      "description": "林雨从左侧桌上拿起；据其说这是祖父留下的；小雨换上蓝色外套后仍握着它。",
+      "sourceIds": [
+        "v6-p000003",
+        "v6-p000004",
+        "v6-p000007"
+      ]
+    },
+    {
+      "id": "asset_5caf7a970a88189436b664471f007d7d",
+      "kind": "prop",
+      "name": "另一把铜钥匙",
+      "aliases": [
+        "右侧桌上的另一把铜钥匙"
+      ],
+      "description": "第2集另一个同名的林雨从右侧桌上拿起，是与左侧桌上那把不同的钥匙。",
+      "sourceIds": [
+        "v6-p000008"
+      ]
+    },
+    {
+      "id": "asset_7ab1e6be12ec296e99adbc9058534119",
+      "kind": "prop",
+      "name": "蓝色外套",
+      "description": "小雨在第2集换上。",
+      "sourceIds": [
+        "v6-p000007"
+      ]
+    }
+  ]
+}

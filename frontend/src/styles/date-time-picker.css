@@ -1,0 +1,37 @@
+.jm-date-time-field{position:relative;min-width:0}
+.jm-date-time-validation{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;clip-path:inset(50%);overflow:hidden;pointer-events:none}
+.jm-date-time-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;height:40px;padding:0 12px;border:1px solid transparent;border-radius:8px;background:var(--jm-inset);color:var(--jm-text);font-size:13px;line-height:20px;cursor:pointer;text-align:left;font-variant-numeric:tabular-nums}
+.jm-date-time-trigger>span[data-placeholder=true]{color:var(--jm-muted)}
+.jm-date-time-trigger>svg{width:16px;height:16px;color:var(--jm-muted);flex-shrink:0}
+.jm-date-time-trigger:hover:not(:disabled){background:var(--jm-hover)}
+.jm-date-time-trigger:disabled{color:var(--jm-muted);cursor:not-allowed;opacity:.5}
+.jm-date-time-trigger[aria-invalid=true]{border-color:var(--jm-danger)}
+.jm-date-time-trigger:focus-visible,.jm-date-time-popover button:focus-visible{outline:2px solid var(--jm-brand);outline-offset:2px}
+.jm-date-time-popover{z-index:160;display:flex;flex-direction:column;width:266px;max-width:calc(100vw - 24px);max-height:var(--radix-popover-content-available-height);overflow:auto;padding:8px;border-radius:16px;border:.5px solid var(--jm-border);background:var(--jm-raised);color:var(--jm-text);box-shadow:var(--jm-shadow);transform-origin:var(--radix-popover-content-transform-origin);font-size:12px;line-height:16px}
+.jm-date-time-popover[data-state=open]{animation:jm-date-time-in 200ms cubic-bezier(.34,.69,.1,1)}
+.jm-date-time-popover[data-state=closed]{animation:jm-date-time-out 200ms cubic-bezier(.3,1.3,.3,1);pointer-events:none}
+.jm-date-time-popover .jm-calendar-head{display:flex;align-items:center;height:40px;flex-shrink:0;font-size:12px;font-weight:var(--font-weight-medium);gap:0}
+.jm-calendar-head>span{flex:1;text-align:center;white-space:nowrap}
+.jm-calendar-head>button{display:grid;place-items:center;width:28px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--jm-muted);cursor:pointer}
+.jm-calendar-head>button:hover{background:var(--jm-hover);color:var(--jm-text)}
+.jm-calendar-head svg{width:14px;height:14px}
+.jm-date-time-calendar{width:100%;border-collapse:collapse;table-layout:fixed;text-align:center}
+.jm-date-time-days{min-height:72px;overflow:auto}
+.jm-date-time-calendar th{height:24px;font-size:12px;font-weight:var(--font-weight-normal);color:var(--jm-muted)}
+.jm-date-time-calendar td{height:36px;padding:2px 0}
+.jm-date-time-calendar td>button{display:block;width:100%;height:32px;border:0;border-radius:8px;background:transparent;color:var(--jm-text);font-size:12px;line-height:16px;font-weight:var(--font-weight-medium);cursor:pointer;font-variant-numeric:tabular-nums}
+.jm-date-time-calendar td>button[data-outside=true]{color:var(--jm-muted);opacity:.45}
+.jm-date-time-calendar td>button[aria-current=date]{text-decoration:underline;text-underline-offset:4px}
+.jm-date-time-calendar td>button:hover:not(:disabled){background:var(--jm-hover)}
+.jm-date-time-calendar td>button[data-selected=true]{background:var(--jm-primary);color:var(--jm-on-primary);opacity:1}
+.jm-date-time-calendar td>button[data-selected=true]:hover:not(:disabled){background:var(--jm-primary);color:var(--jm-on-primary)}
+.jm-date-time-calendar td>button:disabled{opacity:.25;cursor:not-allowed}
+.jm-date-time-clock{display:flex;flex-shrink:0;align-items:center;justify-content:space-between;padding:4px;gap:12px}
+.jm-date-time-clock>div{display:flex;align-items:center;gap:6px}
+.jm-date-time-clock input{width:36px;height:32px;border:1px solid transparent;border-radius:8px;background:var(--jm-inset);color:var(--jm-text);font-size:12px;text-align:center;font-variant-numeric:tabular-nums;outline:none;padding:0}
+.jm-date-time-clock input:focus{border-color:var(--jm-muted)}
+.jm-date-time-footer{flex-shrink:0;background:var(--jm-raised);display:flex;justify-content:space-between;align-items:center;padding:4px;gap:12px}
+.jm-date-time-error{margin:4px 4px 0;color:var(--jm-danger);font-size:12px;line-height:20px}
+@keyframes jm-date-time-in{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+@keyframes jm-date-time-out{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(.5)}}
+@media(prefers-reduced-motion:reduce){.jm-date-time-popover[data-state]{animation:none}}

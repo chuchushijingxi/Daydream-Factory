@@ -1,0 +1,9 @@
+# Redis 8 provides an AGPLv3 option; keep the upstream server/CLI and entrypoint.
+FROM redis:8-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
+LABEL org.opencontainers.image.licenses="AGPL-3.0-only"
+# The application uses core RESP/Lua/AOF only. Remove unused optional module
+# binaries so the upstream entrypoint does not automatically load extensions.
+RUN apk upgrade --no-cache \
+    && rm /usr/local/lib/redis/modules/*.so \
+    && test -z "$(ls -A /usr/local/lib/redis/modules)"
+COPY deploy/redis/ /usr/share/licenses/daydream-redis/

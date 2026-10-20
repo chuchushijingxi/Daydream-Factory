@@ -1,0 +1,388 @@
+/* Xiaoyunque's measured upload panel. Scope stays inside the upload component. */
+.xy-project-choices-dialog {
+  --xy-pill-bg: #f2f2f2;
+  width: min(660px, calc(100vw - 32px));
+  max-width: 660px;
+  padding: 24px;
+  gap: 16px;
+}
+.dark .xy-project-choices-dialog {
+  --xy-pill-bg: rgba(255, 255, 255, 0.04);
+}
+.xy-project-choices-dialog .xy-creation-settings {
+  position: static;
+  translate: none;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
+}
+.xy-project-choices-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.xy-upload-panel {
+  --xy-surface: #f6f6f6;
+  --xy-tabs: #efefef;
+  --xy-text: #111;
+  --xy-muted: #999;
+  --xy-border: #e1e1e1;
+  --xy-pill: #fff;
+  --xy-disabled: #bfbfbf;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 920px;
+  margin: 32px auto 0;
+  border-radius: 28px;
+  overflow: hidden;
+  background: var(--xy-surface);
+  color: var(--xy-text);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 17px;
+}
+.dark .xy-upload-panel {
+  --xy-surface: #1c1c1c;
+  --xy-tabs: #212121;
+  --xy-text: #fff;
+  --xy-muted: rgba(255, 255, 255, 0.5);
+  --xy-border: rgba(255, 255, 255, 0.08);
+  --xy-pill: rgba(255, 255, 255, 0.04);
+  --xy-disabled: rgba(255, 255, 255, 0.2);
+}
+.xy-upload-tabs {
+  height: 44px;
+  background: var(--xy-tabs);
+  border-radius: 28px 28px 0 0;
+  overflow: hidden;
+}
+.xy-upload-tab {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 25%;
+  min-width: 180px;
+  height: 44px;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 17px;
+  font-weight: var(--font-weight-medium);
+}
+.xy-upload-tab::before {
+  content: '';
+  position: absolute;
+  inset: 0 -41px;
+  background: var(--xy-surface);
+  mask: url('../../public/images/xiaoyunque-upload/tab-curve.svg') 0 0/100% 100% no-repeat;
+  z-index: -1;
+}
+.xy-upload-tab img {
+  width: 16px;
+  height: 16px;
+}
+.dark .xy-upload-tab img,
+.dark .xy-upload-setting img {
+  filter: brightness(0) invert(1);
+}
+.xy-upload-body {
+  padding: 16px 12px 12px;
+}
+.xy-upload-drop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 166px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+}
+.xy-upload-border {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  color: var(--xy-border);
+}
+.xy-upload-drop[data-dragging='true'] {
+  background: var(--jm-hover);
+}
+.xy-upload-drop[data-dragging='true'] .xy-upload-border {
+  color: var(--xy-text);
+}
+.xy-upload-hit {
+  position: absolute;
+  inset: 1px;
+  z-index: 0;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+}
+.xy-upload-hit:disabled {
+  cursor: default;
+}
+.xy-upload-hit:focus-visible {
+  outline: 1px solid var(--xy-text);
+  outline-offset: -1px;
+}
+.xy-upload-empty {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  pointer-events: none;
+}
+.xy-upload-art {
+  position: relative;
+  display: block;
+  width: 62px;
+  height: 62px;
+}
+.xy-script-page {
+  position: absolute;
+  display: block;
+  width: 30.852px;
+  height: 41.14px;
+  max-width: none;
+  border-radius: 2.496px;
+  transform-origin: 0 0;
+}
+.xy-script-page--one {
+  left: 1px;
+  top: 14.689px;
+  transform: rotate(-5deg);
+}
+.xy-script-page--two {
+  left: 24.602px;
+  top: 10.299px;
+  transform: rotate(6deg);
+}
+.xy-upload-plus {
+  position: absolute;
+  right: -3px;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #e2e2e2;
+  color: #111;
+}
+.dark .xy-upload-plus {
+  background: #3a3a3a;
+  color: #fff;
+}
+.xy-upload-plus svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2;
+}
+.xy-upload-commands {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: var(--font-weight-medium);
+}
+.xy-upload-commands button {
+  height: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.xy-upload-commands button:disabled {
+  cursor: default;
+}
+.xy-upload-separator {
+  height: 10px;
+  width: 1px;
+  background: #c8c8c8;
+}
+.dark .xy-upload-separator {
+  background: #555;
+}
+.xy-upload-format {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--xy-muted);
+}
+.xy-upload-format .jm-tooltip-anchor {
+  pointer-events: auto;
+  line-height: 0;
+}
+.xy-upload-format svg {
+  width: 12px;
+  height: 12px;
+}
+.xy-upload-footer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 32px;
+  margin-top: 16px;
+}
+.xy-upload-settings {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.xy-upload-setting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-width: 80px;
+  padding: 0 8px;
+  gap: 6px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--xy-pill);
+  color: var(--xy-text);
+  font-size: 12px;
+  line-height: 17px;
+  white-space: nowrap;
+}
+.xy-upload-setting--ratio {
+  height: 32px;
+  min-width: 66px;
+  padding: 0 12px;
+  gap: 4px;
+}
+.xy-upload-setting img {
+  width: 14px;
+  height: 14px;
+}
+.xy-upload-setting .xy-upload-chevron {
+  width: 12px;
+  height: 12px;
+}
+.xy-upload-save {
+  --jm-action: var(--credit-accent);
+  --jm-on-action: #191919;
+  height: 32px;
+  min-width: 78px;
+  border-radius: 999px;
+  padding: 0 14px;
+  font-size: 12px;
+  line-height: 17px;
+  font-weight: var(--font-weight-medium);
+}
+.xy-upload-save:not(:disabled):hover {
+  background: color-mix(in srgb, var(--credit-accent) 90%, #191919);
+  color: #191919;
+}
+.xy-upload-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.xy-upload-price svg { width: 14px; height: 14px; }
+.xy-upload-price .credit-star path { fill: currentColor; }
+.xy-upload-save:disabled {
+  background: var(--xy-tabs);
+  color: var(--xy-disabled);
+}
+.dark .xy-upload-save:disabled {
+  background: var(--xy-pill);
+}
+.xy-upload-file {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: min(480px, 100%);
+  padding: 16px;
+  color: var(--xy-text);
+}
+.xy-upload-file > svg {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  stroke-width: 1.25;
+  color: var(--xy-muted);
+}
+.xy-upload-file > div {
+  flex: 1;
+  min-width: 0;
+}
+.xy-upload-file strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: var(--font-weight-medium);
+}
+.xy-upload-file p {
+  margin-top: 4px;
+  color: var(--xy-muted);
+  font-size: 12px;
+  line-height: 20px;
+}
+.xy-paste-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-width: 560px;
+  padding: 24px;
+  gap: 16px;
+}
+.xy-paste-header {
+  padding-right: 32px;
+}
+.xy-paste-text {
+  min-height: 240px;
+  max-height: 50dvh;
+}
+.xy-paste-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  .xy-upload-tab {
+    width: 50%;
+    min-width: 156px;
+  }
+  .xy-upload-body {
+    padding: 12px;
+  }
+  .xy-upload-drop {
+    height: 190px;
+  }
+  .xy-upload-format {
+    max-width: 240px;
+    text-align: center;
+    line-height: 18px;
+  }
+  .xy-upload-footer {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .xy-upload-settings {
+    position: static;
+    translate: 0;
+  }
+}

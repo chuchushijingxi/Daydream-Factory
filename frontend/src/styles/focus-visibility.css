@@ -1,0 +1,10 @@
+/* 指针流程恢复焦点时覆盖组件的高优先级描边；键盘与文本编辑反馈保留。
+   只清除焦点 ring，不能连同卡片原有的悬浮阴影一起清空。 */
+:root[data-input-modality=pointer] :is(button,a,summary,[role=button],[role=tab],[role=menuitem],[role=menuitemcheckbox],[role=menuitemradio],[role=radio],[role=checkbox],[role=switch],[role=option],[role=combobox]):not(input,textarea,[contenteditable]:not([contenteditable=false])):focus {
+  outline: none !important;
+}
+:root[data-input-modality=pointer] [class*="focus-visible:ring-"]:not(input,textarea,[contenteditable]:not([contenteditable=false])):focus {
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  --tw-inset-ring-shadow: 0 0 #0000 !important;
+}

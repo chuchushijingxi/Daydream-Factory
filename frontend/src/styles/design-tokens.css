@@ -1,0 +1,354 @@
+/**
+ * Dramora UI 设计令牌（浅色 / 深色）
+ * 新页面与改版 UI 优先使用本文件的 CSS 变量（--dm-*）或配套工具类（dm-*）。
+ */
+
+:root {
+  /* 品牌色 */
+  --dm-primary: #0030ff;
+  --dm-accent-purple: #a600ff;
+  --dm-accent-red: #fd4b4b;
+  --dm-accent-orange: #ff981e;
+  --dm-accent-green: #00c907;
+
+  /* 文字层级（基于 #0A1B31） */
+  --dm-text-1: #0a1b31;
+  --dm-text-2: rgb(10 27 49 / 72%);
+  --dm-text-3: rgb(10 27 49 / 64%);
+  --dm-text-4: rgb(10 27 49 / 48%);
+  --dm-text-5: rgb(10 27 49 / 24%);
+
+  /* 页面与表面 */
+  --dm-bg-page: #f7f9ff;
+  --dm-bg-elevated: #ffffff;
+  --dm-bg-muted: #f5f6f7;
+  --dm-border-subtle: rgb(10 27 49 / 12%);
+  --dm-on-primary: #fbfbfb;
+
+  /* 主按钮渐变 */
+  --dm-gradient-primary: linear-gradient(105.42deg, #0030ff 7.35%, #a600ff 100%);
+  --dm-gradient-primary-hover: linear-gradient(105.42deg, #0028e0 7.35%, #9400e8 100%);
+
+  /* 字号 / 行高 */
+  --dm-type-display-xl-size: 28px;
+  --dm-type-display-xl-leading: 40px;
+  --dm-type-display-lg-size: 24px;
+  --dm-type-display-lg-leading: 36px;
+  --dm-type-h1-size: 18px;
+  --dm-type-h1-leading: 26px;
+  --dm-type-h2-size: 16px;
+  --dm-type-h2-leading: 24px;
+  --dm-type-body-size: 14px;
+  --dm-type-body-leading: 20px;
+  --dm-type-label-1-size: 12px;
+  --dm-type-label-1-leading: 18px;
+  --dm-type-label-2-size: 10px;
+  --dm-type-label-2-leading: 14px;
+
+  /* 按钮尺寸档 */
+  --dm-btn-h-lg: 40px;
+  --dm-btn-radius-lg: 8px;
+  --dm-btn-h-md: 32px;
+  --dm-btn-radius-md: 8px;
+  --dm-btn-h-sm: 28px;
+  --dm-btn-radius-sm: 4px;
+  --dm-btn-h-xs: 24px;
+  --dm-btn-radius-xs: 4px;
+
+  /** 按钮投影：主渐变按钮、辅助按钮 */
+  --dm-btn-shadow-primary-gradient: 0 4px 8px 1px #0a1b3129;
+  --dm-btn-shadow-secondary: 0 4px 8px 1px #0000001f;
+
+  /* 文本框（单行/多行共用令牌） */
+  --dm-input-h: 40px;
+  --dm-input-radius: 8px;
+  --dm-input-bg: #ffffff;
+  --dm-input-border: #0a1b311f;
+  --dm-input-fg: #0a1b31;
+  --dm-input-placeholder: #0a1b313d;
+  --dm-input-focus-border: #0030ff;
+  --dm-input-readonly-bg: #ecedefa3;
+  --dm-input-error-border: var(--dm-accent-red);
+  --dm-input-px: 12px;
+  --dm-input-py: 10px;
+}
+
+.dark {
+  /* 深色：表面与文字（与浅色层级对应，保证对比度） */
+  --dm-text-1: #f4f7ff;
+  --dm-text-2: rgb(244 247 255 / 88%);
+  --dm-text-3: rgb(244 247 255 / 72%);
+  --dm-text-4: rgb(244 247 255 / 56%);
+  --dm-text-5: rgb(244 247 255 / 36%);
+
+  --dm-bg-page: #0b1020;
+  --dm-bg-elevated: #141b2d;
+  --dm-bg-muted: #1c2438;
+  --dm-border-subtle: rgb(244 247 255 / 14%);
+
+  /* 品牌色在深色下略提亮，便于辨识 */
+  --dm-primary: #4d7aff;
+  --dm-accent-purple: #c266ff;
+  --dm-accent-red: #ff6b6b;
+  --dm-accent-orange: #ffb04a;
+  --dm-accent-green: #2ee04a;
+
+  --dm-on-primary: #fbfbfb;
+  --dm-gradient-primary: linear-gradient(105.42deg, #4d7aff 7.35%, #a600ff 100%);
+  --dm-gradient-primary-hover: linear-gradient(105.42deg, #3d6aef 7.35%, #9400e8 100%);
+
+  --dm-input-bg: var(--dm-bg-elevated);
+  --dm-input-border: rgb(244 247 255 / 14%);
+  --dm-input-fg: var(--dm-text-1);
+  --dm-input-placeholder: rgb(244 247 255 / 36%);
+  --dm-input-focus-border: var(--dm-primary);
+  --dm-input-readonly-bg: rgb(255 255 255 / 8%);
+  --dm-input-error-border: var(--dm-accent-red);
+}
+
+@theme inline {
+  --color-dm-primary: var(--dm-primary);
+  --color-dm-accent-purple: var(--dm-accent-purple);
+  --color-dm-accent-red: var(--dm-accent-red);
+  --color-dm-accent-orange: var(--dm-accent-orange);
+  --color-dm-accent-green: var(--dm-accent-green);
+  --color-dm-text-1: var(--dm-text-1);
+  --color-dm-text-2: var(--dm-text-2);
+  --color-dm-text-3: var(--dm-text-3);
+  --color-dm-text-4: var(--dm-text-4);
+  --color-dm-text-5: var(--dm-text-5);
+  --color-dm-bg-page: var(--dm-bg-page);
+  --color-dm-bg-elevated: var(--dm-bg-elevated);
+  --color-dm-bg-muted: var(--dm-bg-muted);
+  --color-dm-border-subtle: var(--dm-border-subtle);
+  --color-dm-on-primary: var(--dm-on-primary);
+  --color-dm-input-bg: var(--dm-input-bg);
+  --color-dm-input-border: var(--dm-input-border);
+  --color-dm-input-fg: var(--dm-input-fg);
+  --color-dm-input-placeholder: var(--dm-input-placeholder);
+  --color-dm-input-focus-border: var(--dm-input-focus-border);
+  --color-dm-input-readonly-bg: var(--dm-input-readonly-bg);
+  --color-dm-input-error-border: var(--dm-input-error-border);
+}
+
+@layer utilities {
+  /* —— 文字色 —— */
+  .text-dm-1 {
+    color: var(--dm-text-1);
+  }
+  .text-dm-2 {
+    color: var(--dm-text-2);
+  }
+  .text-dm-3 {
+    color: var(--dm-text-3);
+  }
+  .text-dm-4 {
+    color: var(--dm-text-4);
+  }
+  .text-dm-5 {
+    color: var(--dm-text-5);
+  }
+
+  /* —— 背景 —— */
+  .bg-dm-page {
+    background-color: var(--dm-bg-page);
+  }
+  .bg-dm-elevated {
+    background-color: var(--dm-bg-elevated);
+  }
+  .bg-dm-muted {
+    background-color: var(--dm-bg-muted);
+  }
+
+  /* —— 排版（规范字号/行高） —— */
+  .dm-type-display-xl {
+    font-size: var(--dm-type-display-xl-size);
+    line-height: var(--dm-type-display-xl-leading);
+  }
+  .dm-type-display-lg {
+    font-size: var(--dm-type-display-lg-size);
+    line-height: var(--dm-type-display-lg-leading);
+  }
+  .dm-type-h1 {
+    font-size: var(--dm-type-h1-size);
+    line-height: var(--dm-type-h1-leading);
+  }
+  .dm-type-h2 {
+    font-size: var(--dm-type-h2-size);
+    line-height: var(--dm-type-h2-leading);
+  }
+  .dm-type-body {
+    font-size: var(--dm-type-body-size);
+    line-height: var(--dm-type-body-leading);
+  }
+  .dm-type-label-1 {
+    font-size: var(--dm-type-label-1-size);
+    line-height: var(--dm-type-label-1-leading);
+  }
+  .dm-type-label-2 {
+    font-size: var(--dm-type-label-2-size);
+    line-height: var(--dm-type-label-2-leading);
+  }
+
+  /* —— 按钮尺寸档（高度 + 圆角） —— */
+  .dm-btn-h-lg {
+    min-height: var(--dm-btn-h-lg);
+    border-radius: var(--dm-btn-radius-lg);
+    padding-inline: 1rem;
+  }
+  .dm-btn-h-md {
+    min-height: var(--dm-btn-h-md);
+    border-radius: var(--dm-btn-radius-md);
+    padding-inline: 0.875rem;
+  }
+  .dm-btn-h-sm {
+    min-height: var(--dm-btn-h-sm);
+    border-radius: var(--dm-btn-radius-sm);
+    padding-inline: 0.75rem;
+  }
+  .dm-btn-h-xs {
+    min-height: var(--dm-btn-h-xs);
+    border-radius: var(--dm-btn-radius-xs);
+    padding-inline: 0.625rem;
+  }
+
+  /* —— 按钮类型（配合 dm-btn-h-* 使用） —— */
+  .dm-btn-primary-gradient {
+    background-image: var(--dm-gradient-primary);
+    font-size: var(--dm-type-body-size);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--dm-type-body-leading);
+    color: var(--dm-on-primary);
+    border: none;
+    box-shadow: var(--dm-btn-shadow-primary-gradient);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    transition: opacity 0.15s ease;
+  }
+  .dm-btn-primary-gradient:hover:not(:disabled) {
+    opacity: 0.8;
+  }
+  .dm-btn-primary-gradient:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /**
+   * 主要按钮（纯色）：背景为主色，字色为规范反色 #FBFBFB（与渐变主按钮一致，保证对比度）。
+   * 若设计稿要求字用「文字色1」，仅适用于浅底场景，请另用 dm-btn-secondary 变体。
+   */
+  .dm-btn-primary-solid {
+    background-color: var(--dm-primary);
+    font-size: var(--dm-type-body-size);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--dm-type-body-leading);
+    color: var(--dm-on-primary);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    transition: opacity 0.15s ease;
+  }
+  .dm-btn-primary-solid:hover:not(:disabled) {
+    opacity: 0.8;
+  }
+  .dm-btn-primary-solid:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .dm-btn-secondary {
+    background-color: var(--dm-bg-muted);
+    border: 1px solid var(--dm-border-subtle);
+    box-shadow: var(--dm-btn-shadow-secondary);
+    font-size: var(--dm-type-body-size);
+    font-weight: var(--font-weight-normal);
+    line-height: var(--dm-type-body-leading);
+    color: var(--dm-text-1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    transition: opacity 0.15s ease;
+  }
+  .dm-btn-secondary:hover:not(:disabled) {
+    opacity: 0.8;
+  }
+  .dm-btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* —— 文本框（规范默认样式；用于 input / textarea） —— */
+  .dm-input {
+    box-sizing: border-box;
+    width: 100%;
+    border-radius: var(--dm-input-radius);
+    border: 1px solid var(--dm-input-border);
+    background-color: var(--dm-input-bg);
+    padding-inline: var(--dm-input-px);
+    padding-block: var(--dm-input-py);
+    font-size: var(--dm-type-body-size);
+    font-weight: var(--font-weight-normal);
+    line-height: var(--dm-type-body-leading);
+    color: var(--dm-input-fg);
+    outline: none;
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease;
+  }
+
+  .dm-input::placeholder {
+    font-size: var(--dm-type-body-size);
+    font-weight: var(--font-weight-normal);
+    color: var(--dm-input-placeholder);
+    opacity: 1;
+  }
+
+  .dm-input:focus-visible {
+    border-color: var(--dm-input-focus-border);
+  }
+
+  .dm-input:read-only {
+    background-color: var(--dm-input-readonly-bg);
+  }
+
+  .dm-input:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+  }
+
+  /** 错误：边框为辅色-红；可配合 aria-invalid="true" 或 .dm-input--error */
+  .dm-input[aria-invalid='true'],
+  .dm-input.dm-input--error {
+    border-color: var(--dm-input-error-border);
+  }
+
+  .dm-input[aria-invalid='true']:focus-visible,
+  .dm-input.dm-input--error:focus-visible {
+    border-color: var(--dm-input-error-border);
+  }
+
+  input.dm-input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']) {
+    height: var(--dm-input-h);
+    padding-block: 0;
+    line-height: var(--dm-input-h);
+  }
+
+  textarea.dm-input {
+    min-height: var(--dm-input-h);
+    height: auto;
+    line-height: var(--dm-type-body-leading);
+    padding-block: var(--dm-input-py);
+    resize: vertical;
+  }
+
+  select.dm-input {
+    height: var(--dm-input-h);
+    padding-block: 0;
+    line-height: var(--dm-input-h);
+  }
+}

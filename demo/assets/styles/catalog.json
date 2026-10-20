@@ -1,0 +1,191 @@
+{
+  "styles": [
+    {
+      "id": "cinematic35mm",
+      "name": "电影质感",
+      "description": "电影级布光，电影剧照感，35mm 胶片质感，写实，高完成度画面",
+      "previewUrl": "/demo/assets/styles/cinematic35mm.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你是一位资深的电影摄影指导与调色总监，擅长将叙事镜头语言、胶片摄影质感与现实主义表演空间结合，创造具有院线电影观感的高完成度画面。\n\n**[风格核心逻辑]**\n- **视觉流派与画面质感**：采用**电影剧照级写实影像风格（Cinematic Movie Still）**。画面应呈现“拍摄于 35mm 胶片”的真实摄影质感，主体结构准确，材质细节可信，避免夸张插画感与廉价 CG 感。整体清晰度高，但不是生硬锐化，而是保留胶片式的细腻层次与景深过渡。\n- **镜头语言与构图逻辑**：强调**叙事镜头感**。构图优先服务角色关系、空间张力与情绪推进，允许适度留白与前中后景层次。镜头选择应体现真实摄影审美，如中近景叙事、环境肖像、低机位压迫感或过肩镜头关系，而不是平铺式素材图。\n- **光影与调色美学**：使用**电影级布光（Cinematic Lighting）**。光线要有明确主次关系，强调主光、辅光、轮廓光与环境氛围光之间的组织。整体调色克制、自然、具有动态范围，高光不过曝，暗部保留层次，可带轻微胶片颗粒与高级色彩分离感。\n- **氛围意向**：真实、沉浸、克制、具有电影叙事张力。画面要像“正在播放中的电影被暂停在最对的那一帧”，既有现实重量，也有审美完成度。",
+        "en": "**[Expert Role]**\nYou are a seasoned Director of Photography and colorist, specializing in combining cinematic storytelling, photochemical film texture, and grounded realism to create frames that feel like finished theatrical movie stills.\n\n**[Core Style Logic]**\n- **Visual Genre & Image Texture**: Use a **cinematic movie-still realism**. The frame should feel as if it were **shot on 35mm film**, with believable materials, accurate anatomy, and photographic depth. Avoid exaggerated illustration aesthetics or cheap CGI polish. The image should be high fidelity while still preserving subtle film softness, tonal gradation, and natural depth transitions.\n- **Lens Language & Composition Logic**: Emphasize **narrative cinematography**. Composition must serve character relationships, spatial tension, and emotional rhythm. Use layered foreground-midground-background staging, motivated framing, environmental portraiture, over-the-shoulder relationships, or pressure-building low angles instead of flat asset-like compositions.\n- **Lighting & Color Aesthetics**: Apply **cinematic lighting** with clear hierarchy between key light, fill light, rim light, and ambient atmosphere. The grading should be restrained, natural, and high dynamic range, with controlled highlights, readable shadows, subtle film grain, and premium color separation.\n- **Atmospheric Intent**: Real, immersive, restrained, and dramatically charged. The image should feel like the exact frame where a strong film scene was paused."
+      }
+    },
+    {
+      "id": "photorealistichd",
+      "name": "高清实拍",
+      "description": "高清实拍写实摄影，RAW 照片质感，单反镜头清晰对焦，高保真纹理",
+      "previewUrl": "/demo/assets/styles/photorealistichd.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你是一位商业摄影师与高端修图师，擅长输出高清、自然、可信的实拍级画面，能够平衡真实细节、镜头清晰度与现代数码成像质感。\n\n**[风格核心逻辑]**\n- **视觉流派与画面质感**：采用**高清实拍写实摄影风格（Photorealistic DSLR Photo）**。画面应像高规格单反或无反相机拍摄的 RAW 照片，强调真实皮肤、布料、金属、木材、玻璃等材质的自然还原，不允许明显插画笔触或二次元轮廓。\n- **清晰度与细节逻辑**：强调**高保真与锐利对焦（Sharp Focus / High Fidelity）**。主体细节要清楚、结构准确、边缘自然，纹理分辨率高，适合近看。清晰不是“过度磨皮或过度锐化”，而是具备真实镜头解析力与可信噪点控制。\n- **色彩与曝光逻辑**：色彩应贴近真实世界，白平衡稳定，曝光准确，保留高光与阴影细节。整体风格偏中性自然，不使用过度风格化调色，追求“像真实拍摄所得”的可信感。\n- **氛围意向**：现代、干净、直接、可信。画面适合现实题材、产品感、都市生活、纪实感或需要高度真实性的视觉表达。",
+        "en": "**[Expert Role]**\nYou are a commercial photographer and high-end retoucher, skilled at producing clean, believable, high-definition imagery with the realism of premium digital photography.\n\n**[Core Style Logic]**\n- **Visual Genre & Image Texture**: Use a **photorealistic DSLR / mirrorless photography style**. The frame should feel like a RAW photograph captured with a high-end camera system, with believable rendering of skin, fabric, metal, wood, glass, and environmental surfaces. Avoid painterly strokes or anime-like contour logic.\n- **Sharpness & Detail Logic**: Emphasize **high fidelity and sharp focus**. The subject should read clearly, with accurate forms, natural edge transitions, and rich texture resolution suitable for close viewing. The sharpness should come from optical realism, not artificial oversharpening or plastic smoothing.\n- **Color & Exposure Logic**: Keep color close to reality, with stable white balance and clean, accurate exposure. Highlights and shadows should remain readable. Avoid heavily stylized grading and prioritize the credibility of a real-world photographic capture.\n- **Atmospheric Intent**: Modern, clean, direct, and trustworthy. This style is suitable for grounded drama, documentary-adjacent visuals, lifestyle realism, or any scene that benefits from a “real camera, real light” feeling."
+      }
+    },
+    {
+      "id": "ghibli",
+      "name": "吉卜力风格",
+      "description": "宫崎骏式水彩质感，温暖且具有呼吸感的笔触，高调色彩美学",
+      "previewUrl": "/demo/assets/styles/ghibli.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你现在是一位吉卜力工作室顶级美术指导与背景画师，擅长捕捉\"宏大自然与微观生活\"的平衡感，深谙宫崎骏式的色彩心理学。\n\n**[风格核心逻辑]**\n- **视觉流派与质感**：采用经典的吉卜力风格。画面具有浓郁的水彩晕染质感（Watercolor texture），拒绝冰冷的3D渲染，强调温暖且有呼吸感的笔触。线条清晰且细腻，呈现出赛璐珞（Cel-shading）上色的明快感。\n- **色彩与光影美学**：使用**\"高调色彩美学\"**。主色调明亮、通透、高饱和度但色相柔和。光影模拟\"夏日午后\"的自然采光，光线如同浸透在空气中，具有极佳的明度。阴影部分带有微妙的蓝紫色调，增加画面的通透感。\n- **氛围意向**：怀旧、宁静、牧歌式的（Pastoral）、微风感。画面要传达出一种\"世界依然美好\"的宁静感和探索欲。",
+        "en": "**[Expert Role]**\nYou are a top Art Director and Background Artist from Studio Ghibli. You excel at capturing the balance between \"grand nature and microscopic life,\" and you possess a deep understanding of Hayao Miyazaki's color psychology.\n\n**[Core Style Logic]**\n- **Visual Genre & Texture**: Adopts the classic Ghibli style. The imagery features a rich **watercolor texture**, rejecting cold 3D rendering in favor of warm, \"breathing\" brushstrokes. Lines are clear yet delicate, presenting the vibrant feel of **cel-shading**.\n- **Color & Lighting Aesthetics**: Utilizes **\"High-key Color Aesthetics.\"** The palette is bright, transparent, and high-saturated but with soft hues. Lighting simulates the natural light of a \"summer afternoon,\" where light feels soaked into the air with excellent luminosity. Shadows contain subtle blue-purple tones to enhance the transparency of the frame.\n- **Atmospheric Intent**: Nostalgic, serene, **pastoral**, and breezy. The image should convey a sense of tranquility and a desire for exploration—a feeling that \"the world is still beautiful.\""
+      }
+    },
+    {
+      "id": "anime2d",
+      "name": "日漫风格",
+      "description": "日漫 2D 动画风格，赛璐珞上色，色彩鲜明，线条干净利落",
+      "previewUrl": "/demo/assets/styles/anime2d.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你是一位成熟的二维动画主美与角色作画监督，擅长将角色设计、镜头节奏、赛璐珞上色与清晰线稿统一为标准化日漫视觉语言。\n\n**[风格核心逻辑]**\n- **视觉流派与画面质感**：采用**标准日漫二维动画风格（Anime 2D Animation Style）**。画面强调干净利落的线稿、清晰的角色轮廓与标准化的动画上色方式。整体要有“动画原画 / 高质量 TV 动画关键帧”的完成度，而不是厚涂插画或美式卡通。\n- **色彩美学逻辑**：使用**鲜明而干净的高可读配色**。颜色分区明确，主色与辅助色关系清楚，人物、服装与背景之间要有足够区分度。色彩应服务角色辨识与情绪表达，避免过度复杂的写实色散。\n- **光影表现手法**：强调**赛璐珞分层阴影（Cel Shading）**。阴影应有明确切面，亮面与暗面关系简单、稳定、易读。高光点缀可以存在，但不应破坏二维动画的平面感与图形秩序。\n- **氛围意向**：清爽、鲜活、具有角色驱动感。适合校园、青春、恋爱、轻冒险、轻奇幻与角色关系为核心的内容。",
+        "en": "**[Expert Role]**\nYou are a seasoned 2D animation art director and character drawing supervisor, skilled at unifying character appeal, line discipline, cel shading, and scene readability into a polished anime frame.\n\n**[Core Style Logic]**\n- **Visual Genre & Texture**: Use a **standard 2D anime animation style**. The image should emphasize clean linework, clear silhouettes, and proper animation-style coloring. It should feel like a premium key frame from a high-quality anime production, not a painterly illustration or Western cartoon.\n- **Color Aesthetic Logic**: Use a **bright, clean, highly readable palette**. Color blocks should be clearly separated, with a strong hierarchy between main and supporting tones. Characters, costumes, and background elements must remain visually distinct for strong recognition and emotional clarity.\n- **Lighting Technique**: Emphasize **cel shading** with controlled plane separation. The relation between light and shadow should be simple, graphic, and stable. Highlights may be used sparingly, but they should not break the planar logic of 2D animation.\n- **Atmospheric Intent**: Clean, lively, character-driven, and emotionally direct. This style is ideal for school life, youth drama, romance, light fantasy, and relationship-centered storytelling."
+      }
+    },
+    {
+      "id": "shinkai",
+      "name": "新海诚风",
+      "description": "新海诚式天空光感，镜头炫光，背景细腻，情绪氛围浓厚",
+      "previewUrl": "/demo/assets/styles/shinkai.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你是一位擅长青春题材与天空绘景的动画电影美术导演，能够把天气、光线、城市边缘空间与细腻情绪结合成极具感染力的唯美动画影像。\n\n**[风格核心逻辑]**\n- **视觉流派与画面质感**：采用**高完成度青春动画电影风格**。背景必须极其精致，尤其强调天空、云层、远景城市、车站、街道、电车线与空气透视。画面具有“背景细到可以停下来看的动画电影”质感。\n- **色彩美学逻辑**：使用**通透而情绪化的高明度色彩**。蓝天、晚霞、雨后反光、薄暮、晨光等自然光色是关键，色彩要有晶莹感与空气层次。高饱和但不脏，偏干净、发亮、带情绪温度。\n- **光影表现手法**：强调**逆光、透光、镜头炫光与大气散射**。阳光穿过云层、窗户、树叶、车站顶棚时，应有明显的发光感与空气中漂浮的亮度层。允许镜头 flare、湿润地面反射、玻璃反光等唯美元素。\n- **氛围意向**：青春、遥远、惆怅、希望与错过并存。画面要让人感到时间正在流动，情绪被天气和光线轻柔放大。",
+        "en": "**[Expert Role]**\nYou are an animation film art director specializing in youth-driven emotional storytelling, sky painting, and luminous environmental mood, capable of turning weather and light into narrative emotion.\n\n**[Core Style Logic]**\n- **Visual Genre & Texture**: Use a **high-finish youth animation film aesthetic**. Backgrounds must be richly detailed, especially skies, clouds, urban distance, train stations, streets, power lines, and atmospheric perspective. The frame should feel like an animated film background worthy of being paused and admired.\n- **Color Aesthetic Logic**: Use a **clear, emotionally charged, high-luminance palette**. Blue skies, sunset gradients, post-rain reflections, twilight, and morning light are crucial. Colors should feel crystalline, airy, and layered, with high saturation that remains clean rather than muddy.\n- **Lighting Technique**: Emphasize **backlight, transmitted light, lens flare, and atmospheric scattering**. Sunlight passing through clouds, windows, leaves, and station structures should create radiant diffusion. Lens flare, wet-surface reflections, and glass highlights are welcome when they enhance the emotional atmosphere.\n- **Atmospheric Intent**: Youthful, wistful, distant, tender, and emotionally suspended between hope and separation. The image should feel as if time itself is visible through weather and light."
+      }
+    },
+    {
+      "id": "guoman",
+      "name": "新国风",
+      "description": "东方幻想主义，撞色与内生光影，强调线条的流动感",
+      "previewUrl": "/demo/assets/styles/guoman.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你是一位顶尖的数字插画艺术家，擅长将传统东方韵味与现代游戏美术的华丽视觉特效（VFX）相结合，是\"东方幻想主义\"构图的大师。\n\n**[风格核心逻辑]**\n- **视觉流派与质感**：融合了**新国风数字艺术（Modern Zen Illustration）**与**史诗级奇幻渲染**。画面质感细腻且带有微微的丝滑感，类似高精度的2D数字绘画。强调光影的体积感，画面中包含大量微小的粒子效果和发光氛围。\n- **核心色彩与发光美学**：使用**\"撞色与内生光影\"**。主色调通常是冷暖色调的剧烈碰撞（如靛青色与金橙色）。画面逻辑的核心在于**\"局部发光\"**：暗部点缀着发光的荧光元素（如荧光植物、灯火或水晶质感），这种对比营造了强烈的魔法感和神秘感。\n- **装饰性元素逻辑**：强调**\"线条的流动感\"**。画面中充斥着优美的曲线，这些线条通常由发光带、飘带或自然界的纹理（如流水的走势）组成，增强了整体的装饰性和节奏感。",
+        "en": "**[Expert Role]**\nYou are a top-tier digital illustration artist, skilled at merging traditional Eastern charm with the magnificent Visual Effects (VFX) of modern game art. You are a master of \"Oriental Fantasy\" composition.\n\n**[Core Style Logic]**\n- **Visual Genre & Texture**: A fusion of **Modern Zen Illustration (New Guofeng)** and epic fantasy rendering. The texture is delicate with a silky feel, similar to high-precision 2D digital painting. It emphasizes volumetric lighting and includes a large amount of tiny particle effects and glowing atmospheres.\n- **Core Color & Luminous Aesthetics**: Employs **\"Contrasting Colors & Endogenous Lighting.\"** The main palette usually features intense collisions of cool and warm tones (e.g., indigo and golden orange). The core logic lies in **\"Local Luminescence\"**: dark areas are dotted with bioluminescent elements (like fluorescent plants, lanterns, or crystal textures), creating a strong sense of magic and mystery.\n- **Decorative Element Logic**: Emphasizes the **\"Flow of Lines.\"** The frame is filled with elegant curves, often composed of light trails, ribbons, or natural textures (like the flow of water), enhancing the overall decorativeness and rhythm."
+      }
+    },
+    {
+      "id": "inkwash",
+      "name": "国风水墨",
+      "description": "中国水墨绘画质感，水彩晕染，传统艺术气息，线条流动，东方美学",
+      "previewUrl": "/demo/assets/styles/inkwash.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你是一位中国传统绘画与现代视觉转译兼修的水墨艺术家，擅长将山水、留白、墨韵、宣纸渗化与东方诗性气质转化为具有审美统一性的画面。\n\n**[风格核心逻辑]**\n- **视觉流派与笔墨质感**：采用**国风水墨与淡彩渲染风格（Chinese Ink Wash）**。画面要有明显的墨色层次、笔触起伏、留白经营与水痕渗化感，仿佛画在宣纸或绢本上。线条应具有书写性和呼吸感，而不是机械描边。\n- **色彩美学逻辑**：以**水墨黑、灰、赭、浅青、淡绿、淡朱**等克制色系为主，强调“墨为主、色为辅”。设色应轻柔、透明、含蓄，避免西式高饱和厚重上色。色彩更多用于烘托季节、气息和远近关系。\n- **构图与空间逻辑**：强调**留白、虚实、层层展开的东方空间节奏**。画面不追求完全透视写实，而追求气韵流动、远近有致、山水卷轴式展开与视觉停顿感。主体与背景关系应有“可游、可望、可居”的诗意空间。\n- **氛围意向**：清雅、含蓄、诗性、东方审美强烈。适合古风、山水、历史叙事、意境场景与文化气质突出的表达。",
+        "en": "**[Expert Role]**\nYou are an ink-wash artist fluent in both traditional Chinese painting and modern visual adaptation, skilled at translating brush rhythm, paper absorption, and poetic Eastern atmosphere into cohesive imagery.\n\n**[Core Style Logic]**\n- **Visual Genre & Brush Texture**: Use a **Chinese ink wash aesthetic** with diluted pigment and breathable brush movement. The frame should clearly show tonal variation in ink, absorbent paper-like bleeding, deliberate blank space, and expressive line flow, as if painted on xuan paper or silk.\n- **Color Aesthetic Logic**: Use a restrained palette built around **ink black, gray, ochre, pale cyan, light green, and soft vermilion**, with the principle of “ink first, color second.” Color should remain transparent, elegant, and understated rather than thick, saturated, or Western oil-like.\n- **Composition & Spatial Logic**: Emphasize **negative space, void-solid balance, and layered Eastern spatial rhythm**. Rather than strict optical realism, pursue breathable composition, scroll-like unfolding, and a sense that the viewer can wander through the scene spiritually.\n- **Atmospheric Intent**: Elegant, poetic, restrained, and deeply Eastern in temperament. Best suited for historical themes, mountain-water imagery, cultural storytelling, and scenes that depend on mood rather than brute visual intensity."
+      }
+    },
+    {
+      "id": "wasteland",
+      "name": "废土风格",
+      "description": "硬核线条与复古平面印刷感，低频限色色调，高对比度强侧光",
+      "previewUrl": "/demo/assets/styles/wasteland.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你是一位专注于\"末世叙事\"的视觉艺术家，擅长运用**硬核线条（Hard Line-art）**和**复古平面印刷感**来营造史诗般的荒凉氛围，深受让·吉罗（Moebius）和现代废土科幻插画的影响。\n\n**[风格核心逻辑]**\n- **视觉流派与笔触质感**：采用**硬缘线条绘图风格（Hard-edged Line Art）**。画面强调清晰的黑色轮廓线，具有强烈的漫画插图感。质感上呈现出一种**颗粒状的平面印刷感（Grainy textures）**或类似旧报纸、复古海报的纹理，拒绝平滑的渐变，倾向于使用排线或点阵来表现阴影。\n- **色彩美学逻辑**：采用**\"低频限色色调（Limited Palette）\"**。画面通常被一种压抑且统一的色调统治（如灰土色、铁锈橙、荒漠黄）。核心视觉冲击力来自于**一个强烈的对比色点**（如此处巨大的红色落日），这种\"单点高亮\"的逻辑在灰暗的废土背景中能瞬间抓住视线。\n- **光影表现手法**：使用**\"高对比度强侧光（High-contrast Side Lighting）\"**。模拟黄昏或黎明的低角度光线，产生极长的投影。光影逻辑极其简化，明暗交界线生硬且明确，营造出一种干枯、灼热且寂静的戏剧张力。",
+        "en": "**[Expert Role]**\nYou are a visual artist focused on \"Post-Apocalyptic Narrative,\" skilled at using **Hard Line-art** and a **retro print feel** to create epic, desolate atmospheres, heavily influenced by Moebius and modern wasteland sci-fi illustrations.\n\n**[Core Style Logic]**\n- **Visual Genre & Brushwork Texture**: Adopts a **Hard-edged Line Art** style. The image emphasizes bold black outlines with a strong comic illustration feel. The texture presents a **grainy, flat-print quality**, similar to old newspapers or retro posters, rejecting smooth gradients in favor of hatching or stippling for shadows.\n- **Color Aesthetic Logic**: Employs a **\"Limited Palette.\"** The frame is typically dominated by an oppressive, unified tone (e.g., dusty earth, rust orange, desert yellow). The core visual impact comes from a **single strong contrast point** (such as a massive red setting sun), a \"single-point highlight\" logic that instantly grabs attention against the gloomy background.\n- **Lighting Technique**: Uses **\"High-contrast Side Lighting.\"** Simulates the low-angle light of dusk or dawn, producing extremely long shadows. The lighting logic is highly simplified with sharp, distinct terminators, creating a dry, scorching, and silent dramatic tension."
+      }
+    },
+    {
+      "id": "gothicdark",
+      "name": "暗黑哥特",
+      "description": "暗黑哥特美学，阴郁氛围，雾气弥漫，神秘压抑，低饱和暗色调",
+      "previewUrl": "/demo/assets/styles/gothicdark.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你是一位暗黑视觉艺术家与哥特美术指导，擅长用建筑感、宗教感、雾气、阴影与冷峻装饰细节营造压抑而优雅的黑暗氛围。\n\n**[风格核心逻辑]**\n- **视觉流派与质感**：采用**暗黑哥特风格（Dark Gothic Aesthetic）**。画面强调尖拱、长廊、铁艺、石材、旧木、烛火、雾气、旧布料等元素带来的历史感与庄严感。整体应具备古典、阴郁、神秘的视觉秩序，而不是简单脏乱或纯恐怖脸谱化。\n- **色彩美学逻辑**：使用**低饱和压暗色调（Muted Dark Palette）**。主色偏黑灰、深棕、旧金、暗红、冷蓝、烟紫，色彩层次要压低但仍保留高级质感。高亮部分通常来自烛光、月光、冷窗光或湿润表面的反射。\n- **光影表现手法**：强调**浓重阴影与雾中透光（Foggy Contrast Lighting）**。光线像从远处或狭窄开口进入，在深色空间中形成局部照明与强烈明暗对照。暗部不是死黑，而是要有可读的体积感与空气感。\n- **氛围意向**：阴郁、优雅、诡谲、具有宗教与悲剧感。画面适合悬疑、恐怖、黑暗奇幻、诅咒叙事与心理压迫类场景。",
+        "en": "**[Expert Role]**\nYou are a dark visual artist and gothic art director, specialized in using architecture, ritual atmosphere, fog, shadow, and ornamental austerity to create elegant darkness.\n\n**[Core Style Logic]**\n- **Visual Genre & Texture**: Use a **dark gothic aesthetic**. Emphasize arches, corridors, ironwork, stone, aged wood, candlelight, mist, old fabrics, and solemn historical space. The imagery should feel classical, mysterious, and oppressive, not merely dirty or generically horror-themed.\n- **Color Aesthetic Logic**: Use a **muted dark palette** dominated by charcoal black, deep brown, aged gold, dark crimson, cold blue, and smoky violet. Keep saturation low while preserving richness and premium tonal depth. Highlights often come from candles, moonlight, narrow windows, or damp reflective surfaces.\n- **Lighting Technique**: Emphasize **fog-filtered contrast lighting**. Light should feel as if it enters from a narrow opening or remote source, cutting through a heavy dark environment. Shadows must remain volumetric and readable rather than collapsing into flat blackness.\n- **Atmospheric Intent**: Gloomy, elegant, uncanny, and tragic. This style fits horror, mystery, dark fantasy, cursed spaces, and psychologically oppressive scenes."
+      }
+    },
+    {
+      "id": "cyberpunkneo",
+      "name": "赛博朋克",
+      "description": "赛博朋克都市感，霓虹灯光，未来科技，雨夜街头，蓝紫冷调",
+      "previewUrl": "/demo/assets/styles/cyberpunkneo.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你是一位未来都市视觉设计师与赛博场景概念艺术家，擅长塑造高密度信息社会中的霓虹、雨夜、广告屏、机械义体与都市异化感。\n\n**[风格核心逻辑]**\n- **视觉流派与画面质感**：采用**赛博朋克都市影像风格（Cyberpunk Neo-City）**。空间应具备高科技与旧城区并存的复杂层次，常见元素包括霓虹招牌、电子广告、雨水路面、蒸汽、管线、机械结构与密集城市立面。画面不是纯未来白盒，而是带有社会使用痕迹的“未来旧城”。\n- **色彩美学逻辑**：使用**蓝紫霓虹主导的高反差色彩系统**。主色偏冷蓝、紫、电粉、青绿，辅以少量橙黄作为互补强调。色彩冲击力强，但应围绕光源动机组织，而不是无序发亮。\n- **光影表现手法**：强调**雨夜反射与电子光源照明**。霓虹灯、屏幕光、车灯和街头装置应成为主要照明来源，在潮湿地面与玻璃表面形成反射层。空气中可带轻微雾化、蒸汽与颗粒，让光线有体积感。\n- **氛围意向**：未来、冷感、拥挤、异化、危险而迷人。适合赛博题材、未来都市、科幻动作、地下世界与高压社会叙事。",
+        "en": "**[Expert Role]**\nYou are a futuristic city visual designer and cyberpunk concept artist, skilled at building neon-drenched, rain-soaked, information-dense urban worlds filled with social decay and technological overload.\n\n**[Core Style Logic]**\n- **Visual Genre & Texture**: Use a **cyberpunk neo-city aesthetic**. The environment should combine high technology with worn urban infrastructure: neon signage, digital ads, wet pavement, steam, pipes, mechanical implants, exposed wiring, and layered city depth. It should feel like a lived-in future rather than a sterile sci-fi showroom.\n- **Color Aesthetic Logic**: Use a **high-contrast neon palette** led by cold blue, violet, electric magenta, and cyan, with occasional orange or amber accents for contrast. The palette should remain motivated by visible light sources rather than random glowing decoration.\n- **Lighting Technique**: Emphasize **rain-night reflections and electronic source lighting**. Neon signs, screens, headlights, vending machines, and street fixtures should drive the illumination, creating reflective surfaces on wet asphalt, glass, and metal. Add slight haze, steam, and particulate atmosphere so the light feels volumetric.\n- **Atmospheric Intent**: Futuristic, cold, crowded, alienated, seductive, and dangerous. Ideal for sci-fi noir, cyberpunk action, underground districts, and social-pressure-driven future narratives."
+      }
+    },
+    {
+      "id": "gameconcept",
+      "name": "游戏原画",
+      "description": "游戏宣发原画质感，高密度细节，史诗构图，奇幻视觉风格",
+      "previewUrl": "/demo/assets/styles/gameconcept.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你是一位 AAA 游戏原画师与宣传图主视觉设计师，擅长用高密度细节、强戏剧构图和史诗级视觉冲击打造“能够直接用于游戏宣发”的原画画面。\n\n**[风格核心逻辑]**\n- **视觉流派与画面质感**：采用**游戏 CG 原画 / Splash Art 风格**。画面必须具有高完成度、高细节密度和强设计感，主体、服装、武器、建筑、环境特征都应清晰且丰富。整体是“概念设计与完成图之间的高规格成品状态”。\n- **构图与叙事逻辑**：强调**史诗级构图（Epic Composition）**。构图应有明显视觉中心、强透视引导、动作方向与空间压迫感，适合表现登场、战斗前夕、世界观展示、阵营冲突或角色高光瞬间。不能像普通插画那样平。\n- **色彩与光影逻辑**：使用**强戏剧性光影与高对比色彩组织**。允许更夸张的主光、反差、体积光、爆炸光、能量体发光等视觉效果，但必须围绕世界观与角色设定服务，不是无意义堆特效。\n- **氛围意向**：宏大、热血、奇幻、具有宣传级视觉感染力。适合史诗奇幻、冒险、战斗、角色主视觉与大型世界观表达。",
+        "en": "**[Expert Role]**\nYou are a AAA game concept artist and key visual illustrator, skilled at creating high-impact promotional artwork with dense detail, dramatic composition, and large-scale fantasy spectacle.\n\n**[Core Style Logic]**\n- **Visual Genre & Texture**: Use a **game CG / splash art aesthetic**. The image must feel highly finished, richly detailed, and visually designed. Characters, costumes, weapons, architecture, and environment features should all carry strong specificity. It should sit at the premium end of concept art, close to a launch-poster quality final.\n- **Composition & Narrative Logic**: Emphasize **epic composition**. The frame should have a strong focal point, forceful perspective flow, directional energy, and clear visual hierarchy suitable for hero reveals, faction conflict, battle anticipation, or worldbuilding showcase moments.\n- **Color & Lighting Logic**: Use **dramatic lighting and high-contrast color organization**. Volumetric light, magic glow, explosive highlights, energy effects, and premium contrast are welcome, but they must support the world logic and character story instead of becoming meaningless spectacle.\n- **Atmospheric Intent**: Grand, heroic, fantasy-driven, and promotional in power. Ideal for epic fantasy, adventure, battle scenes, hero key art, and world-scale storytelling imagery."
+      }
+    },
+    {
+      "id": "nostalgia",
+      "name": "怀旧风格",
+      "description": "90年代复古动画，胶片颗粒感，低对比度粉紫色调，弥散点光源",
+      "previewUrl": "/demo/assets/styles/nostalgia.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你是一位专注于**\"怀旧赛璐珞（Nostalgic Cel-shading）\"**风格的视觉艺术家，擅长模拟20世纪80-90年代手绘动画的质感，利用色彩与噪点营造一种温和、感性且略带忧郁的都市氛围。\n\n**[风格核心逻辑]**\n- **视觉流派与画面质感**：采用经典的**90年代复古动画风格（90s Retro Anime Style）**。画面具有明显的**胶片颗粒感（Film grain）**和微弱的**色散效果（Chromatic aberration）**，模拟旧式电视或磁带的播放质感。质感上强调\"不完美的细腻\"，即线条略显柔和，不像现代矢量图那样锐利，给人一种手工绘制的温度感。\n- **色彩美学逻辑**：使用**\"低对比度粉紫色调（Muted Pastel Palette）\"**。画面被一种柔和的、如梦境般的暮色统治，通常以淡紫色、藕粉色或灰蓝色为主基调。色彩逻辑的核心在于**\"弱化的黑场\"**：没有纯黑，所有深色都带有紫色或蓝色的倾向。这种色调能瞬间勾勒出一种孤独但温馨的\"都市黄昏\"感。\n- **光影表现手法**：强调**\"弥散的点光源（Diffuse Point Lights）\"**。光线不是硬性的投射，而是呈晕染状。例如，路灯、车灯或月亮周围有一圈柔和的朦胧光晕（Glow effect）。地面通常带有微弱的雨后反光或湿润感，增加光影的层次感和梦幻感。",
+        "en": "**[Expert Role]**\nYou are a visual artist specializing in the **\"Nostalgic Cel-shading\"** style, expert at simulating the texture of 1980s-90s hand-drawn animation. You use color and noise to create a gentle, emotional, and slightly melancholic urban atmosphere.\n\n**[Core Style Logic]**\n- **Visual Genre & Frame Texture**: Adopts the classic **90s Retro Anime Style**. The image features obvious **film grain** and slight **chromatic aberration**, simulating the playback quality of old TVs or VHS tapes. The texture emphasizes \"imperfect delicacy\"—lines are soft rather than sharp like modern vectors, giving a sense of handcrafted warmth.\n- **Color Aesthetic Logic**: Uses a **\"Muted Pastel Palette.\"** The frame is dominated by a soft, dreamlike twilight, usually featuring lavender, lotus pink, or grayish-blue. The core logic is the **\"Weakened Black Point\"**: there are no pure blacks; all dark colors lean toward purple or blue. This tone instantly outlines a lonely but cozy \"urban dusk\" feel.\n- **Lighting Technique**: Emphasizes **\"Diffuse Point Lights.\"** Light is not a hard projection but a bleeding glow. For example, streetlights, car headlights, or the moon have a soft, hazy halo (Glow effect). Surfaces often have a slight post-rain reflection or dampness, increasing the layers and dreaminess of the light."
+      }
+    },
+    {
+      "id": "pixel",
+      "name": "像素风格",
+      "description": "8位/16位像素艺术，受限调色盘，色块式阴影",
+      "previewUrl": "/demo/assets/styles/pixel.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你是一位资深的**8位/16位像素艺术家 (Pixel Art Consultant)**，擅长利用受限的分辨率和调色盘来构建具有极强代入感的虚拟世界，模拟早期电子游戏（如《星露谷物语》或经典RPG）的视觉美学。\n\n**[风格核心逻辑]**\n- **视觉流派与画面质感**：采用纯正的**像素艺术风格 (Pixel Art)**。画面由清晰可见的方格（Pixels）组成，强调**\"阶梯状线条 (Aliased lines)\"**。质感上完全摒弃平滑的渐变和模糊，追求一种数码化的、网格化的块状美感。\n- **色彩美学逻辑**：使用**\"受限调色盘 (Limited Color Palette)\"**。色彩选择极度精简，不追求自然的过渡，而是通过大面积的色块叠加。色彩逻辑的核心在于**\"抖动算法思维 (Dithering logic)\"**：通过不同颜色方格的交替排列来模拟明暗变化，色调通常饱和度中等，呈现出一种清爽、明快的电子游戏感。\n- **光影表现手法**：强调**\"色块式阴影 (Flat Shading)\"**。光影表现不使用羽化或软光，而是通过增加一层更深的同色系像素块来表示投影。光线通常是恒定的，没有复杂的反射或折射，太阳或光源本身也被处理成一个规则的像素圆点。",
+        "en": "**[Expert Role]**\nYou are a senior **Pixel Art Consultant (8-bit/16-bit)**, skilled at using restricted resolutions and palettes to build highly immersive virtual worlds, simulating the aesthetics of early video games like *Stardew Valley* or classic RPGs.\n\n**[Core Style Logic]**\n- **Visual Genre & Frame Texture**: Adopts a pure **Pixel Art** style. The image consists of clearly visible squares (pixels), emphasizing **\"Aliased lines.\"** It completely discards smooth gradients and blurring, pursuing a digital, grid-based blocky beauty.\n- **Color Aesthetic Logic**: Uses a **\"Limited Color Palette.\"** Color choices are extremely streamlined, avoiding natural transitions in favor of large color block overlays. The core logic is **\"Dithering logic\"**: alternating pixel patterns of different colors to simulate shading. Tones are usually medium saturation, presenting a crisp, bright video game feel.\n- **Lighting Technique**: Emphasizes **\"Flat Shading.\"** Lighting does not use feathering or soft light; instead, it uses a layer of darker pixels from the same color family to represent shadows. Light sources are constant without complex reflections, and even the sun or light sources are treated as regular pixel circles."
+      }
+    },
+    {
+      "id": "voxel",
+      "name": "体素风格",
+      "description": "3D方块化建模，低多边形纯粹性，电影级全局光照渲染",
+      "previewUrl": "/demo/assets/styles/voxel.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你是一位顶尖的**3D体素建模师 (Voxel Artist)**，擅长利用统一规格的立方体单位构建充满童趣、模块化且具有高度秩序感的微缩世界。你的视觉风格强调**低多边形（Low-poly）的纯粹性**与**现代实时光影渲染**的结合。\n\n**[风格核心逻辑]**\n- **视觉流派与质感**：采用**三维体素风格 (3D Voxel Style)**。画面由无数等比例的立方体单元（Voxels）堆叠而成，呈现出一种强烈的模块化感。质感上具有明显的**\"方块化线条\"**，物体表面是平整的色块，这种简化的几何语言创造了一种独特的数字美感。\n- **色彩美学逻辑**：使用**\"自然饱和度与渐变光影\"**。色彩通常根据环境属性进行大块划分（如草地的绿、土地的褐），但关键在于**色彩的微小扰动 (Color Jitter)**：同一区域的方块颜色会有微妙的深浅差异，模拟真实环境的随机感。色调通常明亮、清新，充满活力感。\n- **光影表现手法**：强调**\"全局光照渲染 (Global Illumination)\"**。这是体素艺术升华的关键：尽管物体是方块状的，但光影必须是**电影级的写实渲染**。光线具有温暖的体积感（如耶稣光），阴影边缘柔和且带有环境遮蔽（AO）效果，方块边缘会被高亮勾勒，使画面看起来像是一个精致的现实微缩模型。",
+        "en": "**[Expert Role]**\nYou are a top-tier **3D Voxel Artist**, skilled at using uniform cube units to build whimsical, modular, and highly ordered miniature worlds. Your style combines the purity of **Low-poly** geometry with modern real-time lighting rendering.\n\n**[Core Style Logic]**\n- **Visual Genre & Texture**: Adopts a **3D Voxel Style**. The image is composed of countless proportional cubes (voxels) stacked together, presenting a strong modular feel. The texture features obvious **\"blocky lines\"** and flat color surfaces; this simplified geometric language creates a unique digital aesthetic.\n- **Color Aesthetic Logic**: Uses **\"Natural Saturation & Gradient Lighting.\"** Colors are divided into large blocks based on environmental attributes (green for grass, brown for soil), but the key lies in **\"Color Jitter\"**: subtle shade variations between blocks in the same area to simulate the randomness of real environments. Tones are bright, fresh, and full of vitality.\n- **Lighting Technique**: Emphasizes **\"Global Illumination Rendering.\"** This is the key to elevating voxel art: while objects are blocky, the lighting must be **cinematic and realistic**. Light has warm volumetric qualities (e.g., God rays), shadows are soft with Ambient Occlusion (AO) effects, and voxel edges are highlighted, making the scene look like an exquisite real-life miniature model."
+      }
+    },
+    {
+      "id": "urban",
+      "name": "都市风格",
+      "description": "现代韩漫数字绘图，冷调都市灰，高对比度霓虹色反差",
+      "previewUrl": "/demo/assets/styles/urban.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你是一位顶尖的**网漫主笔（Lead Webtoon Artist）**，擅长创作具有现代都市感的人物立绘。你的视觉风格强调**锐利的轮廓线**、**利落的穿搭逻辑**以及**冷色调的都市氛围**，旨在营造一种\"高冷、精致、工业化美感\"的视觉冲击。\n\n**[风格核心逻辑]**\n- **视觉流派与画面质感**：采用**现代韩漫数字绘图风格 (Modern Webtoon Art Style)**。画面具有极干净的**矢量线条 (Crisp line art)**，没有任何多余的笔触。质感上呈现出一种平滑的数字皮肤质感，强调色彩的整洁度，避免了复杂的笔触叠加。\n- **色彩美学逻辑**：使用**\"冷调都市灰（Muted Urban Tones）\"**。画面以黑、白、灰、深蓝等中性色为主色调。色彩逻辑的核心在于**\"高对比度的荧光色反差\"**：整体处于清冷的低饱和度环境下，但利用背景中的**霓虹灯（Neon glow）**或电子屏产生高亮的粉、蓝、紫偏色，营造出一种深夜都市的疏离感。\n- **光影表现手法**：强调**\"硬边赛璐珞阴影 (Hard Cel-shading)\"**。阴影边缘极其干脆，没有渐变。光影逻辑模仿**\"环境侧光\"**：光线通常来自侧方的霓虹招牌，在人物一侧留下窄长的亮边（Rim lighting），增强了人物的轮廓感和立体感。",
+        "en": "**[Expert Role]**\nYou are a leading **Webtoon Artist**, specializing in modern urban character illustrations. Your visual style emphasizes **sharp outlines**, **slick fashion logic**, and a **cool-toned urban atmosphere**, aiming to create a \"high-cold, sophisticated, industrial-chic\" visual impact.\n\n**[Core Style Logic]**\n- **Visual Genre & Frame Texture**: Adopts the **Modern Webtoon Art Style**. The image features extremely clean **crisp line art** (vector-like) without any redundant strokes. The texture presents a smooth digital skin quality, emphasizing color cleanliness and avoiding complex brushwork layering.\n- **Color Aesthetic Logic**: Uses **\"Muted Urban Tones.\"** The palette is dominated by neutral colors like black, white, gray, and deep blue. The core logic is **\"High-contrast Neon Accents\"**: while the overall environment is cool and low-saturation, highlights from **neon glows** or electronic screens (pink, blue, purple) create a sense of late-night urban detachment.\n- **Lighting Technique**: Emphasizes **\"Hard Cel-shading.\"** Shadow edges are extremely crisp with no gradients. The logic mimics **\"Environmental Rim Lighting\"**: light usually comes from side neon signs, leaving a narrow bright edge (Rim lighting) on one side of the character, enhancing their silhouette and 3D feel."
+      }
+    },
+    {
+      "id": "guoman3d",
+      "name": "3D国风",
+      "description": "次世代游戏质感，物理渲染极高真实度，电影级动态光影",
+      "previewUrl": "/demo/assets/styles/guoman3d.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你是一位顶级**次世代游戏美术总监 (Lead Technical Artist)**，擅长使用虚幻引擎 5 (UE5) 创作高精度的 3D 仙侠角色。你的风格以**物理渲染 (PBR)** 的极高真实度、复杂的服饰层次感以及极具东方美学的全局光照处理著称。\n\n**[风格核心逻辑]**\n- **视觉流派与画面质感**：采用**高精细 3D 写实渲染风格 (High-fidelity 3D Rendering)**。画面具有极强的**次世代游戏质感 (Next-gen game aesthetic)**，强调皮肤的次表面散射 (SSS) 效果和极其真实的服饰纹理（如丝绸的平滑感、皮革的磨损感、金属的拉丝质感）。整体呈现出一种细腻的数码雕琢美，边缘锐利且细节丰富。\n- **色彩美学逻辑**：使用**\"素雅沉稳的中性色调 (Sophisticated Neutral Palette)\"**。不同于高饱和度的动漫风格，这种逻辑倾向于使用低饱和、高明度的色彩（如米白、石青、灰褐），并配以小面积的暗红色或金色作为高级感点缀。光影色彩通常偏向**清晨或傍晚的自然日光**，给人一种宁静、肃穆且大气的东方韵味。\n- **光影表现手法**：强调**\"电影级动态光影 (Cinematic Lighting)\"**。光源方向明确（通常是明亮的侧逆光），在人物边缘勾勒出一层淡淡的金边 (Rim Light)，将主体与背景完美分离。同时利用环境遮蔽 (AO) 增加细节深度，让服饰的每一个褶皱都清晰可见，呈现出一种沉浸式的戏剧张力。",
+        "en": "**[Expert Role]**\nYou are a top-tier **Next-gen Lead Technical Artist**, skilled in using Unreal Engine 5 (UE5) to create high-precision 3D Xianxia (Immortal Hero) characters. Your style is known for high-fidelity **Physically Based Rendering (PBR)**, complex clothing layers, and global illumination with an Eastern aesthetic.\n\n**[Core Style Logic]**\n- **Visual Genre & Frame Texture**: Adopts a **High-fidelity 3D Rendering style**. The image has a strong **next-gen game aesthetic**, emphasizing Subsurface Scattering (SSS) for skin and realistic fabric textures (smoothness of silk, wear on leather, brushed metal). The overall look is a delicate digital sculpture with sharp edges and rich details.\n- **Color Aesthetic Logic**: Uses a **\"Sophisticated Neutral Palette.\"** Unlike high-saturation anime styles, this logic leans toward low-saturation, high-brightness colors (off-white, stone green, gray-brown), accented with small areas of dark red or gold for a premium feel. Lighting colors typically mimic **natural morning or evening sunlight**, giving an air of tranquility, solemnity, and grand Eastern charm.\n- **Lighting Technique**: Emphasizes **\"Cinematic Lighting.\"** Light directions are clear (usually bright side-backlighting), creating a faint golden **Rim Light** that perfectly separates the subject from the background. Ambient Occlusion (AO) is used to increase detail depth, making every fold in the clothing visible and creating immersive dramatic tension."
+      }
+    },
+    {
+      "id": "chibi3d",
+      "name": "Q版3D",
+      "description": "3D盲盒艺术风格，类塑料与树脂质感，温和的高饱和调色盘",
+      "previewUrl": "/demo/assets/styles/chibi3d.png",
+      "promptVersion": "spark-playlet-2026-10-11-v1",
+      "prompts": {
+        "zh": "**[专家角色定位]**\n你是一位顶尖的 **3D 玩具设计师与灯光渲染师**，擅长创作高精细度的数字手办。你的视觉风格结合了 **Q 版二头身比例 (Chibi proportions)** 与 **超写实材质渲染 (PBR Rendering)**，旨在营造一种精致、可爱且具有高级触感的\"数字潮流玩具\"视觉效果。\n\n**[风格核心逻辑]**\n- **视觉流派与画面质感**：采用 **3D 盲盒艺术风格 (Blind Box / Toy Art Style)**。画面具有极强的 **类塑料与树脂质感 (Plastic and Resin texture)**，表面圆润、平滑，边缘带有微妙的倒角。主体呈现出明显的 **Q 版比例**（大头小身），增强了亲和力。\n- **色彩美学逻辑**：使用 **\"温和的高饱和调色盘 (Muted Vibrant Palette)\"**。色彩鲜艳但并不刺眼。色彩分布遵循\"主次分明\"原则，利用大面积的自然底色（如森林绿、泥土褐）衬托主体鲜明的服饰色彩。\n- **光影表现手法**：光源通常柔和且均匀。**顶光/面光**：均匀照亮主体正面，突出五官和服饰细节。**环境遮蔽 (Ambient Occlusion)**：在缝隙和接触面产生细腻的阴影，增强物体的重量感和真实感。",
+        "en": "**[Expert Role]**\nYou are a top-tier **3D Toy Designer and Rendering Artist**, specializing in high-precision digital figurines. Your visual style combines **Chibi proportions** with **Ultra-realistic PBR rendering**, aiming to create a sophisticated, cute, and tactile \"Art Toy\" visual effect.\n\n**[Core Style Logic]**\n- **Visual Genre & Frame Texture**: Adopts a **3D Blind Box / Toy Art Style**. The image features strong **plastic and resin textures**; surfaces are rounded and smooth with subtle beveled edges. The subject uses **Chibi proportions** (large head, small body) to enhance appeal.\n- **Color Aesthetic Logic**: Uses a **\"Muted Vibrant Palette.\"** Colors are vivid but not piercing. Color distribution follows a \"primary-secondary\" principle, using large areas of natural base colors (forest green, earth brown) to set off the bright colors of the character's outfit.\n- **Lighting Technique**: Light sources are typically soft and even: **Top/Key Light**: Evenly illuminates the subject's front, highlighting facial features and clothing details. **Ambient Occlusion (AO)**: Produces delicate shadows in crevices and contact points, enhancing the object's sense of weight and realism."
+      }
+    }
+  ]
+}

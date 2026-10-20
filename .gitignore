@@ -1,0 +1,50 @@
+# Private credentials and runtime state.
+.env*
+*.key
+*.pem
+*.p12
+*.pfx
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.bak
+/.data/
+/config/*.local.yaml
+/backups/
+/server
+
+# Dependencies and rebuildable outputs.
+node_modules/
+__pycache__/
+*.py[cod]
+*.tsbuildinfo
+.DS_Store
+/frontend/.vite/
+/frontend/coverage/
+/frontend/dist/
+/demo/app/
+/demo/__*-fixture/
+# MiSans 原始字体不随源码分发；构建前按固定清单的 SHA-256 获取 WOFF2 分片。
+/frontend/public/fonts/MiSansVF.ttf
+/frontend/public/fonts/misans/
+
+# Authoring, design, provenance and verification materials stay local.
+/.local-only/
+/.trellis/
+/.agents/
+/.codex/
+/.zcode/
+/AGENTS.md
+/.zcodeignore
+/docs/
+/frontend/.data/
+/frontend/migration-sources.json
+/internal/application/project/testdata/scripts/
+
+# Local design previews are not release inputs.
+/demo/proposals/
+
+# Historical paid experiments and their evidence remain local.
+/internal/adapter/model/catalog_extraction_live_test.go
+/internal/adapter/model/value_live_test.go

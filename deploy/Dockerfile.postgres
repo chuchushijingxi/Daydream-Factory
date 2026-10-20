@@ -1,0 +1,18 @@
+# PostgreSQL's server, data layout and public entrypoints remain upstream's.
+FROM postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+# Apply available Alpine security revisions. The only gosu consumers pass a
+# fixed "postgres" user and a command; Alpine's maintained su-exec handles that
+# contract directly without embedding a second, stale Go runtime.
+RUN set -eu; \
+    apk upgrade --no-cache; \
+    apk add --no-cache su-exec=0.3-r0; \
+    for entrypoint_file in /usr/local/bin/docker-entrypoint.sh /usr/local/bin/docker-ensure-initdb.sh; do \
+        test "$(grep -c 'exec gosu postgres ' "$entrypoint_file")" -eq 1; \
+        sed -i 's/exec gosu postgres /exec su-exec postgres /' "$entrypoint_file"; \
+        ! grep -q gosu "$entrypoint_file"; \
+    done; \
+    rm /usr/local/bin/gosu; \
+    test "$(su-exec postgres id -u)" = 70; \
+    test "$(su-exec postgres:postgres id -g)" = 70; \
+    test "$(su-exec 70:70 id -u)" = 70
+COPY deploy/postgres/ /usr/share/licenses/daydream-postgres/

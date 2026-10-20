@@ -1,0 +1,29 @@
+本软件使用小米 MiSans 网页字体（静态 WOFF2，Version 4.003）。
+This software uses Xiaomi MiSans Web fonts (original static WOFF2, Version 4.003).
+
+Copyright © 2020-2025 Beijing Xiaomi Mobile Software Co.,Ltd. All Rights Reserved.
+
+The 224 WOFF2 slices are original, unmodified resources from Xiaomi's official
+MiSans Web font service. They are embedded as part of this application and are
+not licensed under this project's Apache-2.0 license. The CSS weights 400, 500,
+650 and 700 select the official Regular, Medium, Semibold and Bold resources.
+
+MiSans is governed by the separate MiSans Fonts Intellectual Property License
+Agreement, retained in MiSans-LICENSE.pdf. Do not modify the font, sublicense it,
+or distribute or sell it separately from the application. Keep the copyright
+and license agreement with copies of the font. See the agreement for all terms.
+
+Official site: https://hyperos.mi.com/font/zh/
+Official Web CSS: https://font.sec.miui.com/font/css?family=MiSans:400,500,650,700:Chinese_Simplify,Latin&display=swap
+Original WOFF2 source: https://cdn-file.hyperos.mi.com/mi-font-service/misans/
+Agreement: https://hyperos.mi.com/font-download/MiSans字体知识产权许可协议.pdf
+Pinned source URLs, byte sizes and SHA-256 hashes: misans-manifest.json
+
+Font binaries are not committed to the source repository. Build prerequisites
+fetch the pinned original resources and verify each size, WOFF2 signature and
+SHA-256 before use (scripts/fetch-misans.py). The built application ships those
+original fonts, this notice, the manifest and the separate license agreement.
+The application changes only CSS delivery: same-origin resources, official
+unicode ranges and optional display; the original font files are not modified.
+字体文件不随源码仓库分发，构建前按 misans-manifest.json 固定的来源与哈希获取并校验；
+构建产物随应用分发原始、未修改的字体，并随附本声明、清单与许可协议。

@@ -1,0 +1,18 @@
+Milvus 3.0.3 security rebuild
+Upstream: https://github.com/milvus-io/milvus/tree/328df0cd2f323c2d3c50cef91bfc9f2c412bcb09
+License: Apache-2.0; upstream copyright and dependency licenses remain applicable.
+
+Daydream rebuilds the Go main binary and Go planparser library using Go 1.26.10
+and the adjacent dependency locks. The planparser C++ bridge is recompiled from
+the same source. Other native libraries are unchanged from the pinned official
+3.0.3 image. This is not an upstream Milvus release or a claim of zero defects.
+
+The Dockerfile pins all source/header downloads by SHA-256. It provides the
+exact source URLs, and the adjacent go.mod/go.sum files record our dependency
+changes. The application module is independent of these rebuild dependencies.
+
+Avro's archived github.com/hamba/avro/v2 is replaced with the maintained MIT
+fork github.com/iskorotkov/avro/v2 v2.33.0 (GO-2026-5046/5047/5048 fixes).
+Its public crc64 helper is locked at v2.34.0. The fork's LICENCE and the original
+Hamba copyright/permission notice are both retained. Pulsar and Milvus keep their
+existing APIs and snapshot format; the replacement changes the decoder code.
