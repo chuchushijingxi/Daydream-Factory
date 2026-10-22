@@ -3,7 +3,7 @@ name: daydream-factory
 services:
   config-init:
     container_name: daydream-factory-config-init
-    image: daydream-factory:local
+    image: daydream-backend:local
     pull_policy: never
     command: ["python", "/usr/local/lib/drama-agent/bootstrap-compose.py"]
     volumes:
@@ -36,7 +36,7 @@ services:
     restart: unless-stopped
 
   database-init:
-    image: daydream-factory:local
+    image: daydream-backend:local
     pull_policy: never
     command: ["drama-accounts-init", "-config", "/app/config/app.local.yaml"]
     volumes:
@@ -66,13 +66,13 @@ services:
       retries: 30
     restart: unless-stopped
 
-  app:
+  # 后端只在 Compose 网络内可达；浏览器经前端 nginx 访问，按 X-Real-IP 识别真实来源。
+  backend:
     container_name: daydream-factory-backend
-    image: daydream-factory:local
+    image: daydream-backend:local
     build: .
     init: true
-    ports:
-      - "127.0.0.1:8787:8787"
+    command: ["drama-server", "-config", "/app/config/app.local.yaml", "-listen", "0.0.0.0:8787", "-trusted-proxies", "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"]
     volumes:
       - runtime-config:/runtime:ro
       - app-data:/app/.data
@@ -92,6 +92,26 @@ services:
       retries: 30
       start_period: 30s
     stop_grace_period: 30s
+    restart: unless-stopped
+
+  # 前端：nginx 提供工作台页面，/api/ 转发给后端；对宿主机只发布这一个端口。
+  frontend:
+    container_name: daydream-factory-frontend
+    image: daydream-frontend:local
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.frontend
+    ports:
+      - "127.0.0.1:8787:8787"
+    depends_on:
+      backend:
+        condition: service_healthy
+        restart: true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8787/frontend-healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
     restart: unless-stopped
 
   redis:
@@ -114,19 +134,19 @@ services:
       retries: 30
     restart: unless-stopped
 
-  # 共享回环网络以保持 NSQ/Milvus 现有本机地址合同，不向宿主机发布依赖端口。
+  # 共享后端的回环网络以保持 NSQ/Milvus 现有本机地址合同，不向宿主机发布依赖端口。
   nsq:
     container_name: daydream-factory-nsq
     image: daydream-nsq:1.3.0-go1.26.10
     build:
       context: .
       dockerfile: deploy/Dockerfile.nsq
-    network_mode: service:app
+    network_mode: service:backend
     command: ["/nsqd", "--data-path=/data", "--tcp-address=127.0.0.1:4150", "--http-address=127.0.0.1:4151", "--broadcast-address=127.0.0.1", "--mem-queue-size=0", "--sync-every=1", "--sync-timeout=1s"]
     volumes:
       - nsq-data:/data
     depends_on:
-      app:
+      backend:
         condition: service_healthy
         restart: true
     healthcheck:
@@ -143,7 +163,7 @@ services:
     build:
       context: .
       dockerfile: deploy/Dockerfile.milvus
-    network_mode: service:app
+    network_mode: service:backend
     command: ["milvus", "run", "standalone"]
     environment:
       ETCD_USE_EMBED: "true"
@@ -155,7 +175,7 @@ services:
       - milvus-data:/var/lib/milvus
       - ./deploy/milvus-embedded.yaml:/milvus/configs/embedEtcd.yaml:ro
     depends_on:
-      app:
+      backend:
         condition: service_healthy
         restart: true
     healthcheck:
@@ -169,17 +189,17 @@ services:
 
   task-worker:
     container_name: daydream-factory-worker
-    image: daydream-factory:local
+    image: daydream-backend:local
     pull_policy: never
     profiles: ["workers"]
     init: true
-    network_mode: service:app
+    network_mode: service:backend
     command: ["drama-task-worker", "-config", "/app/config/app.local.yaml"]
     volumes:
       - runtime-config:/runtime:ro
       - app-data:/app/.data
     depends_on:
-      app:
+      backend:
         condition: service_healthy
         restart: true
       nsq:

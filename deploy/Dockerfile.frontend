@@ -1,0 +1,24 @@
+# 前端镜像：构建工作台静态文件，由 nginx 提供页面并把 /api/ 转发到后端容器。
+# 官方 WOFF2 分片不随源码分发：按固定清单下载原始资源并校验 SHA-256。
+FROM python:3.12-slim-trixie AS misans
+WORKDIR /src
+COPY scripts/fetch-misans.py ./scripts/fetch-misans.py
+COPY frontend/public/fonts/misans-manifest.json ./frontend/public/fonts/misans-manifest.json
+RUN python scripts/fetch-misans.py --output /out/misans
+
+FROM node:24-bookworm-slim AS build
+WORKDIR /src
+COPY frontend/package.json frontend/package-lock.json ./frontend/
+RUN npm --prefix frontend ci
+COPY frontend/ ./frontend/
+COPY --from=misans /out/misans/ ./frontend/public/fonts/misans/
+COPY demo/index.html ./demo/
+COPY demo/assets/ ./demo/assets/
+RUN npm --prefix frontend run build
+
+FROM docker.io/library/nginx:1.28-alpine@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236
+RUN rm -f /etc/nginx/conf.d/default.conf
+COPY deploy/frontend/nginx.conf /etc/nginx/conf.d/daydream.conf
+COPY --from=build /src/demo/ /usr/share/nginx/html/demo/
+COPY LICENSE NOTICE /usr/share/licenses/drama-agent/
+EXPOSE 8787

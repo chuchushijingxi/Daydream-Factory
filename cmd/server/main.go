@@ -44,7 +44,12 @@ func main() {
 	configFile := flag.String("config", "config/app.local.yaml", "private runtime YAML file")
 	readOnlyFlag := flag.Bool("read-only", false, "browse existing data without writes or task execution")
 	listen := flag.String("listen", appconfig.Defaults().HTTP.Address, "HTTP bind address (container deployment uses 0.0.0.0:8787)")
+	trustedProxies := flag.String("trusted-proxies", "", "comma-separated CIDRs whose X-Real-IP is trusted for per-IP limits (container deployment trusts the frontend proxy network)")
 	flag.Parse()
+	proxies, err := httpapi.ParseTrustedProxies(*trustedProxies)
+	if err != nil {
+		log.Fatal(err)
+	}
 	cfg, err := appconfig.Load(*configFile)
 	if err != nil {
 		log.Fatal(err)
@@ -146,6 +151,7 @@ func main() {
 	host.Runtime = runtimeState
 	host.RequestsPerMinute = cfg.Redis.RequestsPerMinute
 	host.IPRequestsPerMinute = cfg.Redis.IPRequestsPerMinute
+	host.TrustedProxies = proxies
 	host.Workers.Updates = runtimeState
 	host.Files = files
 	accountService := &accounts.Service{Store: store, Hasher: passwordhash.Bcrypt{}, Thumbnails: files.Thumbnails}

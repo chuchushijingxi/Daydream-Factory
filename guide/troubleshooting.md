@@ -7,7 +7,7 @@
 ```sh
 docker compose version
 docker compose ps -a
-docker compose logs --tail=100 config-init database-init app postgres redis minio nsq milvus
+docker compose logs --tail=100 config-init database-init frontend backend postgres redis minio nsq milvus
 # 仅在启用了额外 worker 时查看。
 docker compose --profile workers logs --tail=100 task-worker
 ```
@@ -22,14 +22,14 @@ docker compose --profile workers logs --tail=100 task-worker
 | 页面没有可选分析模型 | 模型是否已启用、连接密钥和容量是否有效、计价配置是否保存；项目是否选择了该分析模型 |
 | 提示价格未配置或积分不足 | 检查站内积分价格、账号余额和限免有效期；厂商账户余额独立检查 |
 | 真实图片/视频模型不可用 | 当前只接入本地 Mock；给真实媒体厂商预设填 Key 也不会使其变为可执行任务 |
-| 任务一直排队或检索不可用 | 查看 app、NSQ、Milvus 及额外 worker 日志，确认更新时一起重建了共享网络的服务 |
+| 任务一直排队或检索不可用 | 查看 backend、NSQ、Milvus 及额外 worker 日志，确认更新时一起重建了共享网络的服务 |
 
-可从当前 app 的网络中检查依赖：
+可从当前 backend 的网络中检查依赖：
 
 ```sh
-docker compose exec app python -c 'import socket; s=socket.create_connection(("127.0.0.1",4150),5); s.close(); print("NSQ TCP connected")'
-docker compose exec app curl -fsS http://127.0.0.1:4151/ping
-docker compose exec app curl -fsS http://127.0.0.1:9091/healthz
+docker compose exec backend python -c 'import socket; s=socket.create_connection(("127.0.0.1",4150),5); s.close(); print("NSQ TCP connected")'
+docker compose exec backend curl -fsS http://127.0.0.1:4151/ping
+docker compose exec backend curl -fsS http://127.0.0.1:9091/healthz
 ```
 
 分享故障信息前先脱敏，不上传私有 YAML、完整备份、API Key、密码、邮箱、剧本或业务数据。避免公开粘贴完整容器环境、命令行参数和未经检查的日志。

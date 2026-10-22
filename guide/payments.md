@@ -60,11 +60,11 @@ RSA至少2048位，私钥接受PKCS#1或PKCS#8 PEM，公钥接受PUBLIC KEY、RS
 
 ## 容器挂载
 
-默认Compose保留自己的 `runtime-config` 卷。将商户字段写入该部署实际使用的私有YAML，并通过自己的Compose override给应用添加只读挂载，例如：
+默认Compose保留自己的 `runtime-config` 卷。将商户字段写入该部署实际使用的私有YAML，并通过自己的Compose override给后端添加只读挂载，例如：
 
 ```yaml
 services:
-  app:
+  backend:
     volumes:
       - /absolute/private/payment-keys:/run/secrets:ro
 ```

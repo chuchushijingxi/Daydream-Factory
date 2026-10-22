@@ -31,6 +31,7 @@ type Handler struct {
 	Runtime               ports.RuntimeState
 	RequestsPerMinute     int
 	IPRequestsPerMinute   int
+	TrustedProxies        []*net.IPNet
 	StreamHeartbeat       time.Duration
 	StreamWriteTimeout    time.Duration
 	registry              *routes
@@ -125,11 +126,7 @@ func New(service *app.Service, configuration *modelconfig.Service, demoDir strin
 			return
 		}
 		if h.Runtime != nil && len(r.URL.Path) >= 5 && r.URL.Path[:5] == "/api/" {
-			ip, _, err := net.SplitHostPort(r.RemoteAddr)
-			if err != nil {
-				ip = r.RemoteAddr
-			}
-			allowed, err := h.Runtime.Allow(r.Context(), "http:"+ip, h.IPRequestsPerMinute, time.Minute)
+			allowed, err := h.Runtime.Allow(r.Context(), "http:"+h.clientIP(r), h.IPRequestsPerMinute, time.Minute)
 			if err != nil {
 				fail(w, err)
 				return

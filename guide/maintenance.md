@@ -8,7 +8,7 @@
 
 ```sh
 docker compose ps -a
-docker compose logs --tail=100 app nsq milvus
+docker compose logs --tail=100 frontend backend nsq milvus
 # 停止整套环境（包括已启用的额外 worker），保留数据卷。
 docker compose --profile workers down
 ```
@@ -21,7 +21,7 @@ sh deploy.sh
 sh deploy.sh --profile workers
 ```
 
-NSQ、Milvus 和额外 worker 共用 app 的网络命名空间，必须一起重建，不能只重建 app。曾使用 `-p` 项目名、`-f` 覆盖文件或固定镜像的部署，启动、备份、更新和恢复须沿用同一组参数，避免意外启动另一个空环境。健康检查通过不等于模型调用或业务结果已经验证。
+NSQ、Milvus 和额外 worker 共用 backend 的网络命名空间，必须一起重建，不能只重建 backend。曾使用 `-p` 项目名、`-f` 覆盖文件或固定镜像的部署，启动、备份、更新和恢复须沿用同一组参数，避免意外启动另一个空环境。健康检查通过不等于模型调用或业务结果已经验证。
 
 已有 MinIO 或 Redis 7 部署应先保留旧卷，并在隔离副本验证升级，不能直接让新镜像写真实旧卷。Milvus 2.x 至 3.x 使用新索引卷，从 PostgreSQL 重建派生索引。升级后的数据库迁移不保证能直接降级；回退使用配套的旧源码、镜像及完整备份恢复到新卷。
 
@@ -42,7 +42,7 @@ umask 077
 project=daydream-factory
 dc() { docker compose -p "$project" -f "$PWD/docker-compose.yml" "$@"; }
 volumes='runtime-config postgres-data objects-data app-data nsq-data milvus-data redis-data'
-backup_image=$(docker image inspect --format '{{.Id}}' daydream-factory:local)
+backup_image=$(docker image inspect --format '{{.Id}}' daydream-backend:local)
 for volume in $volumes; do
   docker volume inspect "${project}_${volume}" >/dev/null
 done

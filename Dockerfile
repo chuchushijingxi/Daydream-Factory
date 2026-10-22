@@ -1,20 +1,4 @@
-# 官方 WOFF2 分片不随源码分发：按固定清单下载原始资源并校验 SHA-256。
-FROM python:3.12-slim-trixie AS misans
-WORKDIR /src
-COPY scripts/fetch-misans.py ./scripts/fetch-misans.py
-COPY frontend/public/fonts/misans-manifest.json ./frontend/public/fonts/misans-manifest.json
-RUN python scripts/fetch-misans.py --output /out/misans
-
-FROM node:24-bookworm-slim AS frontend
-WORKDIR /src
-COPY frontend/package.json frontend/package-lock.json ./frontend/
-RUN npm --prefix frontend ci
-COPY frontend/ ./frontend/
-COPY --from=misans /out/misans/ ./frontend/public/fonts/misans/
-COPY demo/index.html ./demo/
-COPY demo/assets/ ./demo/assets/
-RUN npm --prefix frontend run build
-
+# 后端镜像：API、任务执行与初始化工具。工作台页面由 deploy/Dockerfile.frontend 单独构建。
 # Pin the actual compiler independently of the published base image tag.
 FROM golang:1.26.9-bookworm AS backend
 ENV GOTOOLCHAIN=go1.26.10 GOMAXPROCS=2 GOFLAGS=-p=2
@@ -58,7 +42,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* /usr/local/lib/python3.12/ensurepip
 WORKDIR /app
 COPY --from=backend /out/ /usr/local/bin/
-COPY --from=frontend /src/demo/ ./demo/
+# 风格目录 catalog.json 等运行时数据由后端读取；页面文件只在前端镜像中。
+COPY demo/assets/ ./demo/assets/
 COPY --from=embedding /opt/evidence-embedding/ /opt/evidence-embedding/
 COPY --from=media /opt/media/ /opt/media/
 ENV PATH="/opt/media/bin:${PATH}"
