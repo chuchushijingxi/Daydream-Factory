@@ -113,15 +113,15 @@ export function ProductionPage() {
     setParams(next, { replace: true });
   };
   const access = accessMessage(view?.access.reason, c);
+  // 只读原因（含编辑权核对中）由项目标题栏统一展示；这里若跟随 status.readOnly，
+  // 编辑权回来前会闪现一条提示并把制作区挤矮。
   const startReason = view?.activeRun
       ? view.activeRun.storyboardScope?.episodeId === episodeId
         ? c('任务进行中，只读浏览。')
         : c('项目有其他任务正在运行，只读浏览。')
-      : status.readOnly
-        ? c('当前服务只读。')
-        : access
-          ? c(access)
-          : '';
+      : access
+        ? c(access)
+        : '';
   const insertShot = (afterShotId?: string) => {
     if (!scene || !view) return;
     const before = new Set(scene.shotIds);

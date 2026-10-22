@@ -183,9 +183,7 @@ export function EpisodesPage() {
   const access = accessMessage(index?.access.reason, c);
   const reason = uncertain
     ? c('拆解请求的受理结果尚未确认，请重新读取，不会重复提交。')
-    : status?.readOnly
-      ? c('当前服务只读，可查看已有分集内容。')
-      : !ready
+    : !ready
         ? ''
         : active
           ? c('项目有任务正在运行，可查看进度和已有内容。')

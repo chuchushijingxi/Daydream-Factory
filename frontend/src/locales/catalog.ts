@@ -2066,7 +2066,6 @@ export const catalogEn = {
   "catalog.重新拆解": "Break down again",
   "catalog.拆解分镜": "Break down shots",
   "catalog.拆解请求的受理结果尚未确认，请重新读取，不会重复提交。": "The breakdown request is not confirmed yet. Reload to check; it will not be submitted again.",
-  "catalog.当前服务只读，可查看已有分集内容。": "This service is read-only. You can view existing episode content.",
   "catalog.项目有任务正在运行，可查看进度和已有内容。": "A project task is running. You can view progress and existing content.",
   "catalog.拆解回执与当前原文版本不一致，请回读核查。": "The breakdown receipt does not match the current script version. Reload to verify.",
   "catalog.拆解已受理，但分集目录回读失败：{reason}": "Breakdown accepted, but the episode directory failed to reload: {reason}",
