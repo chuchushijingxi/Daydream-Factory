@@ -829,7 +829,7 @@ test('empty payment collections render one spanning cell inside tbody; loading a
   api.anomalies = async () => ({ items: [], total: 0, page: 1, pageSize: 20 });
   api.packages = async () => [];
   for (const [node, columns] of [
-    [<OperationsPaymentOrdersPage api={api} />, 10],
+    [<OperationsPaymentOrdersPage api={api} />, 7],
     [<OperationsPaymentAnomaliesPage api={api} />, 6],
     [<OperationsPaymentPackagesPage api={api} />, 9],
   ] as const) {
@@ -838,6 +838,7 @@ test('empty payment collections render one spanning cell inside tbody; loading a
     assert.ok(empty);
     assert.equal(empty.textContent?.trim(), '当前条件下暂无记录');
     assert.equal(empty.getAttribute('colspan'), String(columns));
+    assert.equal(document.querySelectorAll('thead th').length, columns, 'empty cell spans every column');
     assert.equal(document.querySelectorAll('tbody tr').length, 1);
     assert.equal(document.querySelector('.op-feedback'), null);
   }

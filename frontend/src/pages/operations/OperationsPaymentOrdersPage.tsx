@@ -194,15 +194,13 @@ function OrdersScope({ api, embedded }: { api: PaymentAPI; embedded: boolean }) 
             <table className="op-table op-payment-orders">
               <thead>
                 <tr>
+                  {/* 次要事实收进所属单元格的第二行，1280 宽度下整表不必横向滑动。 */}
                   {[
-                    c('创建时间'),
                     c('订单号'),
                     c('下单人'),
                     c('目标空间'),
                     c('实付金额'),
-                    c('充值 / 赠送积分'),
                     c('支付渠道'),
-                    c('渠道交易号'),
                     c('状态'),
                     c('操作'),
                   ].map((v) => (
@@ -213,15 +211,17 @@ function OrdersScope({ api, embedded }: { api: PaymentAPI; embedded: boolean }) 
               <tbody>
                 {!read.value.items.length ? (
                   <tr>
-                    <td colSpan={10} className="op-payment-empty" role="status">
+                    <td colSpan={7} className="op-payment-empty" role="status">
                       {c('当前条件下暂无记录')}
                     </td>
                   </tr>
                 ) : null}
                 {read.value.items.map((o) => (
                   <tr key={o.orderNo}>
-                    <td className="op-numeric">{dateTime(o.createdAt)}</td>
-                    <td className="op-payment-mono">{o.orderNo}</td>
+                    <td className="op-payment-order">
+                      <span className="op-payment-mono">{o.orderNo}</span>
+                      <small>{dateTime(o.createdAt)}</small>
+                    </td>
                     <td className="op-payment-id" title={o.buyerUserId}>
                       {o.buyerUserId}
                     </td>
@@ -231,14 +231,23 @@ function OrdersScope({ api, embedded }: { api: PaymentAPI; embedded: boolean }) 
                     </td>
                     <td className="op-numeric">
                       <PaymentPrice amountFen={o.amountFen} originalAmountFen={o.originalAmountFen} />
+                      <small
+                        title={c('充值 {recharge} + 赠送 {gift}', {
+                          recharge: formatInteger(String(o.rechargeCredits)),
+                          gift: formatInteger(String(o.giftCredits)),
+                        })}
+                      >
+                        {c('{recharge} + {gift} 积分', {
+                          recharge: formatInteger(String(o.rechargeCredits)),
+                          gift: formatInteger(String(o.giftCredits)),
+                        })}
+                      </small>
                     </td>
-                    <td className="op-numeric">
-                      {formatInteger(String(o.rechargeCredits))} /{' '}
-                      {formatInteger(String(o.giftCredits))}
-                    </td>
-                    <td>{paymentChannelLabel(o.channel, c)}</td>
-                    <td className="op-payment-id" title={o.channelTradeNo || undefined}>
-                      {o.channelTradeNo || '—'}
+                    <td className="op-payment-channel">
+                      {paymentChannelLabel(o.channel, c)}
+                      <small title={o.channelTradeNo || undefined}>
+                        {o.channelTradeNo || c('暂无渠道交易号')}
+                      </small>
                     </td>
                     <td>
                       <span className="op-payment-status" data-status={o.status}>

@@ -11,13 +11,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from '../../../components/ui/dialog';
-import { Feedback, Field, PageNavigation, useRead } from '../controls';
+import { Feedback, Field, PageNavigation, StatusBadge, useRead } from '../controls';
 import { dateTime, shanghaiInput } from '../../credits/credit-format';
 import {
   MutationFeedback,
   numberInput,
   numberText,
-  TeamState,
   useTeamMutation,
 } from '../../team/team-ui';
 import { TeamContractFields, discountsComplete, type ContractDraft } from './TeamContractFields';
@@ -218,8 +217,29 @@ export function TeamsPage() {
                       {team.ownerName}
                       <small>{team.ownerEmail}</small>
                     </td>
-                    <td>
-                      <TeamState team={team} />
+                    {/* TeamState 只渲染到期/停用等提醒；列表单元格直接给出人数与状态事实。 */}
+                    <td className="op-team-state">
+                      <span>
+                        {c('{count} / {limit} 人', {
+                          count: team.memberCount,
+                          limit: team.memberLimit,
+                        })}
+                      </span>
+                      <StatusBadge
+                        tone={
+                          team.status === 'active'
+                            ? 'success'
+                            : team.status === 'expired'
+                              ? 'warning'
+                              : 'danger'
+                        }
+                      >
+                        {team.status === 'active'
+                          ? c('正常')
+                          : team.status === 'expired'
+                            ? c('已到期')
+                            : c('已停用')}
+                      </StatusBadge>
                     </td>
                     <td>{dateTime(team.expiresAt)}</td>
                     <td>{numberText(team.grantAmount)}</td>

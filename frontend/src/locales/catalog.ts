@@ -3200,6 +3200,8 @@ export const catalogEn = {
   "catalog.加赠{percent}%": "+{percent}% bonus",
   "catalog.立省{amount}": "Save {amount}",
   "catalog.充值 {recharge} + 赠送 {gift}": "{recharge} purchased + {gift} bonus",
+  "catalog.暂无渠道交易号": "No channel transaction number yet",
+  "catalog.{recharge} + {gift} 积分": "{recharge} + {gift} credits",
   "catalog.充值 {recharge}": "{recharge} purchased",
   "catalog.购买": "Buy",
   "catalog.选择充值档位": "Choose a credit package",

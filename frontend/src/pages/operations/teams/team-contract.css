@@ -215,3 +215,12 @@ div.team-discounts {
     justify-self: end;
   }
 }
+
+/* 团队列表“人数 / 状态”：人数与状态标签同一行，不换行挤压。 */
+.op-table td.op-team-state {
+  white-space: nowrap;
+}
+.op-team-state > span {
+  margin-right: 8px;
+  font-variant-numeric: tabular-nums;
+}

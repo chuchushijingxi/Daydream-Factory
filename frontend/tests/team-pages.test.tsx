@@ -363,6 +363,10 @@ test('operations team list displays the authoritative total balance alongside co
     const cells = document.querySelectorAll('tbody tr td');
     assert.equal(cells[balanceColumn]?.textContent, new Intl.NumberFormat().format(1234567));
     assert.match(document.body.textContent || '', /所有者甲/);
+    // 正常团队的“人数 / 状态”列也要给出人数与状态，不能因为没有提醒而留空。
+    const stateCell = cells[headers.indexOf('人数 / 状态')];
+    assert.match(stateCell?.textContent || '', /\d+ \/ \d+ 人/);
+    assert.ok(stateCell?.querySelector('.op-status-badge'), 'status badge');
   } finally {
     await act(async () => root!.unmount());
     root = undefined;

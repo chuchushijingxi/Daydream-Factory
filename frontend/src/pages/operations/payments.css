@@ -431,13 +431,25 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
 }
+/* 订单时间、积分与渠道交易号作为第二行；长 ID 截断显示，完整值在悬停提示与详情里。 */
+.op-payment-orders th,
+.op-payment-orders td {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+.op-payment-orders .op-payment-order .op-payment-mono {
+  font-size: 12px;
+}
 .op-payment-orders .op-payment-id,
-.op-payment-orders .op-payment-target small {
-  max-width: 200px;
+.op-payment-orders .op-payment-target small,
+.op-payment-orders .op-payment-channel small {
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.op-payment-orders .op-payment-target small {
+.op-payment-orders .op-payment-target small,
+.op-payment-orders .op-payment-channel small,
+.op-payment-orders .op-payment-order small {
   display: block;
 }
 .op-payment-status {
