@@ -4,7 +4,6 @@ import { JSDOM } from 'jsdom';
 import React, { act } from 'react';
 import { createStoryboardFixture } from './storyboard-fixture.mjs';
 import {
-  sourceSlice,
   indexLabel,
   indexReady,
   shotInput,
@@ -142,27 +141,6 @@ async function key(el: Element, key: string, extra = {}) {
   );
   await flush();
 }
-test('source positions use Unicode code points and reject invalid offsets', () => {
-  const source = {
-    version: 1,
-    filename: 'f',
-    spans: [
-      { id: 'a', text: 'A🌧中B' },
-      { id: 'b', text: '下集' },
-    ],
-  };
-  assert.deepEqual(
-    sourceSlice(source, [{ start: { spanId: 'a', offset: 1 }, end: { spanId: 'a', offset: 3 } }]),
-    ['🌧中'],
-  );
-  assert.deepEqual(
-    sourceSlice(source, [{ start: { spanId: 'a', offset: 2 }, end: { spanId: 'b', offset: 1 } }]),
-    ['中B\n下'],
-  );
-  assert.throws(() =>
-    sourceSlice(source, [{ start: { spanId: 'a', offset: 0 }, end: { spanId: 'a', offset: 9 } }]),
-  );
-});
 test('null episode numbers remain episodes; whole and failed indexes never display zero or max number', () => {
   const f = createStoryboardFixture();
   assert.equal(indexReady(f.index(), 1), true);
@@ -728,14 +706,7 @@ test('production prompt and reference browsing preserve bound assets and shot dr
   assert.equal(document.querySelector('.sb-scenes')!.textContent!.includes('资产库'), false);
   assert.equal(document.querySelector('.sb-video-workspace [aria-label="视频生成模型"]'), null);
   await appendPrompt('留在镜头 01 的局部草稿');
-  await act(() => button('参考资料').click());
-  await flush();
-  assert.ok(document.querySelector('[role=dialog].sb-reference-dialog'));
-  await act(() => button('原文').click());
-  await flush();
-  assert.match(document.querySelector('.sb-reference-dialog')!.textContent!, /你自己决定/);
-  await act(() => button('关闭').click());
-  await flush();
+  assert.equal(button('参考资料'), undefined);
   await act(() => document.querySelectorAll<HTMLButtonElement>('.sb-strip-select')[1].click());
   await flush();
   await act(() => document.querySelectorAll<HTMLButtonElement>('.sb-strip-select')[0].click());
@@ -950,7 +921,7 @@ test('reader uses indexed Unicode anchors while preserving complete original tex
   assert.equal(writes().length, 0);
 });
 
-test('storyboard context and asset picker use thumbnails with explicit original links and never preload the original image', async () => {
+test('asset picker uses thumbnails and never preloads the original image', async () => {
   await mount();
   const look = fixture.project.assets[0].looks[0];
   look.image = {
@@ -959,18 +930,6 @@ test('storyboard context and asset picker use thumbnails with explicit original 
     originalUrl: '/api/files/file_' + 'c'.repeat(32) + '/original',
   };
   await act(() => context.refreshCurrentProject('p5_free'));
-  await flush();
-  await act(() => button('参考资料').click());
-  await flush();
-  assert.equal(
-    document.querySelector('.sb-reference-dialog img')!.getAttribute('src'),
-    look.image.thumbnailUrl + '?audience=workspace',
-  );
-  assert.equal(
-    document.querySelector('.sb-reference-dialog a[href]')!.getAttribute('href'),
-    look.image.originalUrl + '?audience=workspace',
-  );
-  await act(() => button('关闭').click());
   await flush();
   await act(() => button('添加素材').click());
   await flush();

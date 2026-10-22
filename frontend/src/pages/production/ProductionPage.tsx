@@ -1,12 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { BookOpen, ChevronRight, Clapperboard, Layers, Plus, PanelRight } from 'lucide-react';
+import { BookOpen, ChevronRight, Clapperboard, Layers, Plus } from 'lucide-react';
 import { useWorkspace } from '../../state/WorkspaceContext';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../../components/ui/dialog';
-import { ReferenceDialog } from './ReferenceDialog';
 import { ShotStrip } from './ShotStrip';
-import { accessMessage, indexReady, sourceSlice } from '../../domain/storyboard';
+import { accessMessage, indexReady } from '../../domain/storyboard';
 import type { EpisodeView, SourceRange, StoryboardOperation, StoryScene } from '../../api/storyboard-types';
 import { SceneDialog } from './SceneDialog';
 import { ShotWorkspace } from './ShotWorkspace';
@@ -22,7 +21,6 @@ export function ProductionPage() {
     storyboardIndex: index,
     storyboardError,
     refreshStoryboardIndex,
-    source: fullSource,
   } = useWorkspace();
   const [params, setParams] = useSearchParams();
   const location = useLocation();
@@ -31,8 +29,7 @@ export function ProductionPage() {
   const episodeId = params.get('episodeId') || '';
   const controller = useProduction(episodeId, location.state?.episodeStart as EpisodeView | undefined),
     { view, source, error, busy, loading, editable, hasDrafts } = controller;
-  const [showContext, setShowContext] = useState(false),
-    [picker, setPicker] = useState(false),
+  const [picker, setPicker] = useState(false),
     [showScenes, setShowScenes] = useState(false),
     [sceneDialog, setSceneDialog] = useState<{
       sourceRanges: SourceRange[];
@@ -125,14 +122,6 @@ export function ProductionPage() {
         : access
           ? c(access)
           : '';
-  let currentSource: string[] = [];
-  try {
-    if (shot && fullSource && fullSource.version === view?.sourceVersion)
-      currentSource = sourceSlice(fullSource, shot.sourceRanges);
-  } catch (e) {
-    currentSource = [(e as Error).message];
-  }
-  const selected = shot ? controller.draft(shot).value.selectedAssets : [];
   const insertShot = (afterShotId?: string) => {
     if (!scene || !view) return;
     const before = new Set(scene.shotIds);
@@ -182,7 +171,8 @@ export function ProductionPage() {
           </Button>
         </div>
       ) : null}
-      {!ready ? (
+      {/* 目录读回前不能当作“未完成”，否则提示会闪现并把制作区挤矮。 */}
+      {index && !ready ? (
         <p className="sb-notice">
           {c('分集解析尚未完成，候选可查看；请在')}
           <Link to={`/playlet/${p.id}/outline`}>{c('剧本解析')}</Link>
@@ -204,11 +194,6 @@ export function ProductionPage() {
         <aside className="sb-scenes" data-open={showScenes} aria-label={c('场景列表')}>
           <div className="sb-nav-heading">
             <h2>{c('场景')}</h2>
-            <Button variant="ghost" size="sm" className="sb-reference-toggle"
-              aria-label={c('参考资料')} title={c('参考资料')} aria-haspopup="dialog"
-              aria-expanded={showContext} onClick={() => setShowContext(v => !v)}>
-              <PanelRight />
-            </Button>
           </div>
           <nav className="sb-scene-list" aria-label={c('本集场景')}>
             {scenes.map((item, index) => (
@@ -345,14 +330,6 @@ export function ProductionPage() {
           ) : null}
         </main>
       </div>
-      <ReferenceDialog
-        open={showContext}
-        onOpenChange={setShowContext}
-        project={p}
-        selected={selected}
-        currentSource={currentSource}
-        source={source}
-      />
 
       {sceneDialog ? (
         <SceneDialog

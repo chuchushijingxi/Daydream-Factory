@@ -21,7 +21,6 @@
 .jm-dialog-content[data-dialog-kind=panel]{width:min(976px,calc(100vw - 32px));padding:0;overflow:hidden}
 .jm-dialog-content[data-dialog-kind=panel].notification-editor-dialog{padding:24px;overflow:auto}
 .jm-dialog-content[data-dialog-kind=panel].op-wallet-dialog{padding:24px}
-.jm-dialog-content[data-dialog-kind=panel].sb-reference-dialog{padding:24px}
 .jm-dialog-mask[data-dialog-kind]{background:rgb(0 0 0 / .6);animation:jm-mask-in 400ms cubic-bezier(.3,1.3,.3,1)}
 .jm-dialog-mask[data-dialog-kind][data-state=closed]{animation:jm-mask-out 400ms cubic-bezier(.3,1.3,.3,1);pointer-events:none}
 .jm-dialog-mask[data-dialog-kind=preview]{background:rgb(0 0 0 / .8)}

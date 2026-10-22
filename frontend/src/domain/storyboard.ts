@@ -1,13 +1,11 @@
-import type { Asset, ScriptSource, VisualTarget } from '../api/types';
+import type { Asset, VisualTarget } from '../api/types';
 import type {
   PromptPart,
   ReadPart,
   ShotInput,
-  SourceRange,
   StoryboardIndexView,
   StoryShot,
 } from '../api/storyboard-types';
-import { translate } from '../contexts/translate';
 // 组件展示处传入 useCatalogText() 的 c；领域函数默认保持中文源文案（含占位符插值）。
 type Translate = (text: string, values?: Record<string, string | number>) => string;
 const sourceText: Translate = (text, values = {}) =>
@@ -140,29 +138,4 @@ export function indexLabel(
   return v.episodeCount === null
     ? t('目录已返回，集数未确定')
     : t('本次上传共 {count} 集', { count: v.episodeCount });
-}
-// SourceRange.offset 是 Unicode 码点，Array.from 保留 emoji 等非 BMP 字符。
-export function sourceSlice(source: ScriptSource, ranges: SourceRange[]): string[] {
-  return ranges.map((r) => {
-    const start = source.spans.findIndex((s) => s.id === r.start.spanId),
-      end = source.spans.findIndex((s) => s.id === r.end.spanId);
-    if (start < 0 || end < start) throw new Error(translate('原文段不存在或顺序失效。'));
-    return source.spans
-      .slice(start, end + 1)
-      .map((s, i) => {
-        const chars = Array.from(s.text),
-          from = i === 0 ? r.start.offset : 0,
-          to = i === end - start ? r.end.offset : chars.length;
-        if (
-          !Number.isInteger(from) ||
-          !Number.isInteger(to) ||
-          from < 0 ||
-          to < from ||
-          to > chars.length
-        )
-          throw new Error(translate('原文码点范围失效。'));
-        return chars.slice(from, to).join('');
-      })
-      .join('\n');
-  });
 }
