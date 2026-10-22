@@ -41,6 +41,23 @@ sh deploy.sh
 
 新部署不附带供应商凭据，不会因启动或配置连接而自动生成付费内容；明确发起文本分析等操作可能产生供应商费用。
 
+## 上线前关闭演示配置
+
+全新部署默认处于体验状态：运行环境为 `development`、演示收银台开启，并在空库上建立演示团队（`owner@daydream.local`、`admin@daydream.local`、`member@daydream.local`，密码与初始账号相同）。对外提供服务前，在源码根目录执行下面的命令，把运行配置切换为正式环境并关闭演示收银台，然后重新运行 `sh deploy.sh`：
+
+```sh
+docker run --rm --network none --user 0 \
+  --mount type=volume,src=daydream-factory_runtime-config,dst=/runtime \
+  --entrypoint python daydream-backend:local -c "
+p='/runtime/config/app.local.yaml'
+s=open(p).read()
+s=s.replace('environment: development','environment: production',1)
+s=s.replace('  demo:\n    enabled: true','  demo:\n    enabled: false',1)
+open(p,'w').write(s)"
+```
+
+再到运营后台「用户管理」停用三个演示账号，并修改 `Daydream` 的密码。演示团队只在空库首次部署时创建；不需要它的新部署，可在 `docker-compose.yml` 的 `database-init` 命令中去掉 `-demo-team`。使用过 `-p` 项目名时，把卷名中的 `daydream-factory` 换成对应项目名。
+
 ## 初始化与持久化
 
 Compose 自动生成私有基础设施凭据，并在空数据库创建基础设置和这一个运营账号。[初始化 SQL](../deploy/init.sql) 从代码中的表结构和种子生成，不包含开发者账号、项目、上传、用量、邮件或业务流水。数据库已有任何用户时不再添加公开初始化账号，重复运行部署脚本不重置已有密码或业务数据，也不删除数据卷。

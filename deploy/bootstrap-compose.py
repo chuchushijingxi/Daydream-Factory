@@ -54,7 +54,13 @@ def initialize(root: Path):
     # 配置与基础设施凭证一起原子发布；中断目录不会被当作有效配置。
     staging = Path(tempfile.mkdtemp(prefix=".config-", dir=root))
     database_password, storage_password = secrets.token_hex(24), secrets.token_hex(24)
-    config = f"""database:
+    # 开源模板默认可体验完整流程：演示收银台开启（不真实扣款）。只写入新部署的配置，已有部署不被改动。
+    # 正式上线前把 environment 改为 production 并关闭 payment.demo，见 README「上线前」。
+    config = f"""environment: development
+payment:
+  demo:
+    enabled: true
+database:
   url: postgres://drama:{database_password}@postgres:5432/drama_agent?sslmode=disable
 nsq:
   address: 127.0.0.1:4150

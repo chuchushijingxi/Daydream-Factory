@@ -9,6 +9,7 @@ const publicFiles = [
   'fonts/NOTICE.txt',
   'fonts/misans-manifest.json',
   'images/placeholder.png',
+  'images/brand-logo.png',
   'images/image-types/closeup-main-sample.webp',
   'images/image-types/closeup-sample.webp',
   'images/image-types/closeup-three-view-sample.webp',

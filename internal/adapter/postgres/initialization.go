@@ -36,6 +36,57 @@ SELECT pg_advisory_xact_lock(hashtextextended('drama-agent:schema',0));
 ` + schemaSQL + "\nSELECT pg_advisory_xact_lock(hashtextextended('drama-agent:operator-init',0));\n" + initialOperatorSQL() + "COMMIT;\n"
 }
 
+// DemoAccount is one public demo login seeded next to the initial operator.
+type DemoAccount struct {
+	ID, Email, Username string
+}
+
+// DemoAccounts share the intentionally public bootstrap password so a fresh
+// template deployment can be tried as team owner, admin and member at once.
+var DemoAccounts = []DemoAccount{
+	{ID: "daydream-demo-owner", Email: "owner@daydream.local", Username: "演示团队所有者"},
+	{ID: "daydream-demo-admin", Email: "admin@daydream.local", Username: "演示团队管理员"},
+	{ID: "daydream-demo-member", Email: "member@daydream.local", Username: "演示团队成员"},
+}
+
+// InitializeDemoAccounts adds the public demo users only while the initial
+// operator is the sole account, so an installation with real users never
+// receives public logins. It reports whether all demo accounts exist after
+// the call (created now or by an earlier deployment).
+func (s *Store) InitializeDemoAccounts(ctx context.Context) (bool, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback(context.WithoutCancel(ctx))
+	if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('drama-agent:operator-init',0))`); err != nil {
+		return false, err
+	}
+	if _, err = tx.Exec(ctx, `LOCK TABLE drama_catalog_v1.users IN SHARE ROW EXCLUSIVE MODE`); err != nil {
+		return false, err
+	}
+	ids := make([]string, len(DemoAccounts))
+	for i, account := range DemoAccounts {
+		ids[i] = account.ID
+	}
+	var others, present int
+	if err = tx.QueryRow(ctx, `SELECT count(*) FILTER (WHERE email<>$1), count(*) FILTER (WHERE id=ANY($2)) FROM drama_catalog_v1.users`, accounts.InitialOperatorEmail, ids).Scan(&others, &present); err != nil {
+		return false, err
+	}
+	if others != 0 {
+		return present == len(DemoAccounts), nil
+	}
+	for _, account := range DemoAccounts {
+		if _, err = tx.Exec(ctx, `INSERT INTO drama_catalog_v1.users(id,email,username,role,password_hash) VALUES($1,$2,$3,'user',convert_to($4,'UTF8'))`, account.ID, account.Email, account.Username, initialOperatorPasswordHash); err != nil {
+			return false, err
+		}
+		if _, err = tx.Exec(ctx, `INSERT INTO drama_catalog_v1.spaces(id,kind) VALUES($1,'personal')`, account.ID); err != nil {
+			return false, err
+		}
+	}
+	return true, tx.Commit(ctx)
+}
+
 // InitializeDefaultOperator is the normal deployment bootstrap. Any existing
 // user makes it a no-op; explicit maintenance initialization stays separate.
 func (s *Store) InitializeDefaultOperator(ctx context.Context) (bool, error) {

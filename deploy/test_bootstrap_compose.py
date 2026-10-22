@@ -24,6 +24,9 @@ class BootstrapTests(unittest.TestCase):
             target = root / "config"
             original = {path.name: path.read_bytes() for path in target.iterdir()}
             self.assertEqual(set(original), {"app.local.yaml", "postgres-password", "minio-password", "minio-user", "redis-password"})
+            # 新部署默认开启演示收银台，开箱可体验充值全流程。
+            config = (target / "app.local.yaml").read_text()
+            self.assertTrue(config.startswith("environment: development\npayment:\n  demo:\n    enabled: true\n"))
             for path in target.iterdir():
                 self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
             self.initialize(root)

@@ -54,8 +54,8 @@ CREATE TABLE IF NOT EXISTS drama_catalog_v1.platform_logos (
 CREATE TABLE IF NOT EXISTS drama_catalog_v1.platform_settings (
  id boolean PRIMARY KEY CHECK(id),
  revision bigint NOT NULL DEFAULT 0 CHECK(revision>=0 AND revision<=9007199254740991),
- name text NOT NULL DEFAULT '短剧 Agent' CHECK(char_length(name) BETWEEN 1 AND 48),
- sidebar_description text NOT NULL DEFAULT '创作工作台' CHECK(char_length(sidebar_description)<=120),
+ name text NOT NULL DEFAULT 'Daydream Factory' CHECK(char_length(name) BETWEEN 1 AND 48),
+ sidebar_description text NOT NULL DEFAULT '脑洞一开，好戏就来。' CHECK(char_length(sidebar_description)<=120),
  logo_id text REFERENCES drama_catalog_v1.platform_logos(id)
 );
 INSERT INTO drama_catalog_v1.platform_settings(id) VALUES(true) ON CONFLICT DO NOTHING;

@@ -38,7 +38,8 @@ services:
   database-init:
     image: daydream-backend:local
     pull_policy: never
-    command: ["drama-accounts-init", "-config", "/app/config/app.local.yaml"]
+    # -demo-team：全新安装时同时建立公开的演示团队账号（所有者/管理员/成员），正式上线前见 README「上线前」。
+    command: ["drama-accounts-init", "-config", "/app/config/app.local.yaml", "-demo-team"]
     volumes:
       - runtime-config:/runtime:ro
     depends_on:

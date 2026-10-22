@@ -24,6 +24,7 @@ const { PlatformProvider } = await import('../src/state/PlatformContext');
 const { Application } = await import('../src/Application');
 const { sessionBoundary } = await import('../src/api/session-boundary');
 const { ApiError } = await import('../src/api/http-error');
+const { defaultPlatformLogo } = await import('../src/components/workspace/PlatformLogo');
 let root: ReturnType<typeof createRoot> | undefined;
 let stored: PlatformSettings;
 let api: PlatformApi;
@@ -99,13 +100,14 @@ test('brand edits and uploaded Logo remain drafts until save, then read back; re
   assert.equal(document.querySelector('.account-brand-name')?.textContent, '星河影业');
   assert.equal(document.title, '星河影业');
   await act(async () => button('恢复默认').click());
-  assert.equal(document.querySelector('.op-platform-logo-preview img'), null);
-  assert.ok(document.querySelector('.account-brand img'));
+  // 恢复默认即回到模板自带标识：草稿预览立刻显示默认图，已发布的品牌在保存前仍是上传的图。
+  assert.equal(document.querySelector('.op-platform-logo-preview img')?.getAttribute('src'), defaultPlatformLogo);
+  assert.equal(document.querySelector('.account-brand img')?.getAttribute('src'), url);
   await act(async () => button('保存设置').click());
   await flush();
   assert.equal(stored.logoId, '');
   assert.equal(stored.name, '星河影业');
-  assert.equal(document.querySelector('.account-brand img'), null);
+  assert.equal(document.querySelector('.account-brand img')?.getAttribute('src'), defaultPlatformLogo);
   await act(async () => { window.location.hash = '#/operations/users'; }); await flush();
   await act(async () => { window.location.hash = '#/operations/platform'; }); await flush();
   assert.equal(input('平台名称').value, '星河影业');

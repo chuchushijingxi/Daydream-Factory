@@ -19,6 +19,7 @@ func main() {
 	secret := flag.String("password-file", "", "optional 0600 file for explicit operator maintenance initialization")
 	printSQL := flag.Bool("print-sql", false, "print clean initialization SQL without connecting to a database")
 	writeSQL := flag.String("write-sql", "", "write clean initialization SQL without connecting to a database")
+	demoTeam := flag.Bool("demo-team", false, "on a fresh installation, also seed the public demo team (owner/admin/member) for trying the template")
 	flag.Parse()
 	if *printSQL || *writeSQL != "" {
 		if *writeSQL != "" {
@@ -42,7 +43,8 @@ func main() {
 	}
 	defer store.Close()
 	if e = store.Migrate(ctx); e != nil {
-		log.Fatal("identity migration failed")
+		// 迁移错误是 SQL 层的结构问题，不含凭据；带上原因便于排查旧库升级失败。
+		log.Fatalf("identity migration failed: %v", e)
 	}
 	if *secret == "" {
 		created, err := store.InitializeDefaultOperator(ctx)
@@ -50,6 +52,13 @@ func main() {
 			log.Fatal(err)
 		}
 		log.Printf("default operator initialization complete; created=%t; existing accounts unchanged", created)
+		if *demoTeam {
+			seeded, err := seedDemoTeam(ctx, store)
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Printf("demo team initialization complete; created=%t", seeded)
+		}
 		return
 	}
 	f, e := os.Open(*secret)
