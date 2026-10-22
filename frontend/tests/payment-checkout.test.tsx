@@ -674,7 +674,7 @@ test('recharge record shared page-size menu keeps server pagination and returns 
       }}
     />,
   );
-  await click('下一页');
+  await clickLabel('下一页');
   assert.deepEqual(calls.at(-1), [2, 10]);
   const trigger = document.querySelector<HTMLButtonElement>(
     'button[aria-label="充值记录每页条数"]',
@@ -684,7 +684,7 @@ test('recharge record shared page-size menu keeps server pagination and returns 
   );
   await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
   const size = [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')].find(
-    (node) => node.textContent === '50',
+    (node) => node.textContent === '50 条 / 页',
   )!;
   await act(async () => size.click());
   assert.deepEqual(calls.at(-1), [1, 50]);

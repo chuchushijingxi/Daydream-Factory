@@ -1332,9 +1332,3 @@
   }
 }
 
-/* 所有者的团队积分卡：充值记录与充值并排。 */
-.team-page.team-workspace-page .team-balance-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}

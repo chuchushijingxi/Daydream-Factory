@@ -481,11 +481,8 @@ test('personal balance and records failures remain explicit instead of displayin
   assert.match(text(), /流水读取失败/);
   assert.equal(document.querySelector('.personal-credit-empty'), null);
   assert.equal(document.querySelector('.personal-credit-ledger'), null);
-  // 余额读取失败也保留充值记录入口：历史订单不依赖当前余额。
-  assert.match(
-    document.querySelector('.personal-credit-actions a')?.getAttribute('href') || '',
-    /\/payments\/orders$/,
-  );
+  // 充值记录只走账号菜单的独立入口，积分页不再放跳转。
+  assert.equal(document.querySelector('a[href$="/payments/orders"]'), null);
 });
 test('ambiguous credit adjustment is submitted once and reconciled with its original command', async () => {
   await mount('/operations/credits?account=fixture_a', (f) => f.setUncertain(true));

@@ -111,8 +111,7 @@
   font-size: 11px;
 }
 .payment-agreement a,
-.payment-record-link,
-.payment-page a {
+.payment-record-link {
   color: var(--jm-text);
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -269,93 +268,6 @@
   color: var(--jm-text);
   text-decoration: underline;
 }
-.payment-page {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: var(--xy-page-top) 40px 32px;
-  color: var(--jm-text);
-}
-.payment-page-head {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
-}
-.payment-page h1 {
-  font-size: 20px;
-  line-height: 28px;
-  font-weight: var(--font-weight-medium);
-  margin: 0;
-}
-.payment-page-head > div {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.payment-page-lead {
-  font-size: 13px;
-  line-height: 22px;
-  color: var(--jm-muted);
-}
-.payment-page-list {
-  display: grid;
-  gap: 12px;
-  margin: 24px 0;
-}
-.payment-order-card {
-  border: 1px solid var(--jm-border);
-  border-radius: 12px;
-  padding: 20px;
-  background: var(--jm-panel);
-}
-.payment-order-card header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: baseline;
-  margin-bottom: 16px;
-}
-.payment-order-card header strong {
-  font-size: 18px;
-  font-weight: var(--font-weight-medium);
-}
-.payment-order-card header .payment-order-status {
-  font-size: 12px;
-  border-radius: 5px;
-  padding: 3px 7px;
-  background: var(--jm-inset);
-}
-.payment-order-card dl {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 24px;
-  margin: 0;
-  font-size: 12px;
-  line-height: 20px;
-}
-.payment-order-card dl > div {
-  min-width: 0;
-}
-.payment-order-card dt {
-  color: var(--jm-muted);
-}
-.payment-order-card dd {
-  margin: 2px 0 0;
-  overflow-wrap: anywhere;
-}
-.payment-order-card dd > span {
-  display: block;
-}
-.payment-pagination {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  font-size: 12px;
-}
 .payment-agreement-page {
   max-width: 920px;
   width: 100%;
@@ -379,8 +291,7 @@
 .payment-agreement-copy p {
   margin: 0 0 12px;
 }
-.payment-checkout :is(button, select, input, a):focus-visible,
-.payment-page :is(button, select, a):focus-visible {
+.payment-checkout :is(button, select, input, a):focus-visible {
   outline: 2px solid var(--jm-text);
   outline-offset: 3px;
 }
@@ -398,25 +309,6 @@
   }
   .payment-package strong {
     font-size: 20px;
-  }
-  .payment-page {
-    padding: var(--xy-page-top) 16px 24px;
-  }
-  .payment-page-head {
-    align-items: start;
-  }
-  .payment-page-head > div {
-    gap: 10px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    font-size: 12px;
-  }
-  .payment-order-card {
-    padding: 16px;
-  }
-  .payment-order-card dl {
-    grid-template-columns: 1fr;
-    gap: 10px;
   }
   .payment-agreement-copy {
     padding: 20px;
@@ -455,11 +347,6 @@
 .payment-field .payment-choice {
   width: 100%;
   height: 40px;
-}
-.payment-page-size-field {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
 }
 .op-choice.payment-page-size {
   width: auto;
@@ -962,17 +849,11 @@
     padding: 0 14px;
   }
 }
-/* 用户充值记录：与积分明细同款的紧凑列表，只列时间、空间、积分、金额和状态。 */
-.payment-records {
-  margin-top: 8px;
-  border-radius: 16px;
-  background: var(--jm-panel);
-  padding: 4px 20px;
-}
+/* 用户充值记录：版式与积分明细列表一致；积分与金额两列都是主值在上、补充信息在下，右对齐。 */
 .payment-records-columns,
 .payment-records-row {
   display: grid;
-  grid-template-columns: 150px minmax(180px, 1.4fr) minmax(110px, 0.8fr) minmax(110px, 0.8fr) 88px;
+  grid-template-columns: 160px minmax(200px, 1fr) minmax(120px, 0.5fr) minmax(120px, 0.5fr) 96px;
   gap: 16px;
   align-items: center;
 }
@@ -982,8 +863,11 @@
   line-height: 20px;
   color: var(--jm-muted);
 }
+.payment-records-columns > span:nth-child(n + 3) {
+  text-align: right;
+}
 .payment-records-row {
-  padding: 14px 0;
+  padding: 12px 0;
   border-top: 1px solid var(--jm-border);
   font-size: 13px;
   line-height: 20px;
@@ -994,42 +878,61 @@
   font-variant-numeric: tabular-nums;
 }
 .payment-records-target,
-.payment-records-credits {
-  display: grid;
+.payment-records-credits,
+.payment-records-amount {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+}
+.payment-records-credits,
+.payment-records-amount {
+  align-items: flex-end;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.payment-records-row strong {
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: var(--font-weight-normal);
 }
 .payment-records-target strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.payment-records-credits strong {
+  color: var(--credit-amount, var(--jm-text));
   font-weight: var(--font-weight-medium);
 }
-.payment-records small {
+.payment-records-row small {
+  margin-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--jm-muted);
   font-size: 12px;
   line-height: 18px;
+}
+.payment-records-target small {
   user-select: all;
 }
-.payment-records-credits {
-  font-variant-numeric: tabular-nums;
-}
-.payment-records-credits small {
-  user-select: auto;
-}
-.payment-records-columns > span:nth-child(n + 3),
-.payment-records-credits,
-.payment-records-amount {
-  text-align: right;
-  justify-items: end;
-}
+/* 实付在上、原价划线在下，与积分列的“含赠送”对齐。 */
 .payment-records-amount .payment-price {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.payment-records-amount .payment-price strong {
+  font-weight: var(--font-weight-medium);
+}
+.payment-records-amount .payment-price del {
+  line-height: 18px;
+}
+.payment-records-state {
+  display: flex;
   justify-content: flex-end;
 }
 .payment-records-status {
-  justify-self: end;
   padding: 0 8px;
   border-radius: 999px;
   background: var(--jm-inset);
@@ -1037,9 +940,6 @@
   font-size: 12px;
   line-height: 22px;
   white-space: nowrap;
-}
-.payment-records-columns > span:last-child {
-  text-align: right;
 }
 .payment-records-status[data-status='credited'] {
   background: rgba(26, 160, 90, 0.12);
@@ -1056,35 +956,50 @@
   background: #3a2f12;
   color: #f5c86a;
 }
-@media (max-width: 700px) {
-  .payment-records {
-    padding: 4px 16px;
+@media (max-width: 1100px) {
+  .payment-records-columns,
+  .payment-records-row {
+    grid-template-columns: 140px minmax(160px, 1fr) minmax(110px, 0.5fr) minmax(110px, 0.5fr) 88px;
+    gap: 12px;
   }
+}
+@media (max-width: 760px) {
   .payment-records-columns {
     display: none;
   }
   .payment-records-row {
     grid-template-columns: minmax(0, 1fr) max-content;
-    gap: 4px 12px;
+    gap: 6px 12px;
+    padding: 14px 0;
   }
   .payment-records-row > time {
-    grid-column: 1 / 3;
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .payment-records-state {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .payment-records-target {
+    grid-column: 1;
+    grid-row: 2;
   }
   .payment-records-credits {
     grid-column: 2;
     grid-row: 2;
   }
   .payment-records-amount {
-    grid-column: 1;
+    grid-column: 1 / 3;
     grid-row: 3;
-    text-align: left;
-    justify-items: start;
+    flex-direction: row;
+    justify-content: flex-end;
   }
   .payment-records-amount .payment-price {
-    justify-content: flex-start;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
   }
-  .payment-records-status {
-    grid-column: 2;
-    grid-row: 3;
+  .payment-orders-page .personal-credits-heading {
+    flex-wrap: wrap;
   }
 }

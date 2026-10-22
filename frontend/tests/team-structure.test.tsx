@@ -545,11 +545,8 @@ test('credit detail entries open the credits tab directly, including when the te
   await mount('owner', '/team/team?tab=credits');
   assert.deepEqual(selected(), ['积分']);
   assert.ok(document.querySelector('.team-credit-panel'));
-  // 所有者在团队积分卡上能直接打开充值记录。
-  assert.match(
-    visible('.team-balance-actions a')[0]?.getAttribute('href') || '',
-    /\/payments\/orders$/,
-  );
+  // 充值记录只走账号菜单的独立入口，团队积分卡不再放跳转。
+  assert.equal(document.querySelector('.team-balance-card a[href$="/payments/orders"]'), null);
   await mount('owner', '/team/team');
   assert.deepEqual(selected(), ['概览']);
   await act(async () => go('/team/team?tab=credits'));

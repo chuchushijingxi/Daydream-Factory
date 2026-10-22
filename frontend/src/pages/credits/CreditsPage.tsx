@@ -13,7 +13,7 @@ import type {
 import { Choice, Feedback, PageNavigation } from '../operations/controls';
 import { dateTime, formatInteger } from './credit-format';
 import { usePersonalCredits } from '../../features/credits/PersonalCredits';
-import { RechargeButton, RechargeOrdersLink } from '../../features/payments/Recharge';
+import { RechargeButton } from '../../features/payments/Recharge';
 import {
   creditCategoryLabel,
   creditActorLabel,
@@ -230,10 +230,7 @@ function PersonalCreditsPage() {
                 <span>{c('积分')}</span>
               </div>
             </div>
-            <div className="personal-credit-actions">
-              <RechargeOrdersLink />
-              <RechargeButton />
-            </div>
+            <RechargeButton />
           </div>
           <div className="personal-credit-categories">
             <article>
