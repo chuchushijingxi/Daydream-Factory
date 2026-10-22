@@ -44,7 +44,8 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 printf '%s\n' '正在构建并启动系统；首次部署需要联网下载依赖、字体和模型，请耐心等待。'
-if docker compose "$@" up --build --force-recreate -d --wait --wait-timeout 600; then
+# --remove-orphans 清理已改名服务的旧容器（如单镜像时期的 app），避免与同名新容器冲突；数据卷不受影响。
+if docker compose "$@" up --build --force-recreate --remove-orphans -d --wait --wait-timeout 600; then
     printf '\n%s\n' '部署成功。'
     printf '%s\n' '工作台：http://127.0.0.1:8787/demo/app/' '运营后台：http://127.0.0.1:8787/demo/app/#/operations-login'
     printf '%s\n' '首次空库初始化账号：Daydream，密码：Daydream123456。登录后请修改密码。'

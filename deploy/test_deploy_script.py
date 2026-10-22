@@ -9,7 +9,7 @@ import unittest
 
 
 DEPLOY_SCRIPT = Path(__file__).resolve().parents[1] / "deploy.sh"
-UP_ARGUMENTS = ["up", "--build", "--force-recreate", "-d", "--wait", "--wait-timeout", "600"]
+UP_ARGUMENTS = ["up", "--build", "--force-recreate", "--remove-orphans", "-d", "--wait", "--wait-timeout", "600"]
 PRIVATE_MARKER = "private-docker-diagnostic-must-not-be-printed"
 
 
@@ -45,7 +45,7 @@ class DeployScriptTests(unittest.TestCase):
             f"    print({PRIVATE_MARKER!r})\n"
             f"    print({PRIVATE_MARKER!r}, file=sys.stderr)\n"
             "    sys.exit(int(os.environ['DEPLOY_TEST_DAEMON_STATUS']))\n"
-            f"if args and args[0] == 'compose' and args[-7:] == {UP_ARGUMENTS!r}:\n"
+            f"if args and args[0] == 'compose' and args[-{len(UP_ARGUMENTS)}:] == {UP_ARGUMENTS!r}:\n"
             "    sys.exit(int(os.environ['DEPLOY_TEST_UP_STATUS']))\n"
             "sys.exit(97)\n"
         )
