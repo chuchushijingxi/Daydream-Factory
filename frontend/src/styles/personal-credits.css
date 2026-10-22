@@ -126,3 +126,5 @@
 .team-member-credit-records[data-tab=usage] :is(.personal-credit-columns,.personal-credit-ledger>li){grid-template-columns:160px minmax(140px,1fr) minmax(140px,.6fr)}
 @media(max-width:1100px){.team-member-credit-records[data-tab=usage] :is(.personal-credit-columns,.personal-credit-ledger>li){grid-template-columns:140px minmax(120px,1fr) minmax(120px,.6fr)}}
 @media(max-width:1000px){.team-member-credit-records[data-tab=usage] .personal-credit-ledger>li{grid-template-columns:minmax(0,1fr) max-content}}
+/* 充值记录与充值按钮并排，窄屏随余额卡片换行。 */
+.personal-credit-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}

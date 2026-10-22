@@ -545,6 +545,11 @@ test('credit detail entries open the credits tab directly, including when the te
   await mount('owner', '/team/team?tab=credits');
   assert.deepEqual(selected(), ['积分']);
   assert.ok(document.querySelector('.team-credit-panel'));
+  // 所有者在团队积分卡上能直接打开充值记录。
+  assert.match(
+    visible('.team-balance-actions a')[0]?.getAttribute('href') || '',
+    /\/payments\/orders$/,
+  );
   await mount('owner', '/team/team');
   assert.deepEqual(selected(), ['概览']);
   await act(async () => go('/team/team?tab=credits'));

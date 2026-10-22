@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { SpaceRole } from '../../api/spaces-types';
 import { useTeamCredits } from '../../features/credits/PersonalCredits';
-import { RechargeButton } from '../../features/payments/Recharge';
+import { RechargeButton, RechargeOrdersLink } from '../../features/payments/Recharge';
 import { useCatalogText } from '../../contexts/useCatalogText';
 import { Feedback } from '../operations/controls';
 import { formatInteger } from '../credits/credit-format';
@@ -50,7 +50,10 @@ export function BalanceTiles({
             <div className="team-balance-head">
               <span className="team-tile-label">{c('未分配积分')}</span>
               {role === 'owner' ? (
-                <RechargeButton />
+                <span className="team-balance-actions">
+                  <RechargeOrdersLink />
+                  <RechargeButton />
+                </span>
               ) : (
                 <span className="team-tile-hint">{c('不足时请联系所有者充值')}</span>
               )}

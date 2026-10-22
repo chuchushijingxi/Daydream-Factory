@@ -113,6 +113,15 @@ export function RechargeProvider({
   );
 }
 export const useRecharge = () => useContext(Context);
+// 充值记录与充值按钮并列放在积分页；渠道关闭时历史订单仍可查看，所以不随充值可用性隐藏。
+export function RechargeOrdersLink() {
+  const { c } = useCatalogText();
+  return (
+    <Button asChild variant="outline" size="sm">
+      <Link to="/payments/orders">{c('充值记录')}</Link>
+    </Button>
+  );
+}
 export function RechargeButton({
   className,
   onClick,
