@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"drama-agent/internal/adapter/appconfig"
-	"drama-agent/internal/adapter/imagethumbnail"
+	"drama-agent/internal/adapter/mediatools"
 	"drama-agent/internal/adapter/mockmedia"
 	"drama-agent/internal/adapter/nsq"
 	"drama-agent/internal/adapter/postgres"
@@ -31,11 +31,13 @@ func New(c appconfig.Config, store *postgres.Store, objects *s3objects.Store, re
 		return nil, nil, err
 	}
 	t := c.Tasks
+	// 缩略图、视频核对与 Mock 视频共用一套媒体工具：Compose 中是独立媒体服务，主机直跑时是本机命令。
+	tools := mediatools.New(c.Media)
 	s := &app.Service{
 		Capacity:      capacity,
 		SpaceResolver: store, SpaceAccess: store,
-		Store: postgres.NewTaskStore(store), Resolver: resolver, Provider: mockmedia.TaskProvider{Media: c.Media},
-		Results: &s3objects.TaskResults{ReadOnly: c.ReadOnly, Thumbnails: imagethumbnail.FFmpeg{Settings: c.Media}, Spaces: postgres.NewTaskStore(store), Files: files, Objects: objects, ProbePath: c.Media.FFprobe, ProbeTimeout: c.Media.ProbeTimeout}, Queue: q, ReadOnly: c.ReadOnly,
+		Store: postgres.NewTaskStore(store), Resolver: resolver, Provider: mockmedia.TaskProvider{Encoder: tools},
+		Results: &s3objects.TaskResults{ReadOnly: c.ReadOnly, Thumbnails: tools, Videos: tools, Spaces: postgres.NewTaskStore(store), Files: files, Objects: objects}, Queue: q, ReadOnly: c.ReadOnly,
 		Lease: t.Lease, SubmitConcurrency: t.SubmitConcurrency, QueryConcurrency: t.QueryConcurrency, SaveConcurrency: t.SaveConcurrency,
 		ObserveTimeout: t.ObserveTimeout, SaveTimeout: t.SaveTimeout, EvidenceTimeout: t.EvidenceTimeout, CapacityRetry: t.CapacityRetry,
 		Policy: d.Policy{PollMillis: t.PollInterval.Milliseconds(), RetryMillis: t.RetryInterval.Milliseconds(), MaxSubmissions: t.MaxSubmissions},

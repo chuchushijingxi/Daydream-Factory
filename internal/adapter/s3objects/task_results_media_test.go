@@ -2,6 +2,8 @@ package s3objects
 
 import (
 	"context"
+	"drama-agent/internal/adapter/appconfig"
+	"drama-agent/internal/adapter/mediatools"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,8 +29,8 @@ func TestProbeVideoUsesActualLocalMediaAndCleansTemporaryFiles(t *testing.T) {
 	}
 	temporary := t.TempDir()
 	t.Setenv("TMPDIR", temporary)
-	// probeVideo only uses the Store timeout helper; no S3 client or endpoint is needed.
-	results := TaskResults{Objects: &Store{}, ProbePath: "ffprobe", ProbeTimeout: 2 * time.Second}
+	// probeVideo delegates to the configured inspector; no S3 client or endpoint is needed.
+	results := TaskResults{Objects: &Store{}, Videos: mediatools.Local{Settings: appconfig.Media{FFprobe: "ffprobe", ProbeTimeout: 2 * time.Second}}}
 	width, height, duration, err := results.probeVideo(context.Background(), raw)
 	if err != nil || width != 96 || height != 54 || duration != 1 {
 		t.Fatalf("actual probe = %dx%d, %gs, %v", width, height, duration, err)

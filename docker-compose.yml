@@ -5,7 +5,7 @@ services:
     container_name: daydream-factory-config-init
     image: daydream-backend:local
     pull_policy: never
-    command: ["python", "/usr/local/lib/drama-agent/bootstrap-compose.py"]
+    command: ["drama-compose-init"]
     volumes:
       - runtime-config:/runtime
     restart: "no"
@@ -73,7 +73,7 @@ services:
     image: daydream-backend:local
     build: .
     init: true
-    command: ["drama-server", "-config", "/app/config/app.local.yaml", "-listen", "0.0.0.0:8787", "-trusted-proxies", "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"]
+    command: ["drama-server", "-config", "/app/config/app.local.yaml", "-listen", "0.0.0.0:8787", "-trusted-proxies", "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16", "-media-endpoint", "http://media:8790", "-embedding-endpoint", "http://embedding:8791"]
     volumes:
       - runtime-config:/runtime:ro
       - app-data:/app/.data
@@ -86,6 +86,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      media:
+        condition: service_healthy
+      embedding:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8787/healthz"]
       interval: 5s
@@ -93,6 +97,44 @@ services:
       retries: 30
       start_period: 30s
     stop_grace_period: 30s
+    restart: unless-stopped
+
+  # 媒体服务：FFmpeg/ffprobe/libwebp 生成缩略图、探测与编码视频，只在 Compose 网络内可达。
+  media:
+    container_name: daydream-factory-media
+    image: daydream-media:local
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.media
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "drama-media-server", "-healthcheck", "http://127.0.0.1:8790"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+  # 检索服务：离线 BGE 向量模型常驻加载，不访问外网，只在 Compose 网络内可达。
+  embedding:
+    container_name: daydream-factory-embedding
+    image: daydream-embedding:local
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.embedding
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "/opt/evidence-embedding/runtime/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8791/healthz', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
     restart: unless-stopped
 
   # 前端：nginx 提供工作台页面，/api/ 转发给后端；对宿主机只发布这一个端口。
@@ -195,7 +237,7 @@ services:
     profiles: ["workers"]
     init: true
     network_mode: service:backend
-    command: ["drama-task-worker", "-config", "/app/config/app.local.yaml"]
+    command: ["drama-task-worker", "-config", "/app/config/app.local.yaml", "-media-endpoint", "http://media:8790"]
     volumes:
       - runtime-config:/runtime:ro
       - app-data:/app/.data

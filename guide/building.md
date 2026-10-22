@@ -4,7 +4,7 @@
 
 ## 免费检查与构建
 
-以下用于编译和免费检查，不是宿主机完整运行教程；完整启动执行 `sh deploy.sh`。需要 Go 1.26.10+、Node.js 22+ 和 Python 3.9+（字体获取与部署脚本检查）；本地检索由容器中的 Python CPU 环境提供。在源码根目录执行：
+以下用于编译和免费检查，不是宿主机完整运行教程；完整启动执行 `sh deploy.sh`。需要 Go 1.26.10+、Node.js 22+ 和 Python 3.9+（字体获取与部署脚本检查）；本地检索由独立检索服务容器中的 Python CPU 环境提供。在源码根目录执行：
 
 ```sh
 python3 -m unittest discover -s deploy -p 'test_*.py'
@@ -38,4 +38,4 @@ python3 scripts/fetch-misans.py --source-dir /absolute/path/to/misans-cache
 
 ## 第三方许可
 
-项目代码采用 [Apache-2.0](../LICENSE)。MiSans 字体、供应商图标、本地 BGE 模型和独立媒体工具保留各自许可，见 [NOTICE](../NOTICE)。FFmpeg/libx264 工具的 GPL 许可及对应源码随镜像保留在 `/opt/media/`。Redis 8 选择独立的 AGPLv3 许可，Silo 使用独立 AGPL 许可。
+项目代码采用 [Apache-2.0](../LICENSE)。MiSans 字体、供应商图标、本地 BGE 模型和独立媒体工具保留各自许可，见 [NOTICE](../NOTICE)。FFmpeg/libx264 工具的 GPL 许可及对应源码随媒体服务镜像保留在 `/opt/media/`。Redis 8 选择独立的 AGPLv3 许可，Silo 使用独立 AGPL 许可。

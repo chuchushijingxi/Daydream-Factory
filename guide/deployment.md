@@ -48,12 +48,7 @@ sh deploy.sh
 ```sh
 docker run --rm --network none --user 0 \
   --mount type=volume,src=daydream-factory_runtime-config,dst=/runtime \
-  --entrypoint python daydream-backend:local -c "
-p='/runtime/config/app.local.yaml'
-s=open(p).read()
-s=s.replace('environment: development','environment: production',1)
-s=s.replace('  demo:\n    enabled: true','  demo:\n    enabled: false',1)
-open(p,'w').write(s)"
+  daydream-backend:local drama-compose-init -production
 ```
 
 再到运营后台「用户管理」停用三个演示账号，并修改 `Daydream` 的密码。演示团队只在空库首次部署时创建；不需要它的新部署，可在 `docker-compose.yml` 的 `database-init` 命令中去掉 `-demo-team`。使用过 `-p` 项目名时，把卷名中的 `daydream-factory` 换成对应项目名。
@@ -62,7 +57,7 @@ open(p,'w').write(s)"
 
 Compose 自动生成私有基础设施凭据，并在空数据库创建基础设置和这一个运营账号。[初始化 SQL](../deploy/init.sql) 从代码中的表结构和种子生成，不包含开发者账号、项目、上传、用量、邮件或业务流水。数据库已有任何用户时不再添加公开初始化账号，重复运行部署脚本不重置已有密码或业务数据，也不删除数据卷。
 
-系统由两个应用镜像组成：后端镜像 `daydream-backend` 包含 API、任务 worker、本地 BGE CPU 推理和媒体工具；前端镜像 `daydream-frontend` 用 nginx 提供工作台页面，并把 `/api/` 转发给后端。浏览器只访问前端发布的 `8787` 端口，后端不向宿主机发布端口。配套服务为 PostgreSQL 17、Redis 8、Milvus 3.0.3、NSQ 1.3.0 和 [PGSTY Silo](https://github.com/pgsty/silo) S3 对象存储。Milvus 与 NSQ 的 Go 程序使用 Go 1.26.10 和独立依赖锁重建，Milvus 原生库保持同一上游版本。
+系统由四个应用镜像组成：后端镜像 `daydream-backend` 只含 Go 程序（API、任务 worker 与初始化工具）；前端镜像 `daydream-frontend` 用 nginx 提供工作台页面，并把 `/api/` 转发给后端；媒体服务 `daydream-media` 提供 FFmpeg/libwebp 缩略图与视频处理；检索服务 `daydream-embedding` 常驻加载离线 BGE CPU 模型生成检索向量。浏览器只访问前端发布的 `8787` 端口，后端、媒体与检索服务都不向宿主机发布端口。配套服务为 PostgreSQL 17、Redis 8、Milvus 3.0.3、NSQ 1.3.0 和 [PGSTY Silo](https://github.com/pgsty/silo) S3 对象存储。Milvus 与 NSQ 的 Go 程序使用 Go 1.26.10 和独立依赖锁重建，Milvus 原生库保持同一上游版本。
 
 基础设施原凭据保存在 `runtime-config` 卷，模型/SMTP 原加密密钥保存在 `app-data` 卷；业务数据使用独立卷。请按[维护指南](maintenance.md#备份与恢复)配套备份，不用删卷处理启动问题。
 

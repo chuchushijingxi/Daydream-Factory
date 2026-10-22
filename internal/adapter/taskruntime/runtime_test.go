@@ -2,6 +2,7 @@ package taskruntime_test
 
 import (
 	"context"
+	"drama-agent/internal/adapter/mediatools"
 	"drama-agent/internal/application/ports"
 	d "drama-agent/internal/domain/task"
 	"testing"
@@ -36,10 +37,11 @@ func TestAPIAndWorkerAssemblyUsesExplicitSettings(t *testing.T) {
 	if s.SubmitConcurrency != 2 || s.QueryConcurrency != 3 || s.SaveConcurrency != 1 {
 		t.Fatal("stage settings ignored")
 	}
-	if s.Results.(*s3objects.TaskResults).ProbePath != c.Media.FFprobe {
+	// 未配置媒体服务地址时，核对与 Mock 编码使用本机工具并沿用配置的工具路径。
+	if v, ok := s.Results.(*s3objects.TaskResults).Videos.(mediatools.Local); !ok || v.Settings.FFprobe != c.Media.FFprobe {
 		t.Fatal("media tool setting ignored")
 	}
-	if s.Provider.(mockmedia.TaskProvider).Media.FFmpeg != c.Media.FFmpeg {
+	if e, ok := s.Provider.(mockmedia.TaskProvider).Encoder.(mediatools.Local); !ok || e.Settings.FFmpeg != c.Media.FFmpeg {
 		t.Fatal("mock encoding tool setting ignored")
 	}
 }

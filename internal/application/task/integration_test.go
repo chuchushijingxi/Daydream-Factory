@@ -18,6 +18,8 @@ import (
 	"testing"
 	"time"
 
+	"drama-agent/internal/adapter/appconfig"
+	"drama-agent/internal/adapter/mediatools"
 	"drama-agent/internal/adapter/mockmedia"
 	mq "drama-agent/internal/adapter/nsq"
 	"drama-agent/internal/adapter/postgres"
@@ -94,7 +96,7 @@ func fixture(t *testing.T) (*app.Service, *postgres.Store) {
 	if err = objects.EnsureBucket(ctx); err != nil {
 		t.Fatal(err)
 	}
-	return &app.Service{Capacity: redisruntime.ConnectDatabase(t, url), Store: postgres.NewTaskStore(store), Resolver: resolver{}, Provider: mockmedia.TaskProvider{}, Results: &s3objects.TaskResults{Objects: objects, ProbePath: testconfig.Example().Media.FFprobe, ProbeTimeout: testconfig.Example().Media.ProbeTimeout}, Queue: &noQueue{}, SubmitConcurrency: 8, QueryConcurrency: 16, SaveConcurrency: 4, ObserveTimeout: 2 * time.Minute, SaveTimeout: 5 * time.Minute, EvidenceTimeout: 10 * time.Second, CapacityRetry: 100 * time.Millisecond, Lease: 300 * time.Millisecond, Policy: d.Policy{PollMillis: 20, RetryMillis: 20, MaxSubmissions: 3}}, store
+	return &app.Service{Capacity: redisruntime.ConnectDatabase(t, url), Store: postgres.NewTaskStore(store), Resolver: resolver{}, Provider: mockmedia.TaskProvider{Encoder: mediatools.Local{Settings: appconfig.Defaults().Media}}, Results: &s3objects.TaskResults{Objects: objects, Videos: mediatools.Local{Settings: testconfig.Example().Media}}, Queue: &noQueue{}, SubmitConcurrency: 8, QueryConcurrency: 16, SaveConcurrency: 4, ObserveTimeout: 2 * time.Minute, SaveTimeout: 5 * time.Minute, EvidenceTimeout: 10 * time.Second, CapacityRetry: 100 * time.Millisecond, Lease: 300 * time.Millisecond, Policy: d.Policy{PollMillis: 20, RetryMillis: 20, MaxSubmissions: 3}}, store
 }
 func command(scope, kind string, delay int) app.Command {
 	ratio := "1:1"
@@ -345,7 +347,7 @@ func TestUnknownSafeRetryStorageRecoveryAndCancelLateEvidence(t *testing.T) {
 	s, _ := fixture(t)
 	ctx := context.Background()
 	scope := identity.New("test")
-	p := &injectedProvider{TaskProvider: mockmedia.TaskProvider{}, mode: "unknown"}
+	p := &injectedProvider{TaskProvider: mockmedia.TaskProvider{Encoder: mediatools.Local{Settings: appconfig.Defaults().Media}}, mode: "unknown"}
 	s.Provider = p
 	unknown := finish(t, s, start(t, s, command(scope, "image", 0)))
 	for i := 0; i < 5; i++ {
@@ -381,7 +383,7 @@ func TestUnknownSafeRetryStorageRecoveryAndCancelLateEvidence(t *testing.T) {
 	}
 	s2, _ := fixture(t)
 	s2.Resolver = resolver{paid: true}
-	late := &injectedProvider{TaskProvider: mockmedia.TaskProvider{}, mode: "paid", entered: make(chan struct{}), release: make(chan struct{})}
+	late := &injectedProvider{TaskProvider: mockmedia.TaskProvider{Encoder: mediatools.Local{Settings: appconfig.Defaults().Media}}, mode: "paid", entered: make(chan struct{}), release: make(chan struct{})}
 	s2.Provider = late
 	v = start(t, s2, command(scope, "image", 0))
 	done := make(chan error, 1)

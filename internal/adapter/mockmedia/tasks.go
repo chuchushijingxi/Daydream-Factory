@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"drama-agent/internal/adapter/appconfig"
 	"drama-agent/internal/application/ports"
 	"drama-agent/internal/application/validation"
 	"drama-agent/internal/domain/fault"
@@ -17,7 +16,7 @@ import (
 	d "drama-agent/internal/domain/task"
 )
 
-type TaskProvider struct{ Media appconfig.Media }
+type TaskProvider struct{ Encoder VideoEncoder }
 type TaskInput struct {
 	Resolution      string  `json:"resolution,omitempty"`
 	DurationSeconds float64 `json:"durationSeconds,omitempty"`
@@ -146,5 +145,5 @@ func (p TaskProvider) Fetch(ctx context.Context, b d.Binding, file d.SourceFile,
 	if b.RequestModelID == md.MockVideoModelID && !execution.VideoOptions {
 		return ports.MediaResult{Data: bytes.Clone(sampleVideo), ContentType: "video/mp4", Width: 1920, Height: 1080, DurationSeconds: md.MockVideoDurationSeconds}, nil
 	}
-	return (Generator{Settings: p.Media}).Generate(ctx, ports.MediaRequest{ModelID: b.RequestModelID, Prompt: in.Prompt, AspectRatio: in.AspectRatio, Resolution: in.Resolution, DurationSeconds: in.DurationSeconds})
+	return (Generator{Encoder: p.Encoder}).Generate(ctx, ports.MediaRequest{ModelID: b.RequestModelID, Prompt: in.Prompt, AspectRatio: in.AspectRatio, Resolution: in.Resolution, DurationSeconds: in.DurationSeconds})
 }

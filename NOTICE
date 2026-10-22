@@ -13,9 +13,9 @@ Official source: https://hyperos.mi.com/font/zh/
 Provider icons from LobeHub retain their MIT license in
  demo/assets/providers/LOBEHUB-LICENSE.
 
-The container downloads BAAI/bge-small-zh-v1.5 at revision
+The embedding container downloads BAAI/bge-small-zh-v1.5 at revision
 7999e1d3359715c523056ef9478215996d62a620. Its model card declares MIT.
-See deploy/licenses/bge-small-zh-v1.5-LICENSE and the container's model folder.
+See deploy/licenses/bge-small-zh-v1.5-LICENSE and that container's model folder.
 Model source: https://huggingface.co/BAAI/bge-small-zh-v1.5
 Other software dependencies retain their respective licenses.
 
@@ -31,7 +31,7 @@ using the pinned source and independent dependency locks in deploy/.
 Their containers retain original Go/dependency licenses under
 /usr/share/licenses/milvus-rebuild/ and /usr/share/licenses/nsq/ respectively.
 
-The application container builds separate FFmpeg 9.0.2 tools with libx264
+The media container builds separate FFmpeg 9.0.2 tools with libx264
 under GPL-2.0-or-later, and libwebp 1.6.0 tools under their BSD-style license.
 Their original licenses, exact corresponding source archives, build inputs
 and configuration are included in /opt/media/licenses/ and /opt/media/source/;
@@ -41,7 +41,7 @@ License texts and copyright notices for compiled Go and frontend dependencies:
  deploy/licenses/go-dependencies.txt
  deploy/licenses/frontend-dependencies.txt
 These are also included under /usr/share/licenses/drama-agent/third-party/
-in the application container. Python distributions and OS packages retain
+in the backend and frontend containers respectively. Python distributions and OS packages retain
 licenses in their installed package metadata and system copyright files.
 
 The local checkout QR encoder uses qrcode-generator 2.0.4 by Kazuhiko Arase,

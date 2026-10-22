@@ -21,4 +21,5 @@ RUN rm -f /etc/nginx/conf.d/default.conf
 COPY deploy/frontend/nginx.conf /etc/nginx/conf.d/daydream.conf
 COPY --from=build /src/demo/ /usr/share/nginx/html/demo/
 COPY LICENSE NOTICE /usr/share/licenses/drama-agent/
+COPY deploy/licenses/frontend-dependencies.txt /usr/share/licenses/drama-agent/third-party/
 EXPOSE 8787

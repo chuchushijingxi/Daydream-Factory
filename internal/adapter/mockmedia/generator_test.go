@@ -7,6 +7,8 @@ import (
 	"image/jpeg"
 	"testing"
 
+	"drama-agent/internal/adapter/appconfig"
+	"drama-agent/internal/adapter/mediatools"
 	"drama-agent/internal/application/ports"
 	"drama-agent/internal/domain/fault"
 	md "drama-agent/internal/domain/modelconfig"
@@ -34,7 +36,7 @@ func TestRealJPEGDimensionsAndPromptPreservation(t *testing.T) {
 }
 
 func TestVideoDefaultsErrorsAndCancellation(t *testing.T) {
-	g := Generator{}
+	g := Generator{Encoder: mediatools.Local{Settings: appconfig.Defaults().Media}}
 	out, err := g.Generate(context.Background(), ports.MediaRequest{ModelID: md.MockVideoModelID, Prompt: "ordinary fail word is not a command"})
 	if err != nil || len(out.Data) < 1000 || string(out.Data[4:8]) != "ftyp" || out.ContentType != "video/mp4" || out.DurationSeconds != 10 || out.Width != 1920 || out.Height != 1080 {
 		t.Fatal(len(out.Data), err)

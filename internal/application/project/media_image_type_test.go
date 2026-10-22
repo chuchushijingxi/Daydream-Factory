@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"drama-agent/internal/adapter/appconfig"
+	"drama-agent/internal/adapter/mediatools"
 	"drama-agent/internal/adapter/mockmedia"
 	"drama-agent/internal/application/ports"
 	taskapp "drama-agent/internal/application/task"
@@ -91,7 +93,7 @@ func TestImageTypeSingleAndBatchFreezeInputsAndReplayAfterSettingsChange(t *test
 				t.Fatal(err)
 			}
 			store := &compositionTasks{previewTaskStore: previewTaskStore{inputs: map[string]td.Snapshot{}}}
-			s.MediaTasks = &taskapp.Service{Store: store, Resolver: mediaResolver{}, Provider: mockmedia.TaskProvider{}, Results: unusedCompositionResults{}, Queue: compositionQueue{}, Policy: td.Policy{PollMillis: 1, RetryMillis: 1, MaxSubmissions: 1}, ObserveTimeout: time.Minute, SaveTimeout: time.Minute}
+			s.MediaTasks = &taskapp.Service{Store: store, Resolver: mediaResolver{}, Provider: mockmedia.TaskProvider{Encoder: mediatools.Local{Settings: appconfig.Defaults().Media}}, Results: unusedCompositionResults{}, Queue: compositionQueue{}, Policy: td.Policy{PollMillis: 1, RetryMillis: 1, MaxSubmissions: 1}, ObserveTimeout: time.Minute, SaveTimeout: time.Minute}
 			s.Prices = resolutionPrices{c.PriceRule{UnitPrice: 0, ResolutionPrices: map[string]int64{"4K": 0}}}
 			s.Credits = unusedCompositionLedger{}
 			in := MediaCommand{CommandID: "composition", Revision: p.Revision, ModelID: md.MockImageModelID, Target: MediaTarget{AssetID: "c"}, ImageType: "closeup_three_view", AspectRatio: "16:9", Options: &md.MediaOptions{Resolution: "4K"}}

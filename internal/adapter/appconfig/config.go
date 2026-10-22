@@ -82,8 +82,12 @@ type Evidence struct {
 	RequestTimeout   time.Duration `yaml:"-"`
 	EmbeddingTimeout time.Duration `yaml:"-"`
 	ProcessWaitDelay time.Duration `yaml:"-"`
+	// EmbeddingEndpoint 指向独立检索服务（Compose 中为 http://embedding:8791）；为空时在本机调用 Python。
+	EmbeddingEndpoint string `yaml:"-"`
 }
 type Media struct {
+	// Endpoint 指向独立媒体服务（Compose 中为 http://media:8790）；为空时在本机调用媒体工具。
+	Endpoint         string        `yaml:"-"`
 	FFmpeg           string        `yaml:"-"`
 	FFprobe          string        `yaml:"-"`
 	CWebP            string        `yaml:"-"`

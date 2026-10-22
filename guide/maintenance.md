@@ -8,7 +8,7 @@
 
 ```sh
 docker compose ps -a
-docker compose logs --tail=100 frontend backend nsq milvus
+docker compose logs --tail=100 frontend backend media embedding nsq milvus
 # 停止整套环境（包括已启用的额外 worker），保留数据卷。
 docker compose --profile workers down
 ```

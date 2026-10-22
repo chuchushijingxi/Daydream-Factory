@@ -17,6 +17,7 @@ import (
 
 	"drama-agent/internal/adapter/appconfig"
 	"drama-agent/internal/adapter/imagethumbnail"
+	"drama-agent/internal/adapter/mediatools"
 	"drama-agent/internal/adapter/mockmedia"
 	"drama-agent/internal/adapter/postgres"
 	"drama-agent/internal/adapter/s3objects"
@@ -515,7 +516,7 @@ func TestProjectMediaUnknownNeverResubmitsAndCancelledLateCannotAdopt(t *testing
 		t.Fatal("unknown replay", e)
 	}
 	// Explicit cancellation is a terminal fact; a concurrent provider receipt is only evidence.
-	late := &controlledMediaProvider{TaskProvider: mockmedia.TaskProvider{}, entered: make(chan struct{}), release: make(chan struct{})}
+	late := &controlledMediaProvider{TaskProvider: mockmedia.TaskProvider{Encoder: mediatools.Local{Settings: appconfig.Defaults().Media}}, entered: make(chan struct{}), release: make(chan struct{})}
 	s.MediaTasks.Provider = late
 	in.CommandID = identity.New("late")
 	in.Target = MediaTarget{AssetID: "c2"}

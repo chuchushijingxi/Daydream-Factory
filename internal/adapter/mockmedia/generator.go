@@ -11,7 +11,6 @@ import (
 	"image/color"
 	"image/jpeg"
 
-	"drama-agent/internal/adapter/appconfig"
 	"drama-agent/internal/application/ports"
 	"drama-agent/internal/domain/fault"
 	md "drama-agent/internal/domain/modelconfig"
@@ -20,7 +19,12 @@ import (
 //go:embed assets/sample.mp4
 var sampleVideo []byte
 
-type Generator struct{ Settings appconfig.Media }
+// VideoEncoder 把示例视频重新编码为请求的分辨率与时长；由本机 ffmpeg 或独立媒体服务实现。
+type VideoEncoder interface {
+	EncodeVideo(ctx context.Context, input []byte, width, height int, seconds float64) ([]byte, error)
+}
+
+type Generator struct{ Encoder VideoEncoder }
 
 func (g Generator) Generate(ctx context.Context, in ports.MediaRequest) (ports.MediaResult, error) {
 	if err := ctx.Err(); err != nil {

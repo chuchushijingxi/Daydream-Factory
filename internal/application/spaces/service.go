@@ -100,6 +100,7 @@ func (s *Service) List(ctx context.Context, a ports.Actor) ([]SpaceSummary, erro
 	}
 	return s.Store.MySpaces(ctx, a.UserID)
 }
+
 // WatchTeam 仅向当前团队成员开放；事件不含内容，权限由每次重读的 GET 决定。
 func (s *Service) WatchTeam(ctx context.Context, a ports.Actor, id string) (<-chan struct{}, func(), error) {
 	if err := s.TeamMember(ctx, a, id); err != nil {

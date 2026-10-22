@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"drama-agent/internal/adapter/appconfig"
+	"drama-agent/internal/adapter/mediatools"
 	"drama-agent/internal/application/ports"
 	"drama-agent/internal/domain/fault"
 	md "drama-agent/internal/domain/modelconfig"
@@ -22,7 +23,7 @@ import (
 
 func TestVideoOptionsAllThirtyActualFilesAndFrozenRecovery(t *testing.T) {
 	ctx := context.Background()
-	provider := TaskProvider{Media: appconfig.Defaults().Media}
+	provider := TaskProvider{Encoder: mediatools.Local{Settings: appconfig.Defaults().Media}}
 	frozen, _ := json.Marshal(md.MockExecution{VideoOptions: true})
 	b := td.Binding{Protocol: md.MockProtocol, RequestModelID: md.MockVideoModelID, ProviderConfig: frozen}
 	file := td.SourceFile{ID: "media_fixture", Source: "mock-submission_fixture"}
@@ -38,7 +39,7 @@ func TestVideoOptionsAllThirtyActualFilesAndFrozenRecovery(t *testing.T) {
 					t.Fatal(err)
 				}
 				// A fresh provider has no process memory or current model config.
-				out, err := (TaskProvider{Media: appconfig.Defaults().Media}).Fetch(ctx, b, file, input)
+				out, err := (TaskProvider{Encoder: mediatools.Local{Settings: appconfig.Defaults().Media}}).Fetch(ctx, b, file, input)
 				if err != nil || out.Width != size.width || out.Height != size.height || out.DurationSeconds != float64(seconds) {
 					t.Fatal(out.Width, out.Height, out.DurationSeconds, err)
 				}
@@ -88,7 +89,7 @@ func TestVideoOptionsAllThirtyActualFilesAndFrozenRecovery(t *testing.T) {
 
 func TestVideoEncoderFailureAndCancellationCannotReturnSample(t *testing.T) {
 	in := ports.MediaRequest{ModelID: md.MockVideoModelID, Resolution: "1080p", DurationSeconds: 10}
-	_, err := (Generator{Settings: appconfig.Media{FFmpeg: filepath.Join(t.TempDir(), "missing")}}).Generate(context.Background(), in)
+	_, err := (Generator{Encoder: mediatools.Local{Settings: appconfig.Media{FFmpeg: filepath.Join(t.TempDir(), "missing")}}}).Generate(context.Background(), in)
 	var f *fault.Error
 	if !errors.As(err, &f) || f.Code != "MOCK_ENCODER_UNAVAILABLE" {
 		t.Fatal(err)
@@ -97,7 +98,7 @@ func TestVideoEncoderFailureAndCancellationCannotReturnSample(t *testing.T) {
 	t.Setenv("TMPDIR", dir)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel()
-	out, err := (Generator{}).Generate(ctx, in)
+	out, err := (Generator{Encoder: mediatools.Local{}}).Generate(ctx, in)
 	if !errors.Is(err, context.DeadlineExceeded) || len(out.Data) != 0 {
 		t.Fatal("cancelled encoder returned output", err)
 	}
@@ -109,7 +110,7 @@ func TestVideoEncoderFailureAndCancellationCannotReturnSample(t *testing.T) {
 	if err = os.WriteFile(encoder, []byte("#!/bin/sh\nexit 1\n"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	out, err = (Generator{Settings: appconfig.Media{FFmpeg: encoder}}).Generate(context.Background(), in)
+	out, err = (Generator{Encoder: mediatools.Local{Settings: appconfig.Media{FFmpeg: encoder}}}).Generate(context.Background(), in)
 	if !errors.As(err, &f) || f.Code != "MOCK_ENCODING_FAILED" || len(out.Data) != 0 {
 		t.Fatal("failed encoder returned fallback", err)
 	}

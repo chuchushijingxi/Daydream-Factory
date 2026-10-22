@@ -95,6 +95,7 @@ func (s *Store) LookupTeam(ctx context.Context, id string) (string, error) {
 	}
 	return name, err
 }
+
 // SpaceAudit 合并有结果的前置记录：申请被批准/拒绝、邮箱邀请被接受/拒绝后只展示结果那一行；
 // 原始审计行保留在表中，未处理的申请与邀请仍单独展示。
 func (s *Store) SpaceAudit(ctx context.Context, id string, cursor int64, limit int) (app.AuditPage, error) {

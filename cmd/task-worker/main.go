@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"drama-agent/internal/adapter/appconfig"
-	"drama-agent/internal/adapter/imagethumbnail"
+	"drama-agent/internal/adapter/mediatools"
 	"drama-agent/internal/adapter/postgres"
 	"drama-agent/internal/adapter/redisstate"
 	"drama-agent/internal/adapter/s3objects"
@@ -22,11 +22,13 @@ import (
 
 func main() {
 	configFile := flag.String("config", "config/app.local.yaml", "private runtime YAML file")
+	mediaEndpoint := flag.String("media-endpoint", "", "media service URL (container deployment: http://media:8790); empty runs FFmpeg/libwebp on this host")
 	flag.Parse()
 	cfg, err := appconfig.Load(*configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
+	cfg.Media.Endpoint = *mediaEndpoint
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	initCtx, cancel := context.WithTimeout(ctx, cfg.StartupTimeout)
@@ -48,7 +50,7 @@ func main() {
 		log.Fatal("cannot initialize task S3")
 	}
 	cancel()
-	files := &uploadapp.Service{Resolver: store, Access: store, Store: store, Objects: objects, Thumbnails: imagethumbnail.FFmpeg{Settings: cfg.Media}, CommitCheckTimeout: cfg.Uploads.CommitCheckTimeout, CleanupTimeout: cfg.Uploads.CleanupTimeout}
+	files := &uploadapp.Service{Resolver: store, Access: store, Store: store, Objects: objects, Thumbnails: mediatools.New(cfg.Media), CommitCheckTimeout: cfg.Uploads.CommitCheckTimeout, CleanupTimeout: cfg.Uploads.CleanupTimeout}
 	runtime, queue, err := taskruntime.New(cfg, store, objects, nil, runtimeState, files)
 	if err != nil {
 		log.Fatal("cannot initialize task resources")

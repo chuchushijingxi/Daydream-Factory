@@ -14,7 +14,7 @@ import (
 	"drama-agent/internal/adapter/appconfig"
 	"drama-agent/internal/adapter/einoagent"
 	"drama-agent/internal/adapter/httpapi"
-	"drama-agent/internal/adapter/imagethumbnail"
+	"drama-agent/internal/adapter/mediatools"
 	modeladapter "drama-agent/internal/adapter/model"
 	"drama-agent/internal/adapter/notificationmarkdown"
 	"drama-agent/internal/adapter/passwordhash"
@@ -45,6 +45,8 @@ func main() {
 	readOnlyFlag := flag.Bool("read-only", false, "browse existing data without writes or task execution")
 	listen := flag.String("listen", appconfig.Defaults().HTTP.Address, "HTTP bind address (container deployment uses 0.0.0.0:8787)")
 	trustedProxies := flag.String("trusted-proxies", "", "comma-separated CIDRs whose X-Real-IP is trusted for per-IP limits (container deployment trusts the frontend proxy network)")
+	mediaEndpoint := flag.String("media-endpoint", "", "media service URL (container deployment: http://media:8790); empty runs FFmpeg/libwebp on this host")
+	embeddingEndpoint := flag.String("embedding-endpoint", "", "embedding service URL (container deployment: http://embedding:8791); empty runs the local Python model on this host")
 	flag.Parse()
 	proxies, err := httpapi.ParseTrustedProxies(*trustedProxies)
 	if err != nil {
@@ -56,6 +58,8 @@ func main() {
 	}
 	cfg.ReadOnly = *readOnlyFlag
 	cfg.HTTP.Address = *listen
+	cfg.Media.Endpoint = *mediaEndpoint
+	cfg.Evidence.EmbeddingEndpoint = *embeddingEndpoint
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.StartupTimeout)
 	defer cancel()
 	readOnly := cfg.ReadOnly
@@ -125,7 +129,7 @@ func main() {
 		}
 	}
 	service.OriginalScripts = objectStore
-	files := &uploadapp.Service{Resolver: store, Access: store, Store: store, Objects: objectStore, Thumbnails: imagethumbnail.FFmpeg{Settings: cfg.Media}, CommitCheckTimeout: cfg.Uploads.CommitCheckTimeout, CleanupTimeout: cfg.Uploads.CleanupTimeout}
+	files := &uploadapp.Service{Resolver: store, Access: store, Store: store, Objects: objectStore, Thumbnails: mediatools.New(cfg.Media), CommitCheckTimeout: cfg.Uploads.CommitCheckTimeout, CleanupTimeout: cfg.Uploads.CleanupTimeout}
 	service.Files = files
 	taskRuntime, taskQueue, err := taskruntime.New(cfg, store, objectStore, configuration, runtimeState, files)
 	if err != nil {

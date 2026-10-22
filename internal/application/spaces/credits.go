@@ -80,6 +80,7 @@ func (s *Service) CreditWallet(ctx context.Context, a ports.Actor) (CreditWallet
 	out.Unallocated = &unallocated
 	return out, nil
 }
+
 // mine 只对管理员有意义：团队页读团队流水，本人积分明细读名下流水；成员始终只有名下流水。
 func (s *Service) CreditHistory(ctx context.Context, a ports.Actor, filter c.HistoryFilter, mine bool) (CreditHistoryView, error) {
 	scope, err := s.CreditScope(ctx, a)

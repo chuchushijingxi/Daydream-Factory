@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1
+# 检索服务镜像：离线 BGE 向量模型（CPU PyTorch）常驻加载，后端通过 -embedding-endpoint 调用。
+FROM python:3.12-slim-trixie AS build
+COPY deploy/pip-requirements.txt /setup/deploy/pip-requirements.txt
+RUN python -m venv /opt/evidence-embedding/runtime \
+    && /opt/evidence-embedding/runtime/bin/pip install --no-cache-dir --require-hashes \
+       -r /setup/deploy/pip-requirements.txt
+COPY deploy/embedding-requirements.txt /setup/deploy/embedding-requirements.txt
+RUN /opt/evidence-embedding/runtime/bin/pip install --no-cache-dir --require-hashes \
+       -r /setup/deploy/embedding-requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+COPY scripts/setup-local-embedding.py /setup/scripts/setup-local-embedding.py
+COPY deploy/licenses/bge-small-zh-v1.5-LICENSE /setup/deploy/licenses/bge-small-zh-v1.5-LICENSE
+RUN python /setup/scripts/setup-local-embedding.py \
+    && mv /setup/.data/evidence-embedding/model /opt/evidence-embedding/model \
+    && /opt/evidence-embedding/runtime/bin/python -m pip uninstall -y pip
+
+FROM python:3.12-slim-trixie
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends libgomp1 libstdc++6 \
+    && python -m pip uninstall -y pip \
+    && rm -rf /var/lib/apt/lists/* /usr/local/lib/python3.12/ensurepip
+COPY --from=build /opt/evidence-embedding/ /opt/evidence-embedding/
+# 与后端本机模式共用同一份推理代码，向量和索引身份在两种模式下一致。
+COPY internal/adapter/localembedding/embed.py deploy/embedding/server.py /opt/evidence-embedding/service/
+COPY deploy/licenses/bge-small-zh-v1.5-LICENSE /usr/share/licenses/drama-agent/third-party/
+COPY LICENSE NOTICE /usr/share/licenses/drama-agent/
+ENV HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 HF_HUB_DISABLE_TELEMETRY=1 \
+    TOKENIZERS_PARALLELISM=false CUDA_VISIBLE_DEVICES= HOME=/tmp
+USER 65534:65534
+EXPOSE 8791
+CMD ["/opt/evidence-embedding/runtime/bin/python", "/opt/evidence-embedding/service/server.py", \
+     "--listen", "0.0.0.0:8791", "--model", "/opt/evidence-embedding/model"]

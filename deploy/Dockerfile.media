@@ -1,14 +1,35 @@
 # syntax=docker/dockerfile:1
-# The application Dockerfile uses the same build script in its media stage.
+# 媒体服务镜像：FFmpeg/ffprobe/libwebp 加 drama-media-server（内部 HTTP 接口）。
+# 后端与任务 worker 通过 -media-endpoint 调用，后端镜像不再携带媒体工具。
 FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f AS build
 COPY deploy/media/ /setup/media/
 RUN sh /setup/media/build.sh
-# Rebuild from the exported /opt/media/source in an empty directory:
+# Rebuild the tools from the exported /opt/media/source in an empty directory:
 # copy build-inputs/ to deploy/media/ and Dockerfile.media to deploy/Dockerfile.media,
-# then run: docker build -f deploy/Dockerfile.media .
+# then run: docker build --target tools -f deploy/Dockerfile.media .
 COPY deploy/Dockerfile.media /opt/media/source/Dockerfile.media
 
 # Export /opt/media into a Debian 13 runtime. Codec libraries are linked
 # statically; the binaries require only the runtime's glibc/libm/loader.
-FROM scratch AS media
+FROM scratch AS tools
 COPY --from=build /opt/media/ /opt/media/
+
+FROM golang:1.26.9-bookworm AS server
+ENV GOTOOLCHAIN=go1.26.10 GOMAXPROCS=2 GOFLAGS=-p=2
+WORKDIR /src
+ARG GOPROXY=https://goproxy.cn,direct
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download -x
+COPY cmd/ ./cmd/
+COPY internal/ ./internal/
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/drama-media-server ./cmd/media-server
+
+FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
+COPY --from=tools /opt/media/ /opt/media/
+COPY --from=server /out/drama-media-server /usr/local/bin/drama-media-server
+COPY LICENSE NOTICE /usr/share/licenses/drama-agent/
+ENV PATH="/opt/media/bin:${PATH}"
+USER 65534:65534
+EXPOSE 8790
+CMD ["drama-media-server", "-listen", "0.0.0.0:8790"]
