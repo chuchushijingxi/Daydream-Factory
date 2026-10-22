@@ -180,7 +180,7 @@ export type TokenPricing = {
   cacheHitHundredthsCnyPerMillion: number;
 };
 export type ModelSettingsInput = {
-  resolutionEnabled?: Record<string, boolean> | null;
+  resolutionEnabled: Record<string, boolean> | null;
   mockBehavior?: { delaySeconds: number; failurePercent: number } | null;
   description: string;
   creditPrice: CreditPriceDTO | null;

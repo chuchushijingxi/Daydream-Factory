@@ -133,7 +133,7 @@ export function useModelConfiguration(): ModelConfigurationViews {
                         : undefined,
                     }
                   : null,
-                ...(resolutionEnabled ? { resolutionEnabled: { ...resolutionEnabled } } : {}),
+                resolutionEnabled: resolutionEnabled ? { ...resolutionEnabled } : null,
                 logoId: logoId || '',
                 modelId,
                 alias,

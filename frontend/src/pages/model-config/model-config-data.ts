@@ -9,6 +9,7 @@ export const blankConnection = (): ConnectionInput => ({
   models: [],
 });
 export const blankModel = (): ModelSettingsInput => ({
+  resolutionEnabled: null,
   creditPrice: null,
   id: '',
   logoId: '',

@@ -103,6 +103,7 @@ const defaultRegistry = () => ({
           contextWindow: 1000000,
           maxOutputTokens: 393216,
           creditPrice: null,
+          resolutionEnabled: null,
           pricing: {
             inputCnyPerMillion: 2,
             outputCnyPerMillion: 8,
@@ -122,6 +123,7 @@ const defaultRegistry = () => ({
           contextWindow: 1000000,
           maxOutputTokens: 393216,
           creditPrice: null,
+          resolutionEnabled: null,
           pricing: {
             inputCnyPerMillion: 9,
             outputCnyPerMillion: 27,
@@ -2547,6 +2549,13 @@ test('custom gateway shares one key, registers mixed categories, and displays al
   assert.deepEqual(
     writes[0].body.connection.models.map((m) => m.category),
     ['analysis', 'image', 'video'],
+  );
+  for (const m of writes[0].body.connection.models) {
+    assert.ok('resolutionEnabled' in m, '后端严格校验要求每个模型显式携带 resolutionEnabled 键');
+  }
+  assert.deepEqual(
+    writes[0].body.connection.models.map((m) => m.resolutionEnabled),
+    [null, null, null],
   );
   assert.equal(writes[0].body.connection.models[0].pricing.inputCnyPerMillion, 0.5);
   assert.equal(writes[0].body.connection.models[1].pricing, null);
