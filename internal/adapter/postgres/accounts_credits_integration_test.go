@@ -26,20 +26,24 @@ import (
 
 func identityDB(t *testing.T) (*postgres.Store, *pgx.Conn) {
 	t.Helper()
-	path := os.Getenv("DRAMA_TEST_CONFIG_FILE")
-	if path == "" {
-		t.Skip("isolated PG configuration required")
+	database := os.Getenv("DRAMA_TEST_DATABASE_URL")
+	if database == "" {
+		path := os.Getenv("DRAMA_TEST_CONFIG_FILE")
+		if path == "" {
+			t.Skip("isolated PG configuration required")
+		}
+		cfg, err := appconfig.Load(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		database = cfg.Database.URL
 	}
-	cfg, e := appconfig.Load(path)
-	if e != nil {
-		t.Fatal(e)
-	}
-	u, _ := url.Parse(cfg.Database.URL)
+	u, _ := url.Parse(database)
 	if !strings.HasPrefix(u.Path, "/drama_accounts_test_") {
 		t.Skip("identity tests require their dedicated database")
 	}
 	ctx := context.Background()
-	s, e := pgfixture.Open(t, ctx, cfg.Database.URL)
+	s, e := pgfixture.Open(t, ctx, database)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -47,7 +51,7 @@ func identityDB(t *testing.T) (*postgres.Store, *pgx.Conn) {
 	if e = s.Migrate(ctx); e != nil {
 		t.Fatal(e)
 	}
-	conn, e := pgx.Connect(ctx, cfg.Database.URL)
+	conn, e := pgx.Connect(ctx, database)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -90,6 +94,10 @@ func TestAccountsPGTransactionsSessionsAndCredits(t *testing.T) {
 	prefix := identity.New("identity")
 	user := createUser(t, s, prefix+"@example.test")
 	other := createUser(t, s, prefix+"b@example.test")
+	var spaces int
+	if err := conn.QueryRow(ctx, `SELECT count(*) FROM drama_catalog_v1.spaces WHERE kind='personal' AND id=ANY($1)`, []string{user.ID, other.ID}).Scan(&spaces); err != nil || spaces != 2 {
+		t.Fatal("registration did not create personal spaces", spaces, err)
+	}
 	t.Run("password-and-single-session", func(t *testing.T) {
 		first, e := service.Login(ctx, user.Email, "test-password-at-least-12", "", "workspace")
 		if e != nil {
@@ -350,13 +358,18 @@ func TestAccountsPGTransactionsSessionsAndCredits(t *testing.T) {
 }
 
 func TestTaskOwnerStoreIsolationAndWorkerOwner(t *testing.T) {
-	s, _ := identityDB(t)
+	s, conn := identityDB(t)
 	ctx := context.Background()
 	tasks := postgres.NewTaskStore(s)
 	scope := identity.New("task_owner")
 	a, b, op := "owner-"+scope, "other-"+scope, "operator-"+scope
+	for _, space := range []string{a, b, op} {
+		if _, err := conn.Exec(ctx, `INSERT INTO drama_catalog_v1.spaces(id,kind) VALUES($1,'personal')`, space); err != nil {
+			t.Fatal(err)
+		}
+	}
 	create := func(owner string) (taskdomain.Task, error) {
-		return tasks.ForTaskOwner(owner).CreateTask(ctx, taskdomain.Task{OwnerID: owner, ID: identity.New("task"), ScopeID: scope, CommandID: "same-command", Status: taskdomain.Queued, Snapshot: taskdomain.Snapshot{Input: json.RawMessage(`{"private":"fixture"}`)}, State: taskdomain.State{Operation: "image.generate", ModelID: "mock-image", ActiveKey: "same-target", CommandDigest: "same-digest"}})
+		return tasks.ForTaskSpace(owner).CreateTask(ctx, taskdomain.Task{SpaceID: owner, CreatorID: owner, OwnerID: owner, ID: identity.New("task"), ScopeID: scope, CommandID: "same-command", Status: taskdomain.Queued, Snapshot: taskdomain.Snapshot{Input: json.RawMessage(`{"private":"fixture"}`)}, State: taskdomain.State{Operation: "image.generate", ModelID: "mock-image", ActiveKey: "same-target", CommandDigest: "same-digest"}})
 	}
 	first, e := create(a)
 	if e != nil {
@@ -367,7 +380,7 @@ func TestTaskOwnerStoreIsolationAndWorkerOwner(t *testing.T) {
 		t.Fatal("owners collided", e)
 	}
 	for _, owner := range []string{b, op} {
-		store := tasks.ForTaskOwner(owner)
+		store := tasks.ForTaskSpace(owner)
 		if _, e = store.Task(ctx, first.ID); !errors.Is(e, fault.ErrNotFound) {
 			t.Fatal("foreign task", e)
 		}
@@ -378,16 +391,16 @@ func TestTaskOwnerStoreIsolationAndWorkerOwner(t *testing.T) {
 			t.Fatal("foreign cancel", e)
 		}
 	}
-	rows, e := tasks.ForTaskOwner(b).ListTasks(ctx, scope, "", nil, 100)
+	rows, e := tasks.ForTaskSpace(b).ListTasks(ctx, scope, "", nil, 100)
 	if e != nil || len(rows) != 1 || rows[0].ID != second.ID {
 		t.Fatal(rows, e)
 	}
-	another := taskdomain.Task{OwnerID: a, ID: identity.New("task"), ScopeID: scope, CommandID: "different-command", Status: taskdomain.Queued, Snapshot: taskdomain.Snapshot{Input: json.RawMessage(`{}`)}, State: taskdomain.State{Operation: "image.generate", ActiveKey: "same-target"}}
-	if _, e = tasks.ForTaskOwner(a).CreateTask(ctx, another); !codeIs(e, "TASK_ACTIVE") {
+	another := taskdomain.Task{SpaceID: a, CreatorID: a, OwnerID: a, ID: identity.New("task"), ScopeID: scope, CommandID: "different-command", Status: taskdomain.Queued, Snapshot: taskdomain.Snapshot{Input: json.RawMessage(`{}`)}, State: taskdomain.State{Operation: "image.generate", ActiveKey: "same-target"}}
+	if _, e = tasks.ForTaskSpace(a).CreateTask(ctx, another); !codeIs(e, "TASK_ACTIVE") {
 		t.Fatal("active target not protected", e)
 	}
 	claimed, ok, e := tasks.ClaimTask(ctx, first.ID, "worker-token", time.Minute)
-	if e != nil || !ok || claimed.OwnerID != a {
+	if e != nil || !ok || claimed.OwnerID != a || claimed.SpaceID != a || claimed.CreatorID != a {
 		t.Fatal(claimed.OwnerID, ok, e)
 	}
 	changed := claimed
@@ -400,11 +413,11 @@ func TestTaskOwnerStoreIsolationAndWorkerOwner(t *testing.T) {
 	if e != nil {
 		t.Fatal("trusted owner recovery", e)
 	}
-	cancelled, e := tasks.ForTaskOwner(a).CancelTask(ctx, scope, committed.ID, committed.Revision)
+	cancelled, e := tasks.ForTaskSpace(a).CancelTask(ctx, scope, committed.ID, committed.Revision)
 	if e != nil || cancelled.Status != taskdomain.Cancelled || cancelled.OwnerID != a {
 		t.Fatal("owned cancel", cancelled.Status, e)
 	}
-	untouched, e := tasks.ForTaskOwner(b).Task(ctx, second.ID)
+	untouched, e := tasks.ForTaskSpace(b).Task(ctx, second.ID)
 	if e != nil || untouched.Status != taskdomain.Queued {
 		t.Fatal("other task changed", e)
 	}

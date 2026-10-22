@@ -11,16 +11,19 @@ import (
 )
 
 func TestCreditHistoryWaitsForAllChargeRunsAndKeepsDeletedFacts(t *testing.T) {
-	s, _ := identityDB(t)
+	s, conn := identityDB(t)
 	ctx := context.Background()
 	account, charge := identity.New("history_chain_account"), identity.New("history_chain_charge")
 	if _, err := s.Add(ctx, c.Change{AccountID: account, Category: c.Gift, Amount: 100, OperationID: identity.New("grant"), Source: "fixture", Subject: "operator", Reason: "fixture"}); err != nil {
 		t.Fatal(err)
 	}
-	project := p.Project{ID: identity.New("history_chain_project"), OwnerID: account, Revision: 1, Runs: []p.Run{
-		{ID: identity.New("run"), Credit: &c.Charge{ID: charge}, Status: p.RunCompleted},
-		{ID: identity.New("run"), Credit: &c.Charge{ID: charge}, Status: p.RunRunning},
+	project := p.Project{ID: identity.New("history_chain_project"), SpaceID: account, CreatorID: account, OwnerID: account, Revision: 1, Runs: []p.Run{
+		{ID: identity.New("run"), Credit: &c.Charge{ID: charge, AccountID: account, ActorID: account, DiscountPercent: 100}, Status: p.RunCompleted},
+		{ID: identity.New("run"), Credit: &c.Charge{ID: charge, AccountID: account, ActorID: account, DiscountPercent: 100}, Status: p.RunRunning},
 	}}
+	if _, err := conn.Exec(ctx, `INSERT INTO drama_catalog_v1.spaces(id,kind) VALUES($1,'personal') ON CONFLICT DO NOTHING`, account); err != nil {
+		t.Fatal(err)
+	}
 	if err := s.Create(ctx, project); err != nil {
 		t.Fatal(err)
 	}

@@ -16,10 +16,13 @@ const initialOperatorPasswordHash = "$2a$10$zARRPb2R7CVEOnmMJpwLiuLWRH7Sttl7whU0
 func initialOperatorSQL() string {
 	return fmt.Sprintf(`-- A populated installation never receives another account or a password reset.
 LOCK TABLE drama_catalog_v1.users IN SHARE ROW EXCLUSIVE MODE;
+WITH created_user AS (
 INSERT INTO drama_catalog_v1.users(id,email,username,role,password_hash)
 SELECT 'daydream-initial-operator','%s','%s','operator',convert_to('%s','UTF8')
 WHERE NOT EXISTS (SELECT 1 FROM drama_catalog_v1.users)
-ON CONFLICT DO NOTHING;
+ON CONFLICT DO NOTHING RETURNING id
+)
+INSERT INTO drama_catalog_v1.spaces(id,kind) SELECT id,'personal' FROM created_user;
 `, accounts.InitialOperatorEmail, accounts.InitialOperatorUsername, initialOperatorPasswordHash)
 }
 

@@ -28,7 +28,7 @@ func TestUploadAllPreferencesAndFailedAutomaticIndexPersistWithoutExternalCall(t
 	service.Models.(*modelregistry.Registry).OptionsValue = ports.ModelOptions{Analysis: []ports.ModelOption{{ID: "fixture-analysis", Name: "Fictional analysis"}}, Image: []ports.ModelOption{{ID: "fixture-image", Name: "Fictional image"}}, Video: []ports.ModelOption{{ID: "fixture-video", Name: "Fictional video"}}}
 	files := uploadfiles.New()
 	service.Files = files
-	host, handler := httpapi.New(service, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(service), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	host.Files = files
 	server := httptest.NewServer(handler)

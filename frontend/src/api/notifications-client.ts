@@ -2,7 +2,14 @@ import { responseFields } from './response-fields';
 import { watchInvalidations } from './invalidation-stream';
 import { http, jsonPost, ApiError, type createHttpClient } from './client';
 import { translate } from '../contexts/translate';
+export type NotificationLink = {
+  type: string;
+  spaceId: string;
+  targetId: string;
+};
 export type NotificationItem = {
+  kind?: 'operator' | 'system';
+  link?: NotificationLink;
   id: string;
   title: string;
   summary: string;
@@ -40,11 +47,7 @@ export type NotificationDraft = Pick<
 >;
 export type NotificationFilter = 'all' | 'unread' | 'read';
 function malformed(): never {
-  throw new ApiError(
-    200,
-    'PROGRAM_FAILED',
-    translate('通知响应不完整，请重新读取后核对。'),
-  );
+  throw new ApiError(200, 'PROGRAM_FAILED', translate('通知响应不完整，请重新读取后核对。'));
 }
 function object(v: unknown): Record<string, unknown> {
   if (!v || typeof v !== 'object' || Array.isArray(v)) malformed();
@@ -61,7 +64,14 @@ function at(v: unknown): v is string {
 }
 function item(raw: unknown, detail = false): NotificationItem | NotificationDetail {
   const v = responseFields(object(raw), [
-    'id', 'title', 'summary', 'publishedAt', 'readAt', ...(detail ? ['body'] : []),
+    'id',
+    'title',
+    'summary',
+    'publishedAt',
+    'readAt',
+    'kind',
+    'link',
+    ...(detail ? ['body'] : []),
   ]);
   if (
     !text(v.id) ||
@@ -74,7 +84,51 @@ function item(raw: unknown, detail = false): NotificationItem | NotificationDeta
     (detail && !text(v.body))
   )
     malformed();
+  if (v.kind !== undefined && v.kind !== 'operator' && v.kind !== 'system') malformed();
+  if (v.link !== undefined && v.link !== null) {
+    const link = responseFields(object(v.link), ['type', 'spaceId', 'targetId']);
+    if (
+      !text(link.type) ||
+      !link.type ||
+      (link.spaceId !== undefined && !text(link.spaceId)) ||
+      (link.targetId !== undefined && !text(link.targetId))
+    )
+      malformed();
+    v.link = {
+      type: link.type,
+      spaceId: link.spaceId || '',
+      targetId: link.targetId || '',
+    };
+  } else delete v.link;
   return v as NotificationItem;
+}
+// Link identity is never a URL or permission. Each destination rereads its facts.
+export function notificationTarget(
+  link: NotificationLink,
+): { path: string; switchSpace: boolean } | null {
+  const space = encodeURIComponent(link.spaceId),
+    target = encodeURIComponent(link.targetId);
+  switch (link.type) {
+    case 'invite':
+      return link.targetId ? { path: '/invites?inviteId=' + target, switchSpace: false } : null;
+    case 'ownership_transfer':
+      return link.spaceId && link.targetId
+        ? {
+            path: '/team/' + space + '/ownership/' + target,
+            switchSpace: false,
+          }
+        : null;
+    case 'team':
+      return link.spaceId ? { path: '/team/' + space, switchSpace: true } : null;
+    case 'join_request':
+      return link.spaceId ? { path: '/team/' + space + '?view=requests', switchSpace: true } : null;
+    case 'project':
+      return link.spaceId && link.targetId
+        ? { path: '/playlet/' + target + '/outline', switchSpace: true }
+        : null;
+    default:
+      return null;
+  }
 }
 function message(raw: unknown): NotificationMessage {
   const v = responseFields(object(raw), [
@@ -135,13 +189,21 @@ function page<T>(raw: unknown, parse: (v: unknown) => T): NotificationPage<T> {
     v.items.length > v.pageSize
   )
     malformed();
-  return { ...v, items: (v.items as unknown[]).map(parse) } as NotificationPage<T>;
+  return {
+    ...v,
+    items: (v.items as unknown[]).map(parse),
+  } as NotificationPage<T>;
 }
 const userPath = '/api/notifications',
   opsPath = '/api/operations/notifications';
 const path = (base: string, id: string) => base + '/' + encodeURIComponent(id);
 const paging = (page: number, status?: NotificationFilter) =>
-  '?' + new URLSearchParams({ page: String(page), pageSize: '20', ...(status ? { status } : {}) });
+  '?' +
+  new URLSearchParams({
+    page: String(page),
+    pageSize: '20',
+    ...(status ? { status } : {}),
+  });
 export function notificationImageUrl(url: string, messageId?: string) {
   const match = /^\/api\/notifications\/([A-Za-z0-9_-]+)\/images\/([A-Za-z0-9_-]+)$/.exec(url);
   return match && (!messageId || match[1] === messageId) ? url : '';
@@ -176,10 +238,10 @@ export function createNotificationsApi(transport: ReturnType<typeof createHttpCl
       return v as { id: string; readAt: string };
     },
     async readAll() {
-      const v = responseFields(
-        object(await transport.json(userPath + '/read-all', jsonPost({}))),
-        ['updated', 'unread'],
-      );
+      const v = responseFields(object(await transport.json(userPath + '/read-all', jsonPost({}))), [
+        'updated',
+        'unread',
+      ]);
       if (!integer(v.updated) || !integer(v.unread)) malformed();
       return v as { updated: number; unread: number };
     },

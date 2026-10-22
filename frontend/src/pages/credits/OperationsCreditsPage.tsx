@@ -35,6 +35,8 @@ export function OperationsCreditsPage() {
   const [selected, setSelected] = useState<Account | null>(null),
     [mode, setMode] = useState<'adjust' | 'ledger'>('adjust'),
     [open, setOpen] = useState(false),
+    // 先读余额与流水再打开弹窗，避免弹窗从加载态突然撑开（闪一下）。
+    [opening, setOpening] = useState(false),
     [ledgerPage, setLedgerPage] = useState(''),
     [ledgerPageSize, setLedgerPageSize] = useState<CreditPageSize>('10');
   const [direction, setDirection] = useState<'add' | 'deduct'>('add'),
@@ -68,8 +70,33 @@ export function OperationsCreditsPage() {
   const wallet = useRead(
     () => service.userWallet(selected!.identity, ledgerPage, ledgerPageSize),
     [service, selected?.identity, ledgerPage, ledgerPageSize, updates.revision],
-    !!selected && open,
+    !!selected && (open || opening),
   );
+  // 实时同步或翻页回读期间保留同一账号上次确认的余额，读到新值再替换，不回到加载态。
+  const [shownWallet, setShownWallet] = useState<{
+    identity: string;
+    value: NonNullable<typeof wallet.value>;
+  } | null>(null);
+  useEffect(() => {
+    if (wallet.value && selected) setShownWallet({ identity: selected.identity, value: wallet.value });
+  }, [wallet.value, selected?.identity]);
+  const walletValue =
+    wallet.value ??
+    (shownWallet && selected && shownWallet.identity === selected.identity ? shownWallet.value : null);
+  useEffect(() => {
+    if (!opening) return;
+    if (wallet.value || wallet.error) {
+      setOpening(false);
+      setOpen(true);
+      return;
+    }
+    // 读取较慢时不让运营干等，超时后照常打开并显示加载。
+    const timer = setTimeout(() => {
+      setOpening(false);
+      setOpen(true);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [opening, wallet.value, wallet.error]);
   const remember = (value: Adjustment | null) => {
     setPending(value);
     try {
@@ -93,8 +120,8 @@ export function OperationsCreditsPage() {
       setReason('');
       setAbsent(false);
     }
-    wallet.refresh();
-    setOpen(true);
+    setShownWallet(null);
+    setOpening(true);
   };
   const showUser = (account: UserView, nextMode: 'adjust' | 'ledger') =>
     show({ identity: account.identity }, nextMode);
@@ -373,38 +400,42 @@ export function OperationsCreditsPage() {
               ? c('为所选用户新增或扣减积分。')
               : c('查看所选用户的积分余额与流水。')}
           </DialogDescription>
-          <Feedback busy={wallet.busy} error={wallet.error} retry={wallet.refresh} />
+          <Feedback
+            busy={wallet.busy && !walletValue}
+            error={wallet.error}
+            retry={wallet.refresh}
+          />
           {updates.error ? (
             <p className="op-inline-note" role="status">
               {updates.error}
             </p>
           ) : null}
-          {wallet.value ? (
+          {walletValue ? (
             <>
               <dl className="op-balance" aria-label={c('积分余额')}>
                 <div>
                   <dt>{c('可用积分')}</dt>
-                  <dd>{formatInteger(wallet.value.balance)}</dd>
+                  <dd>{formatInteger(walletValue.balance)}</dd>
                 </div>
                 <div>
                   <dt>{c('充值积分')}</dt>
-                  <dd>{formatInteger(wallet.value.rechargeBalance)}</dd>
+                  <dd>{formatInteger(walletValue.rechargeBalance)}</dd>
                 </div>
                 <div>
                   <dt>{c('赠送及免费')}</dt>
-                  <dd>{formatInteger(wallet.value.giftBalance)}</dd>
+                  <dd>{formatInteger(walletValue.giftBalance)}</dd>
                 </div>
-                {BigInt(wallet.value.legacyBalance) > 0n ? (
+                {BigInt(walletValue.legacyBalance) > 0n ? (
                   <div>
                     <dt>{c('历史未分类')}</dt>
-                    <dd>{formatInteger(wallet.value.legacyBalance)}</dd>
+                    <dd>{formatInteger(walletValue.legacyBalance)}</dd>
                   </div>
                 ) : null}
               </dl>
               {mode === 'ledger' ? (
                 <>
                   <Ledger
-                    page={wallet.value.ledger}
+                    page={walletValue.ledger}
                     onPage={setLedgerPage}
                     busy={wallet.busy}
                     pageSizeControl={

@@ -43,7 +43,7 @@ func TestMediaListBatchesCreditsAndKeepsSettlementFailures(t *testing.T) {
 				ledger := &batchMediaLedger{entries: map[string]c.Entry{}}
 				for i := 0; i < count; i++ {
 					id := fmt.Sprint(i)
-					charge := &c.Charge{ID: id, Amount: 1}
+					charge := &c.Charge{AccountID: p.OwnerID, ActorID: p.OwnerID, DiscountPercent: 100, ID: id, Amount: 1}
 					status := td.Succeeded
 					if mode == "free" {
 						charge.Amount = 0
@@ -54,7 +54,7 @@ func TestMediaListBatchesCreditsAndKeepsSettlementFailures(t *testing.T) {
 					if mode == "refund" || mode == "refund-conflict" || mode == "refund-pending" {
 						status = td.Failed
 					}
-					change := mediaDebit(p.OwnerID, p.ID, charge)
+					change := generationDebit(p.ID, charge)
 					debit := c.Entry{ID: "debit" + id, OperationID: change.OperationID, AccountID: p.OwnerID, Kind: "deduct", Amount: 1, Source: p.ID, Subject: p.OwnerID, Reason: "generation"}
 					if mode != "missing" && mode != "pending" {
 						ledger.entries[debit.OperationID] = debit
@@ -64,7 +64,7 @@ func TestMediaListBatchesCreditsAndKeepsSettlementFailures(t *testing.T) {
 						ledger.entries[debit.OperationID] = debit
 					}
 					if mode == "refund" || mode == "refund-conflict" {
-						refund := mediaRefund(p.OwnerID, charge.ID, debit)
+						refund := generationRefund(charge.ID, debit)
 						entry := c.Entry{ID: "refund" + id, OperationID: refund.OperationID, Kind: "refund", AccountID: p.OwnerID, Amount: refund.Amount, OriginalDeductionID: debit.ID, Source: p.ID, Subject: refund.Subject, Reason: refund.Reason}
 						if mode == "refund-conflict" {
 							entry.Amount = 2

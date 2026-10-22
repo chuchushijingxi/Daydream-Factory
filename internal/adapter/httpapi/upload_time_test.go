@@ -17,7 +17,7 @@ func TestUploadTimePersistsAndProjectsExposeUnknownHonestly(t *testing.T) {
 	store := openProjectContentPG(t)
 	service := &app.Service{Store: store, Importer: scriptimport.Importer{}}
 	before := time.Now().UTC()
-	p, err := service.ForActor(legacyHTTPActor).Create(context.Background(), "fictional upload time", "fiction.txt", []byte("A fictional person enters a room."), 0)
+	p, err := fixtureProject(t, service, legacyHTTPActor).Create(context.Background(), "fictional upload time", "fiction.txt", []byte("A fictional person enters a room."), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestUploadTimePersistsAndProjectsExposeUnknownHonestly(t *testing.T) {
 	if err != nil || reopened.UploadedAt == nil || !reopened.UploadedAt.Equal(uploadedAt) {
 		t.Fatal("timestamp not durable", err)
 	}
-	host, handler := httpapi.New(service, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(service), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	host.ReadOnly = true
 	for _, path := range []string{"/api/projects", "/api/projects/" + p.ID} {

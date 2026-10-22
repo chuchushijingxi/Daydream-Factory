@@ -35,11 +35,18 @@ import (
 func TestNotificationRealtimeWithdrawalImagesRealPGHTTP(t *testing.T) {
 	base, conn := identityDB(t)
 	ctx := context.Background()
-	cfg, e := appconfig.Load(os.Getenv("DRAMA_TEST_CONFIG_FILE"))
-	if e != nil {
-		t.Fatal(e)
+	database := os.Getenv("DRAMA_TEST_DATABASE_URL")
+	if database == "" {
+		cfg, err := appconfig.Load(os.Getenv("DRAMA_TEST_CONFIG_FILE"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		database = cfg.Database.URL
 	}
-	u, _ := url.Parse(cfg.Database.URL)
+	u, err := url.Parse(database)
+	if err != nil {
+		t.Fatal(err)
+	}
 	q := u.Query()
 	name := identity.New("notice_listener")
 	q.Set("application_name", name)

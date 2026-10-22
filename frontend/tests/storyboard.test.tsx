@@ -86,7 +86,8 @@ const button = (name: string) =>
   [...document.querySelectorAll<HTMLButtonElement>('button')].find(
     (b) => b.textContent?.trim() === name || b.getAttribute('aria-label') === name,
   )!;
-const writes = () => fixture.requests.filter((r) => r.method === 'POST');
+// 继续核对内容写入/生成；编辑协调另经正式租约端口，仍完整记录在requests。
+const writes = () => fixture.requests.filter((r) => r.method === 'POST' && !r.path.endsWith('/editing'));
 async function mount(scenario = 'normal', route = '/playlet/p5_free/production?episodeId=ep_upper', wrapFetch?: (base: typeof globalThis.fetch) => typeof globalThis.fetch) {
   if (root) await act(() => root!.unmount());
   sessionBoundary.reset();
@@ -2226,12 +2227,19 @@ test('cold target discovery reaches older video versions and polling retains com
 });
 
 function creationItem(id: string, kind: 'image' | 'video' = 'image', createdAt = '2026-10-19T01:00:00Z') {
-  const taskId = 'library_task_' + id, outputId = 'output_' + id;
-  const base = '/api/projects/p5_free/media-tasks/' + taskId + '/outputs/' + outputId;
-  return { taskId, outputId, projectId: 'p5_free', projectTitle: '测试剧本', kind, createdAt,
-    modelId: kind === 'image' ? 'mock-image' : 'mock_video', requestModelId: 'frozen-provider-model', aspectRatio: '16:9', resolution: '4K',
-    width: 1024, height: 576, durationSeconds: kind === 'video' ? 8 : 0, contentType: kind === 'image' ? 'image/png' : 'video/mp4',
-    sizeBytes: 128, promptPreview: '冻结提示词 ' + id, contentUrl: base + '/file', thumbnailUrl: kind === 'image' ? '/api/files/image_' + id + '/thumbnail' : base + '/thumbnail' };
+  const taskId = 'library_task_' + id;
+  const outputId = 'output_' + id;
+  const base = '/api/media-library/' + taskId + '/outputs/' + outputId;
+  return {
+    spaceId: 'user_free', ownerId: 'user_free', creatorId: 'user_free', creatorName: '测试用户',
+    sharedWithMe: false, effectiveAccess: 2,
+    taskId, outputId, projectId: 'p5_free', projectTitle: '测试剧本', kind, createdAt,
+    modelId: kind === 'image' ? 'mock-image' : 'mock_video', requestModelId: 'frozen-provider-model',
+    aspectRatio: '16:9', resolution: '4K', width: 1024, height: 576,
+    durationSeconds: kind === 'video' ? 8 : 0, contentType: kind === 'image' ? 'image/png' : 'video/mp4',
+    sizeBytes: 128, promptPreview: '冻结提示词 ' + id,
+    contentUrl: base + '/file', thumbnailUrl: base + '/thumbnail',
+  };
 }
 test('creation library merges cursor pages by date, preserves pages on failure and reads frozen detail separately', async () => {
   const first = [creationItem('one'), creationItem('two')], later = [creationItem('three'), creationItem('old', 'image', '2026-10-17T01:00:00Z')];

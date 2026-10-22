@@ -53,7 +53,8 @@ export function PlatformProvider({ children, api = platformApi }: {
     };
   }, [api, adopt, epoch, retry]);
   useEffect(() => {
-    if (settings) document.title = settings.name;
+    // 独立文档页（协议、政策）自带标签页标题，品牌名不覆盖它。
+    if (settings && !document.documentElement.dataset.pageTitle) document.title = settings.name;
   }, [settings]);
   return <Context.Provider value={{ settings, api, adopt }}>
     {children}

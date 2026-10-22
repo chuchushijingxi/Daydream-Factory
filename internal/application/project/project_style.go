@@ -8,7 +8,7 @@ import (
 )
 
 func (s *Service) SaveStyle(ctx context.Context, id string, revision uint64, styleID, version string) (d.Project, error) {
-	p, err := s.Project(ctx, id)
+	p, err := s.editingProject(ctx, id)
 	if err != nil {
 		return p, err
 	}

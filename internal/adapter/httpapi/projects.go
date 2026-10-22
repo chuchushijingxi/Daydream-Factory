@@ -10,6 +10,9 @@ import (
 )
 
 type ProjectSummaryView struct {
+	ports.ListMetadata
+	SpaceID       string                   `json:"spaceId"`
+	OwnerID       string                   `json:"ownerId"`
 	ID            string                   `json:"id"`
 	Title         string                   `json:"title"`
 	Filename      string                   `json:"filename"`
@@ -20,11 +23,11 @@ type ProjectSummaryView struct {
 }
 
 func projectSummaryView(summary ports.ProjectSummary) ProjectSummaryView {
-	out := ProjectSummaryView{ID: summary.ID, Title: summary.Title, Filename: summary.Filename,
+	out := ProjectSummaryView{ListMetadata: summary.ListMetadata, SpaceID: summary.SpaceID, OwnerID: summary.OwnerID, ID: summary.ID, Title: summary.Title, Filename: summary.Filename,
 		UploadedAt: summary.UploadedAt, Revision: summary.Revision, LatestRun: summary.LatestRun,
 		PreviewImages: []string{}}
 	for _, fileID := range summary.PreviewImageFileIDs {
-		out.PreviewImages = append(out.PreviewImages, assetImage(fileID).ThumbnailURL)
+		out.PreviewImages = append(out.PreviewImages, projectAssetImage(summary.ID, fileID).ThumbnailURL)
 	}
 	return out
 }
@@ -35,7 +38,7 @@ func (h *Handler) deleteProject(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	p, err := h.Service.ForActor(actor(r)).DeleteProject(r.Context(), r.PathValue("id"), rev)
+	p, err := h.projectService(r).DeleteProject(r.Context(), r.PathValue("id"), rev)
 	if err != nil {
 		fail(w, err)
 		return
@@ -44,7 +47,7 @@ func (h *Handler) deleteProject(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	projects, err := h.Service.ForActor(actor(r)).ListProjects(r.Context())
+	projects, err := h.projectService(r).ListProjectsFiltered(r.Context(), ports.ListFilter(r.URL.Query().Get("filter")))
 	if err != nil {
 		fail(w, err)
 		return
@@ -57,15 +60,15 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) project(w http.ResponseWriter, r *http.Request) {
+	// 权限在每个请求中重判，缓存正文不能保留已撤销的内容权限。
+	p, err := h.projectService(r).ReadProject(r.Context(), r.PathValue("id"))
+	if err != nil {
+		fail(w, err)
+		return
+	}
 	if h.Runtime != nil {
-		key := "progress:" + actor(r).UserID + ":" + r.PathValue("id")
-		raw, err := h.Runtime.ReadCached(r.Context(), key, 2*time.Second, func(ctx context.Context) ([]byte, error) {
-			p, err := h.Service.ForActor(actor(r)).ReadProject(ctx, r.PathValue("id"))
-			if err != nil {
-				return nil, err
-			}
-			return json.Marshal(view(p))
-		})
+		key := "progress:" + p.SpaceID + ":" + p.ID
+		raw, err := h.Runtime.ReadCached(r.Context(), key, 2*time.Second, func(context.Context) ([]byte, error) { return json.Marshal(view(p)) })
 		if err != nil {
 			fail(w, err)
 			return
@@ -75,16 +78,11 @@ func (h *Handler) project(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(raw)
 		return
 	}
-	p, err := h.Service.ForActor(actor(r)).ReadProject(r.Context(), r.PathValue("id"))
-	if err != nil {
-		fail(w, err)
-		return
-	}
 	write(w, 200, view(p))
 }
 
 func (h *Handler) projectEvents(w http.ResponseWriter, r *http.Request) {
-	if _, err := h.Service.ForActor(actor(r)).ReadProject(r.Context(), r.PathValue("id")); err != nil {
+	if _, err := h.projectService(r).ReadProject(r.Context(), r.PathValue("id")); err != nil {
 		fail(w, err)
 		return
 	}
@@ -98,5 +96,10 @@ func (h *Handler) projectEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer closeWatch()
-	h.serveInvalidationEvents(w, r, updates, "project")
+	h.serveInvalidationEvents(w, r, updates, "project", func() error {
+		// SSE 的一次连接包含多轮观察，每轮必须使用新的权限事实。
+		ctx := ports.WithRequestedSpace(r.Context(), ports.RequestedSpace(r.Context()))
+		_, err := h.projectService(r).ReadProject(ctx, r.PathValue("id"))
+		return err
+	})
 }

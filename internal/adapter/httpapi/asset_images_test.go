@@ -25,7 +25,7 @@ func TestAssetImagesPGS3RoundtripWithoutModels(t *testing.T) {
 	p := createProjectContent(t, s, pgAssets())
 	before := d.Clone(p)
 	other := createProjectContent(t, s, pgAssets())
-	host, handler := httpapi.New(s, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	host.Files = s.Files.(*uploadapp.Service)
 	defer host.Shutdown(ctx)

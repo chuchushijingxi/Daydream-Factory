@@ -81,6 +81,10 @@ func TestDistributableSQLCreatesOnlyBootstrapAccountAndPreservesExistingData(t *
  (SELECT count(*) FROM drama_catalog_v1.credit_gift_policy)`).Scan(&users, &business, &settings); err != nil || users != 1 || business != 0 || settings != 5 {
 			t.Fatalf("unexpected distributed data: users=%d business=%d settings=%d err=%v", users, business, settings, err)
 		}
+		var personalSpaces int
+		if err := conn.QueryRow(ctx, `SELECT count(*) FROM drama_catalog_v1.spaces WHERE id='daydream-initial-operator' AND kind='personal'`).Scan(&personalSpaces); err != nil || personalSpaces != 1 {
+			t.Fatal("bootstrap personal space missing", personalSpaces, err)
+		}
 		service := &a.Service{Store: store, Hasher: passwordhash.Bcrypt{}}
 		var workspace a.LoginResult
 		for _, audience := range []string{"workspace", "operations"} {
@@ -134,10 +138,11 @@ func TestDistributableSQLCreatesOnlyBootstrapAccountAndPreservesExistingData(t *
 		_, err := conn.Exec(ctx, `INSERT INTO drama_catalog_v1.users(id,email,username,role,password_hash) VALUES
  ('existing-operator','prior-owner@example.invalid','既有运营','operator','unchanged-hash'),
  ('existing-user','prior-user@example.invalid','既有用户','user','unchanged-hash');
+INSERT INTO drama_catalog_v1.spaces(id,kind) VALUES('existing-operator','personal'),('existing-user','personal');
 UPDATE drama_catalog_v1.platform_settings SET name='既有部署',revision=5;
 UPDATE drama_catalog_v1.model_config SET connections='[]',revision=8;
-INSERT INTO drama_catalog_v1.projects(id,revision,payload,owner_id) VALUES
- ('existing-project',1,'{"id":"existing-project","revision":1,"title":"既有业务"}','existing-user');`)
+INSERT INTO drama_catalog_v1.projects(id,revision,payload,space_id,owner_id,creator_id) VALUES
+ ('existing-project',1,'{"id":"existing-project","revision":1,"title":"既有业务"}','existing-user','existing-user','existing-user');`)
 		if err != nil {
 			t.Fatal(err)
 		}

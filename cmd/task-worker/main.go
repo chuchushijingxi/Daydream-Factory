@@ -48,7 +48,7 @@ func main() {
 		log.Fatal("cannot initialize task S3")
 	}
 	cancel()
-	files := &uploadapp.Service{Store: store, Objects: objects, Thumbnails: imagethumbnail.FFmpeg{Settings: cfg.Media}, CommitCheckTimeout: cfg.Uploads.CommitCheckTimeout, CleanupTimeout: cfg.Uploads.CleanupTimeout}
+	files := &uploadapp.Service{Resolver: store, Access: store, Store: store, Objects: objects, Thumbnails: imagethumbnail.FFmpeg{Settings: cfg.Media}, CommitCheckTimeout: cfg.Uploads.CommitCheckTimeout, CleanupTimeout: cfg.Uploads.CleanupTimeout}
 	runtime, queue, err := taskruntime.New(cfg, store, objects, nil, runtimeState, files)
 	if err != nil {
 		log.Fatal("cannot initialize task resources")

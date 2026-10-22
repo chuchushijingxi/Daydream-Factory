@@ -1,3 +1,5 @@
+import { ResourceSharingDialog } from '../../components/spaces/ResourceSharingDialog';
+import { useOptionalSpace } from '../../state/SpaceContext';
 import { useCatalogText } from '../../contexts/useCatalogText';
 import { useContext, useEffect, useRef, useState } from 'react';
 import { SessionOptionalContext } from '../../state/SessionContext';
@@ -22,7 +24,15 @@ import { useProjectManagement, ProjectSelectionMark } from './ProjectManagement'
 import { ProjectRunStatus } from './ProjectRunStatus';
 export function ProjectListPage() {
   const { c } = useCatalogText();
-  const { projects, handleSelectProject, theme, status, refreshProjects } = useWorkspace();
+  const {
+    projects,
+    handleSelectProject,
+    theme,
+    status,
+    refreshProjects,
+  } = useWorkspace();
+  const space = useOptionalSpace();
+  const [sharing, setSharing] = useState<import('../../api/types').ProjectRow | null>(null);
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const isDark = theme === 'dark';
@@ -224,7 +234,9 @@ export function ProjectListPage() {
                 onSave={() => void handleParseScriptClick()}
                 saveLabel={created ? c('进入剧本') : c('开始解析')}
                 saveBusy={quote.busy}
-                saveAmount={quote.required && !created && !quote.blocked ? quote.value?.amount : undefined}
+                saveAmount={
+                  quote.required && !created && !quote.blocked ? quote.value?.amount : undefined
+                }
                 settingsControls={
                   <CreationSettingsControls
                     value={settings}
@@ -329,7 +341,10 @@ export function ProjectListPage() {
                         )}
                       >
                         <div
-                          className={cn('relative h-[160px]', isDark ? 'bg-[#1c1c1c]' : 'bg-[#f5f5f5]')}
+                          className={cn(
+                            'relative h-[160px]',
+                            isDark ? 'bg-[#1c1c1c]' : 'bg-[#f5f5f5]',
+                          )}
                         >
                           {management.managing ? (
                             <span className="project-card-checkbox">
@@ -343,15 +358,20 @@ export function ProjectListPage() {
                             }}
                           >
                             {(project.previewImages || []).map((img, imgIndex) => (
-                                <ImageWithFallback
-                                  key={`${project.id}-${imgIndex}`}
-                                  src={img}
-                                  alt={`${project.title}-${imgIndex + 1}`}
-                                  className="h-full w-full rounded-[12px] object-cover"
-                                />
+                              <ImageWithFallback
+                                key={`${project.id}-${imgIndex}`}
+                                src={img}
+                                alt={`${project.title}-${imgIndex + 1}`}
+                                className="h-full w-full rounded-[12px] object-cover"
+                              />
                             ))}
                             {!project.previewImages?.length ? (
-                              <div className={cn('rounded-[12px]', isDark ? 'bg-black' : 'bg-[#d9d9d9]')} />
+                              <div
+                                className={cn(
+                                  'rounded-[12px]',
+                                  isDark ? 'bg-black' : 'bg-[#d9d9d9]',
+                                )}
+                              />
                             ) : null}
                           </div>
                           <ProjectRunStatus run={project.latestRun} />
@@ -365,13 +385,33 @@ export function ProjectListPage() {
                           >
                             {project.title}
                           </div>
+                          <div className="space-resource-meta">
+                            <span>{c('创建人：{name}', { name: project.creatorName })}</span>
+                            {project.sharedWithMe ? <span>{c('共享给我')}</span> : null}
+                          </div>
+                          {space?.current?.kind === 'team' &&
+                          (space.current.role !== 'member' ||
+                            project.ownerId === session?.user?.identity) ? (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setSharing(project);
+                              }}
+                              onKeyDown={(event) => event.stopPropagation()}
+                            >
+                              {c('共享')}
+                            </button>
+                          ) : null}
+
                           <div
                             className={cn(
                               'mt-1.5 flex items-center gap-1.5 text-[12px]',
                               isDark ? 'text-white/50' : 'text-[#8c8c8c]',
                             )}
                           >
-                            {project.uploadedAt && Number.isFinite(Date.parse(project.uploadedAt)) ? (
+                            {project.uploadedAt &&
+                            Number.isFinite(Date.parse(project.uploadedAt)) ? (
                               <time
                                 dateTime={project.uploadedAt}
                                 title={new Date(project.uploadedAt).toLocaleString(
@@ -416,6 +456,16 @@ export function ProjectListPage() {
 
         {management.footer}
         {management.dialog}
+        {sharing ? (
+          <ResourceSharingDialog
+            open
+            onOpenChange={(open) => {
+              if (!open) setSharing(null);
+            }}
+            spaceId={sharing.spaceId}
+            projectId={sharing.id}
+          />
+        ) : null}
       </div>
     </>
   );

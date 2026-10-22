@@ -78,7 +78,7 @@ func originalUploadService(t *testing.T) (*app.Service, *s3objects.Store) {
 func TestS3AtomicUploadDownloadChoicesAndManualStartWithoutModels(t *testing.T) {
 	s, files := originalUploadService(t)
 	ctx := context.Background()
-	host, handler := httpapi.New(s, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	host.Files = s.Files.(*uploadapp.Service)
 	defer host.Shutdown(ctx)
@@ -223,7 +223,7 @@ func TestS3AtomicUploadDownloadChoicesAndManualStartWithoutModels(t *testing.T) 
 	}
 	t.Run("manual-generation-zero-budget-projection", func(t *testing.T) {
 		// An existing pre-index project still supports its original explicit start.
-		manual, err := s.ForActor(legacyHTTPActor).CreateWithChoices(ctx, "Existing project", "manual.txt", raw, 0, app.CreationChoices{Settings: &settings, StyleID: style.ID, PromptVersion: style.PromptVersion})
+		manual, err := fixtureProject(t, s, legacyHTTPActor).CreateWithChoices(ctx, "Existing project", "manual.txt", raw, 0, app.CreationChoices{Settings: &settings, StyleID: style.ID, PromptVersion: style.PromptVersion})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -256,7 +256,7 @@ func TestS3AtomicUploadDownloadChoicesAndManualStartWithoutModels(t *testing.T) 
 func TestS3GeneralUploadThumbnailAndSourceReferenceRestart(t *testing.T) {
 	s, objects := originalUploadService(t)
 	ctx := context.Background()
-	host, handler := httpapi.New(s, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	host.Files = s.Files.(*uploadapp.Service)
 	defer host.Shutdown(ctx)
@@ -397,7 +397,7 @@ func TestS3UploadBrowserWithoutModels(t *testing.T) {
 	}
 	s, files := originalUploadService(t)
 	ctx := context.Background()
-	p, err := s.ForActor(legacyHTTPActor).Create(ctx, "S3 接口 · 虚构原剧本", "fiction.txt", []byte("完整虚构剧本。\n小竹在车站拾起怀表。\n"), 0)
+	p, err := fixtureProject(t, s, legacyHTTPActor).Create(ctx, "S3 接口 · 虚构原剧本", "fiction.txt", []byte("完整虚构剧本。\n小竹在车站拾起怀表。\n"), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -408,7 +408,7 @@ func TestS3UploadBrowserWithoutModels(t *testing.T) {
 	if err = s.Store.Commit(ctx, p, p.Revision-1); err != nil {
 		t.Fatal(err)
 	}
-	host, handler := httpapi.New(s, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	host.Files = s.Files.(*uploadapp.Service)
 	defer host.Shutdown(ctx)

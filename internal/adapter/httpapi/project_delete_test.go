@@ -21,12 +21,12 @@ func TestProjectDeletionHTTPPreservesLedgerAndIsolation(t *testing.T) {
 	ctx := context.Background()
 	store := openProjectContentPG(t)
 	service := &app.Service{Store: store, Importer: scriptimport.Importer{}}
-	p, err := service.ForActor(legacyHTTPActor).Create(ctx, "Fictional removable project", "fictional.txt", []byte("Full fictional script."), 0)
+	p, err := fixtureProject(t, service, legacyHTTPActor).Create(ctx, "Fictional removable project", "fictional.txt", []byte("Full fictional script."), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	cleanProjectContentRow(t, p)
-	other, err := service.ForActor(legacyHTTPActor).Create(ctx, "Unselected fictional project", "other.txt", []byte("Unselected fictional original."), 0)
+	other, err := fixtureProject(t, service, legacyHTTPActor).Create(ctx, "Unselected fictional project", "other.txt", []byte("Unselected fictional original."), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestProjectDeletionHTTPPreservesLedgerAndIsolation(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := d.Clone(p)
-	host, handler := httpapi.New(service, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(service), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	defer host.Shutdown(ctx)
 	request := func(method, path string, body []byte, want int) []byte {
@@ -113,8 +113,8 @@ func TestProjectDeletionHTTPPreservesLedgerAndIsolation(t *testing.T) {
 
 type deletionCommitFailure struct{ ports.ProjectStore }
 
-func (s deletionCommitFailure) ForProjectOwner(owner string) ports.ProjectStore {
-	return deletionCommitFailure{s.ProjectStore.(ports.OwnedProjects).ForProjectOwner(owner)}
+func (s deletionCommitFailure) ForProjectSpace(owner string) ports.ProjectStore {
+	return deletionCommitFailure{s.ProjectStore.(ports.ScopedProjects).ForProjectSpace(owner)}
 }
 
 func (s deletionCommitFailure) Commit(context.Context, d.Project, uint64) error {
@@ -125,12 +125,12 @@ func TestProjectDeletionCASRollbackAndRunningHTTP(t *testing.T) {
 	ctx := context.Background()
 	store := openProjectContentPG(t)
 	s := &app.Service{Store: store, Importer: scriptimport.Importer{}}
-	p, err := s.ForActor(legacyHTTPActor).Create(ctx, "Fictional concurrency", "race.txt", []byte("Fictional full text"), 0)
+	p, err := fixtureProject(t, s, legacyHTTPActor).Create(ctx, "Fictional concurrency", "race.txt", []byte("Fictional full text"), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	cleanProjectContentRow(t, p)
-	host, handler := httpapi.New(s, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	defer host.Shutdown(ctx)
 	post := func(rev uint64) int {

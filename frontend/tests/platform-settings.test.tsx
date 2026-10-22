@@ -54,9 +54,16 @@ async function mount(setup?: () => void, route = '/operations/platform', ordinar
   };
   setup?.();
   window.location.hash = '#' + route;
-  globalThis.fetch = async (target) => Response.json(target === '/api/projects' ? [] :
-    target === '/api/models' ? { analysis: [], image: [], video: [] } :
-      target === '/api/visual-styles' ? { styles: [] } : { readOnly: false, capabilities: {} });
+  globalThis.fetch = async (target) => {
+    const path = String(target).split('?')[0];
+    const personal = {id: accounts.user?.identity || 'fixture_operator', kind: 'personal', name: '个人空间', role: 'owner', memberCount: 1, memberLimit: 1, status: 'active', readOnly: false};
+    if (path === '/api/spaces') return Response.json([personal]);
+    if (path === '/api/invites/pending') return Response.json([]);
+    if (path === '/api/spaces/' + personal.id) return Response.json(personal);
+    return Response.json(path === '/api/projects' ? [] :
+      path === '/api/models' ? { analysis: [], image: [], video: [] } :
+        path === '/api/visual-styles' ? { styles: [] } : { readOnly: false, capabilities: {} });
+  };
   root = createRoot(document.getElementById('root')!);
   const accounts = createAdministrationFixture();
   if (ordinary) accounts.user = { ...accounts.user!, operationsAllowed: false, roleLabel: '普通用户' };

@@ -16,6 +16,9 @@ import (
 )
 
 type FileView struct {
+	SpaceID      string  `json:"spaceId"`
+	OwnerID      string  `json:"ownerId"`
+	CreatorID    string  `json:"creatorId"`
 	FileID       string  `json:"fileId"`
 	Filename     string  `json:"filename"`
 	ContentType  string  `json:"contentType"`
@@ -26,7 +29,7 @@ type FileView struct {
 
 func fileView(file d.File) FileView {
 	base := "/api/files/" + file.ID
-	v := FileView{FileID: file.ID, Filename: file.Filename, ContentType: file.Original.ContentType, SizeBytes: file.Original.SizeBytes, OriginalURL: base + "/original"}
+	v := FileView{FileID: file.ID, SpaceID: file.SpaceID, OwnerID: file.OwnerID, CreatorID: file.CreatorID, Filename: file.Filename, ContentType: file.Original.ContentType, SizeBytes: file.Original.SizeBytes, OriginalURL: base + "/original"}
 	if file.Thumbnail != nil {
 		url := base + "/thumbnail"
 		v.ThumbnailURL = &url
@@ -36,8 +39,21 @@ func fileView(file d.File) FileView {
 
 func (h *Handler) registerUploads(mux *routes) {
 	mux.HandleFunc("POST /api/upload", h.uploadFile)
+	mux.HandleFunc("GET /api/uploads", func(w http.ResponseWriter, r *http.Request) {
+		limit := 0
+		if raw := r.URL.Query().Get("limit"); raw != "" {
+			var err error
+			limit, err = strconv.Atoi(raw)
+			if err != nil || limit < 1 {
+				fail(w, fault.ErrInvalid)
+				return
+			}
+		}
+		v, err := h.fileService(r).List(r.Context(), ports.ListFilter(r.URL.Query().Get("filter")), r.URL.Query().Get("q"), r.URL.Query().Get("cursor"), limit)
+		spaceResult(w, 200, v, err)
+	})
 	mux.HandleFunc("GET /api/files/{fileId}", func(w http.ResponseWriter, r *http.Request) {
-		file, err := h.Files.ForActor(actor(r)).File(r.Context(), r.PathValue("fileId"))
+		file, err := h.fileService(r).File(r.Context(), r.PathValue("fileId"))
 		if err != nil {
 			fail(w, err)
 			return
@@ -111,7 +127,7 @@ func (h *Handler) uploadFile(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	stored, err := h.Files.ForActor(actor(r)).Upload(r.Context(), app.Input{Filename: header.Filename, ContentType: header.Header.Get("Content-Type"), Data: raw, Thumbnail: options})
+	stored, err := h.fileService(r).Upload(r.Context(), app.Input{Filename: header.Filename, ContentType: header.Header.Get("Content-Type"), Data: raw, Thumbnail: options})
 	if err != nil {
 		fail(w, err)
 		return
@@ -121,11 +137,15 @@ func (h *Handler) uploadFile(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) serveUploadedFile(w http.ResponseWriter, r *http.Request) {
 	thumbnail := strings.HasSuffix(r.URL.Path, "/thumbnail")
-	file, raw, err := h.Files.ForActor(actor(r)).Read(r.Context(), r.PathValue("fileId"), thumbnail)
+	file, raw, err := h.fileService(r).Read(r.Context(), r.PathValue("fileId"), thumbnail)
 	if err != nil {
 		fail(w, err)
 		return
 	}
+	serveUploadedContent(w, r, file, raw, thumbnail)
+}
+
+func serveUploadedContent(w http.ResponseWriter, r *http.Request, file d.File, raw []byte, thumbnail bool) {
 	kind, name := file.Original.ContentType, file.Filename
 	disposition := "attachment"
 	if thumbnail {

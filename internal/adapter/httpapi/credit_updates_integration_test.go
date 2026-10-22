@@ -254,7 +254,7 @@ func TestCreditSSERealPGHTTP(t *testing.T) {
 	assertBalance(100)
 	// A completion-only commit must refresh analysis despite no new ledger entry.
 	runID := identity.New("sse_run")
-	p := project.Project{ID: identity.New("sse_project"), OwnerID: ids[0], Revision: 1, Runs: []project.Run{{ID: runID, Status: project.RunRunning, Credit: &d.Charge{ID: runID, Amount: 10}}}}
+	p := project.Project{ID: identity.New("sse_project"), SpaceID: ids[0], CreatorID: ids[0], OwnerID: ids[0], Revision: 1, Runs: []project.Run{{ID: runID, Status: project.RunRunning, Credit: &d.Charge{ID: runID, Amount: 10}}}}
 	if err = writer.Create(ctx, p); err != nil {
 		t.Fatal(err)
 	}

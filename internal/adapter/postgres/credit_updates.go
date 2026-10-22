@@ -16,3 +16,10 @@ func (s *Store) WatchNotifications(ctx context.Context, user string) (<-chan str
 	}
 	return r.Watch(ctx, "notifications:"+user)
 }
+func (s *Store) WatchTeam(ctx context.Context, space string) (<-chan struct{}, func(), error) {
+	r, err := s.runtimeState()
+	if err != nil {
+		return nil, nil, err
+	}
+	return r.Watch(ctx, "team:"+space)
+}

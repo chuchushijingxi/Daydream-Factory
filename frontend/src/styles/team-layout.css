@@ -1,0 +1,1333 @@
+/* Team workspace: identity header, five work areas and their cards.
+   Selectors are scoped by `.team-page.team-workspace-page` so they replace the older
+   generic team rules in team-spaces.css without touching invite or operations pages. */
+/* 左右留白同“创作资产”；顶部由外壳顶栏预留与 --xy-page-top 决定。 */
+.team-page.team-workspace-page.op-page {
+  padding: var(--xy-page-top) 36px 48px;
+}
+.team-page.team-workspace-page > * {
+  max-width: 1360px;
+  margin-inline: auto;
+}
+.team-page.team-workspace-page [hidden] {
+  display: none;
+}
+.team-page.team-workspace-page :is(h1, h2, h3) {
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+}
+
+/* Identity header */
+.team-page.team-workspace-page .team-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 0;
+}
+.team-page.team-workspace-page .team-hero-copy {
+  flex: 1;
+  min-width: 0;
+}
+.team-page.team-workspace-page .team-hero-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  min-width: 0;
+}
+.team-page.team-workspace-page .team-hero-title h1 {
+  font-size: 22px;
+  line-height: 30px;
+  overflow-wrap: anywhere;
+}
+.team-page.team-workspace-page .team-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  margin: 4px 0 0;
+  color: var(--jm-muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+.team-page.team-workspace-page .team-hero-meta > span + span::before {
+  content: '·';
+  margin-inline: 8px;
+}
+.team-page.team-workspace-page .team-hero-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+}
+.team-page.team-workspace-page .team-hero-actions > .jm-button {
+  height: 34px;
+  gap: 6px;
+  padding: 0 14px;
+}
+.team-page.team-workspace-page .team-hero-actions svg {
+  width: 16px;
+  height: 16px;
+}
+.team-page.team-workspace-page .team-notices:has(> *) {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.team-page.team-workspace-page .team-notices .team-callout {
+  margin: 0;
+  border-inline-start: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.team-page.team-workspace-page .team-notices > .op-status-badge {
+  justify-self: start;
+}
+
+/* Primary navigation */
+.team-page.team-workspace-page .team-workflow-navigation {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-top: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--jm-border);
+}
+.team-page.team-workspace-page .team-workflow-navigation > .view-tabs {
+  flex: 1;
+  min-width: 0;
+  gap: 28px;
+  margin: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
+.team-page.team-workspace-page .team-workflow-navigation > .view-tabs > button {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding-bottom: 12px;
+}
+.team-page.team-workspace-page .view-tabs[data-variant='pill'] {
+  flex-wrap: wrap;
+  margin: 0;
+}
+.team-page.team-workspace-page .view-tabs[data-variant='pill'] > button {
+  min-height: 32px;
+  padding: 5px 14px;
+  font-weight: var(--font-weight-normal);
+}
+.team-page.team-workspace-page .view-tabs[data-variant='pill'] > button[aria-selected='true'] {
+  border-color: transparent;
+  background: var(--jm-inset);
+  color: var(--jm-text);
+  font-weight: var(--font-weight-medium);
+}
+
+/* 成员视图没有分区导航，内容与身份头之间补上与管理视图相同的节奏。 */
+.team-page.team-workspace-page .team-member-panel {
+  margin-top: 24px;
+}
+
+/* Cards and shared heads */
+.team-page.team-workspace-page .team-stack {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.team-page.team-workspace-page .team-card {
+  min-width: 0;
+  border: 1px solid var(--jm-border);
+  border-radius: 14px;
+  padding: 20px;
+  background: var(--jm-panel);
+}
+.team-page.team-workspace-page .team-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-width: 0;
+  margin-bottom: 16px;
+}
+.team-page.team-workspace-page .team-card-head h2 {
+  font-size: 15px;
+  line-height: 24px;
+}
+.team-page.team-workspace-page .team-card-sub {
+  margin: 2px 0 0;
+  color: var(--jm-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.team-page.team-workspace-page .team-card-head .jm-button svg {
+  width: 14px;
+  height: 14px;
+}
+.team-page.team-workspace-page .team-record-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+.team-page.team-workspace-page :is(.team-record-toolbar, .team-card-head) .op-choice {
+  width: auto;
+  min-width: 120px;
+  height: 32px;
+  border: 1px solid var(--jm-border);
+  background: var(--jm-panel);
+  font-size: 12px;
+}
+.team-page.team-workspace-page .team-record-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 16px;
+}
+.team-page.team-workspace-page .team-empty {
+  margin: 0;
+  padding: 36px 16px;
+  color: var(--jm-muted);
+  font-size: 13px;
+  line-height: 20px;
+  text-align: center;
+}
+
+/* Tables inside cards: no second frame, quiet header row. */
+.team-page.team-workspace-page .op-table-scroll {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.team-page.team-workspace-page .op-table {
+  min-width: 640px;
+}
+.team-page.team-workspace-page .op-table th {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--jm-border);
+  background: transparent;
+  font-size: 12px;
+  font-weight: var(--font-weight-normal);
+}
+.team-page.team-workspace-page .op-table td {
+  padding: 12px;
+  border-top: 0;
+  border-bottom: 1px solid var(--jm-border);
+}
+.team-page.team-workspace-page .op-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.team-page.team-workspace-page .op-table :is(th, td):first-child {
+  padding-inline-start: 0;
+}
+.team-page.team-workspace-page .op-table time,
+.team-page.team-workspace-page .team-number {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.team-page.team-workspace-page .team-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.team-page.team-workspace-page .team-member-identity {
+  display: grid;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 20px;
+}
+.team-page.team-workspace-page .team-member-identity small {
+  font-size: 12px;
+  line-height: 18px;
+}
+.team-page.team-workspace-page .team-self {
+  margin-inline-start: 2px;
+  color: var(--jm-muted);
+}
+
+/* Avatars: initials on neutral ground; the team mark is the only filled one. */
+.team-avatar {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--jm-inset);
+  color: var(--jm-text);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: var(--font-weight-medium);
+}
+.team-avatar[data-kind='team'] {
+  width: 52px;
+  height: 52px;
+  border: 1px solid var(--jm-border);
+  border-radius: 14px;
+  background: var(--jm-panel);
+  color: var(--jm-text);
+  font-size: 22px;
+}
+
+/* KPI tiles */
+.team-page.team-workspace-page .team-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.team-page.team-workspace-page .team-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 116px;
+  padding: 16px 18px;
+  border: 1px solid var(--jm-border);
+  border-radius: 14px;
+  background: var(--jm-panel);
+}
+.team-page.team-workspace-page .team-tile[data-primary='true'] .team-tile-value {
+  font-size: 30px;
+}
+.team-page.team-workspace-page .team-tile-label {
+  color: var(--jm-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.team-page.team-workspace-page .team-tile-value {
+  margin-top: 2px;
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.team-page.team-workspace-page .team-tile-hint {
+  margin-top: auto;
+  color: var(--jm-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.team-page.team-workspace-page .team-tile-action {
+  margin-top: auto;
+}
+.team-page.team-workspace-page .team-tile-action .jm-button {
+  height: 28px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+.team-page.team-workspace-page .team-tile .op-feedback {
+  justify-content: flex-start;
+  padding: 8px 0;
+}
+
+/* Team balance: the spendable pool leads, the bar explains how the total splits. */
+.team-page.team-workspace-page .team-balance-row {
+  grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+}
+.team-page.team-workspace-page .team-balance-card {
+  gap: 6px;
+}
+.team-page.team-workspace-page .team-balance-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 28px;
+}
+.team-page.team-workspace-page .team-balance-head .jm-button {
+  height: 28px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+.team-page.team-workspace-page .team-balance-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.team-page.team-workspace-page .team-balance-value .credit-star {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+.team-page.team-workspace-page .team-balance-card > .team-tile-hint {
+  margin-top: 0;
+}
+.team-page.team-workspace-page .team-balance-bar {
+  display: flex;
+  gap: 2px;
+  overflow: hidden;
+  height: 8px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: var(--jm-inset);
+}
+.team-page.team-workspace-page .team-balance-bar > span {
+  min-width: 0;
+  height: 100%;
+}
+.team-page.team-workspace-page .team-balance-bar > span[style*='width: 0%'] {
+  display: none;
+}
+.team-page.team-workspace-page :is(.team-balance-bar, .team-balance-legend) [data-part='free'] {
+  --part-color: var(--credit-accent);
+}
+.team-page.team-workspace-page :is(.team-balance-bar, .team-balance-legend) [data-part='held'] {
+  --part-color: color-mix(in srgb, var(--jm-text) 30%, var(--jm-panel));
+}
+.team-page.team-workspace-page .team-balance-bar > span {
+  background: var(--part-color);
+}
+.team-page.team-workspace-page .team-balance-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 18px;
+}
+.team-page.team-workspace-page .team-balance-legend > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.team-page.team-workspace-page .team-balance-legend dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--jm-muted);
+}
+.team-page.team-workspace-page .team-balance-legend [data-part] dt::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--part-color);
+}
+.team-page.team-workspace-page .team-balance-legend [data-part='total'] dt::before {
+  display: none;
+}
+.team-page.team-workspace-page .team-balance-legend [data-part='total'] {
+  padding-inline-end: 24px;
+  border-inline-end: 1px solid var(--jm-border);
+}
+.team-page.team-workspace-page .team-balance-legend [data-part='total'] dt {
+  color: var(--jm-text);
+}
+.team-page.team-workspace-page .team-balance-legend dd {
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Overview dashboard */
+.team-page.team-workspace-page .team-dashboard {
+  display: grid;
+  gap: 16px;
+}
+.team-page.team-workspace-page .team-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: start;
+  gap: 16px;
+}
+.team-page.team-workspace-page :is(.team-dashboard-main, .team-dashboard-side) {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.team-page.team-workspace-page .team-trend-chart {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+}
+.team-page.team-workspace-page .team-trend-scale {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 180px;
+  color: var(--jm-muted);
+  font-size: 11px;
+  line-height: 14px;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.team-page.team-workspace-page .team-trend {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 180px;
+  margin: 0;
+  border-bottom: 1px solid var(--jm-border);
+  background: repeating-linear-gradient(
+    to top,
+    transparent 0 44px,
+    color-mix(in srgb, var(--jm-border) 70%, transparent) 44px 45px
+  );
+}
+.team-page.team-workspace-page .team-trend-column {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  height: 100%;
+  min-width: 1px;
+}
+.team-page.team-workspace-page .team-trend-bar {
+  width: 100%;
+  min-height: 0;
+  border-radius: 3px 3px 0 0;
+  background: color-mix(in srgb, var(--jm-text) 28%, var(--jm-panel));
+  transition: background 120ms ease;
+}
+.team-page.team-workspace-page .team-trend-column:hover .team-trend-bar {
+  background: color-mix(in srgb, var(--jm-text) 60%, var(--jm-panel));
+}
+.team-page.team-workspace-page .team-trend-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: var(--jm-muted);
+  font-size: 13px;
+}
+.team-page.team-workspace-page .team-trend-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  color: var(--jm-muted);
+  font-size: 11px;
+  line-height: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.team-page.team-workspace-page .team-usage {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.team-page.team-workspace-page .team-usage-value {
+  min-width: 48px;
+  font-variant-numeric: tabular-nums;
+}
+.team-page.team-workspace-page .team-usage-track,
+.team-page.team-workspace-page .team-meter {
+  display: block;
+  overflow: hidden;
+  width: 72px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--jm-inset);
+}
+.team-page.team-workspace-page :is(.team-usage-track, .team-meter) > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--jm-text) 40%, var(--jm-panel));
+}
+/* 名额类进度按占用比例着色，颜色取全局状态色，深浅主题自动跟随。 */
+.team-page.team-workspace-page .team-meter[data-tone='normal'] > span {
+  background: var(--jm-brand);
+}
+.team-page.team-workspace-page .team-meter[data-tone='warning'] > span {
+  background: var(--jm-warning);
+}
+.team-page.team-workspace-page .team-meter[data-tone='danger'] > span {
+  background: var(--jm-danger);
+}
+.team-page.team-workspace-page .team-side-card {
+  padding: 18px;
+}
+.team-page.team-workspace-page .team-side-card .team-card-head {
+  margin-bottom: 12px;
+}
+.team-page.team-workspace-page .team-facts {
+  display: grid;
+  margin: 0;
+}
+.team-page.team-workspace-page .team-facts > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--jm-border);
+  font-size: 13px;
+  line-height: 20px;
+}
+.team-page.team-workspace-page .team-facts > div:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.team-page.team-workspace-page .team-facts dt {
+  flex: none;
+  color: var(--jm-muted);
+}
+.team-page.team-workspace-page .team-facts dd {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.team-page.team-workspace-page .team-facts small {
+  color: var(--jm-muted);
+  font-size: 12px;
+}
+.team-page.team-workspace-page .team-facts small[data-warn='true'] {
+  color: var(--jm-warning);
+}
+.team-page.team-workspace-page .team-meter {
+  width: 96px;
+}
+.team-page.team-workspace-page .team-todo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--jm-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--jm-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+.team-page.team-workspace-page .team-todo:hover {
+  background: var(--jm-hover);
+}
+.team-page.team-workspace-page .team-todo:focus-visible {
+  outline: 2px solid var(--jm-text);
+  outline-offset: 2px;
+}
+.team-page.team-workspace-page .team-todo > span:first-child {
+  display: grid;
+  min-width: 0;
+}
+.team-page.team-workspace-page .team-todo strong {
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: var(--font-weight-medium);
+}
+.team-page.team-workspace-page .team-todo small {
+  color: var(--jm-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.team-page.team-workspace-page .team-todo-count {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--jm-inset);
+  color: var(--jm-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.team-page.team-workspace-page .team-todo[data-active='true'] .team-todo-count {
+  background: var(--team-owner-bg);
+  color: var(--team-owner-text);
+  font-weight: var(--font-weight-medium);
+}
+.team-page.team-workspace-page .team-recent {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.team-page.team-workspace-page .team-recent > li {
+  display: flex;
+  gap: 10px;
+  padding: 7px 0;
+  font-size: 13px;
+  line-height: 20px;
+}
+.team-page.team-workspace-page .team-recent-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-top: 7px;
+  border-radius: 999px;
+  background: var(--jm-border);
+}
+.team-page.team-workspace-page .team-recent > li:first-child .team-recent-dot {
+  background: var(--jm-muted);
+}
+.team-page.team-workspace-page .team-recent-copy {
+  display: grid;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.team-page.team-workspace-page .team-recent strong {
+  font-weight: var(--font-weight-medium);
+}
+.team-page.team-workspace-page .team-recent time {
+  color: var(--jm-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* Members */
+.team-page.team-workspace-page .team-people {
+  display: grid;
+  gap: 16px;
+}
+.team-page.team-workspace-page .team-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(320px, 100%);
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--jm-border);
+  border-radius: 10px;
+  color: var(--jm-muted);
+}
+.team-page.team-workspace-page .team-search:focus-within {
+  border-color: var(--jm-muted);
+}
+.team-page.team-workspace-page .team-search svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+}
+.team-page.team-workspace-page .team-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--jm-text);
+  font: inherit;
+  font-size: 13px;
+}
+.team-page.team-workspace-page .team-roster-table td.team-row-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: end;
+}
+.team-page.team-workspace-page .team-row-actions > * {
+  vertical-align: middle;
+}
+.team-page.team-workspace-page .team-row-actions > .jm-button:not(.team-member-more) {
+  height: 30px;
+  margin-inline-end: 4px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+.team-page.team-workspace-page .team-row-actions > .op-muted {
+  display: inline-block;
+  width: 32px;
+  text-align: center;
+}
+.team-page.team-workspace-page .team-leave {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0;
+}
+.team-page.team-workspace-page .team-leave h2 {
+  font-size: 14px;
+  line-height: 22px;
+}
+.team-page.team-workspace-page .team-leave p {
+  margin: 2px 0 0;
+}
+.team-page.team-workspace-page .team-invite-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--jm-border);
+}
+.team-page.team-workspace-page .team-invite-row:first-of-type {
+  padding-top: 0;
+}
+.team-page.team-workspace-page .team-invite-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.team-page.team-workspace-page .team-invite-row > div:first-of-type {
+  flex: 1;
+  min-width: 0;
+}
+.team-page.team-workspace-page .team-invite-row p {
+  margin: 2px 0;
+}
+.team-page.team-workspace-page .team-invite-kind {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--jm-inset);
+  color: var(--jm-muted);
+}
+.team-page.team-workspace-page .team-invite-kind svg {
+  width: 14px;
+  height: 14px;
+}
+.team-page.team-workspace-page .team-invite-row .op-row-actions {
+  gap: 8px;
+}
+.team-page.team-workspace-page .team-invite-row .jm-button {
+  height: 30px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+/* Activity */
+.team-page.team-workspace-page .team-activity-panel .team-more-records {
+  margin-top: 16px;
+}
+
+/* Settings: each section stacks its title + explanation over full-width controls,
+   so description and action read together instead of a left label column. */
+.team-page.team-workspace-page .team-settings-page {
+  display: grid;
+  gap: 16px;
+}
+.team-page.team-workspace-page .team-settings-card {
+  padding: 0;
+}
+.team-page.team-workspace-page :is(.team-settings-card, .team-plan-card)[data-highlight='true'] {
+  border-color: var(--jm-text);
+}
+.team-page.team-workspace-page .team-setting-row {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+}
+.team-page.team-workspace-page .team-setting-row + .team-setting-row {
+  border-top: 1px solid var(--jm-border);
+}
+.team-page.team-workspace-page .team-setting-row > header h2 {
+  font-size: 14px;
+  line-height: 22px;
+}
+.team-page.team-workspace-page .team-setting-row > header p {
+  margin: 4px 0 0;
+  color: var(--jm-muted);
+  font-size: 12px;
+  line-height: 20px;
+}
+.team-page.team-workspace-page .team-setting-body {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  min-width: 0;
+}
+.team-page.team-workspace-page .team-basic-settings {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+  align-items: start;
+}
+.team-page.team-workspace-page .team-setting-body .op-field input,
+.team-page.team-workspace-page .team-id-section .team-link-box > input {
+  height: 40px;
+  border: 1px solid var(--jm-border);
+  border-radius: 10px;
+  background: var(--jm-panel);
+  font-size: 14px;
+}
+.team-page.team-workspace-page .team-setting-body .op-field input:focus,
+.team-page.team-workspace-page .team-id-section .team-link-box > input:focus {
+  border-color: var(--jm-muted);
+}
+.team-page.team-workspace-page .team-id-section {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 13px;
+}
+.team-page.team-workspace-page .team-id-section .team-link-box {
+  max-width: none;
+  margin: 0;
+  gap: 8px;
+}
+.team-page.team-workspace-page .team-id-section .team-link-box > input {
+  color: var(--jm-muted);
+  font-variant-numeric: tabular-nums;
+}
+.team-page.team-workspace-page .team-policy-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.team-page.team-workspace-page .team-policy-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--jm-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+.team-page.team-workspace-page .team-policy-option:hover {
+  background: var(--jm-hover);
+}
+.team-page.team-workspace-page .team-policy-option:has(input:checked) {
+  border-color: var(--jm-text);
+}
+.team-page.team-workspace-page .team-policy-option:has(input:focus-visible) {
+  outline: 2px solid var(--jm-text);
+  outline-offset: 2px;
+}
+.team-page.team-workspace-page .team-policy-option:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.team-page.team-workspace-page .team-policy-option input {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--jm-text);
+}
+.team-page.team-workspace-page .team-policy-icon {
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  border-radius: 10px;
+  background: var(--jm-inset);
+  color: var(--jm-muted);
+}
+.team-page.team-workspace-page .team-policy-option:has(input:checked) .team-policy-icon {
+  background: var(--jm-text);
+  color: var(--jm-panel);
+}
+.team-page.team-workspace-page .team-policy-option > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.team-page.team-workspace-page .team-policy-option strong {
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: var(--font-weight-medium);
+}
+.team-page.team-workspace-page .team-policy-option small {
+  color: var(--jm-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.team-page.team-workspace-page .team-settings-footer {
+  display: grid;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--jm-border);
+}
+.team-page.team-workspace-page .team-settings-footer > .op-row-actions {
+  justify-content: flex-end;
+}
+.team-page.team-workspace-page
+  .team-settings-footer
+  :is(.op-inline-error, .team-callout, .team-success) {
+  margin: 0;
+}
+.team-page.team-workspace-page .team-contract-panel .team-contract {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+  margin: 0;
+}
+.team-page.team-workspace-page .team-contract dt {
+  font-size: 12px;
+}
+.team-page.team-workspace-page .team-contract dd {
+  margin-top: 4px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.team-page.team-workspace-page .team-contract-discounts {
+  grid-column: 1 / -1;
+}
+.team-page.team-workspace-page .team-contract-discounts p {
+  margin: 4px 0;
+}
+/* 团队套餐：付费方一眼看到名额、周期积分、有效期与模型折扣。 */
+.team-page.team-workspace-page .team-plan-card {
+  padding: 24px;
+}
+.team-page.team-workspace-page .team-plan-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 16px;
+  margin-bottom: 20px;
+}
+.team-page.team-workspace-page .team-plan-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.team-page.team-workspace-page .team-plan-title h2 {
+  font-size: 18px;
+  line-height: 26px;
+}
+.team-page.team-workspace-page .team-plan-status {
+  --plan-status: var(--credit-accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 10px 0 8px;
+  border: 1px solid var(--jm-border);
+  border-radius: 999px;
+  color: var(--jm-text);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+.team-page.team-workspace-page .team-plan-status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--plan-status);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--plan-status) 22%, transparent);
+}
+.team-page.team-workspace-page .team-plan-status[data-tone='warning'] {
+  --plan-status: var(--jm-warning);
+}
+.team-page.team-workspace-page .team-plan-status[data-tone='danger'] {
+  --plan-status: var(--jm-danger);
+}
+.team-page.team-workspace-page .team-plan-head > p {
+  grid-column: 1;
+  margin: 0;
+  color: var(--jm-muted);
+  font-size: 12px;
+  line-height: 20px;
+}
+.team-page.team-workspace-page .team-plan-recharge {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.team-page.team-workspace-page .team-plan-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.team-page.team-workspace-page .team-plan-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: var(--jm-inset);
+}
+.team-page.team-workspace-page .team-plan-stat[data-accent='credit'] {
+  background: color-mix(in srgb, var(--credit-accent) 14%, var(--jm-panel));
+}
+.team-page.team-workspace-page .team-plan-stat[data-warn='true'] {
+  background: color-mix(in srgb, var(--jm-warning) 12%, var(--jm-panel));
+}
+.team-page.team-workspace-page .team-plan-stat-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--jm-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.team-page.team-workspace-page .team-plan-stat-label svg {
+  width: 14px;
+  height: 14px;
+}
+.team-page.team-workspace-page .team-plan-stat-value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+.team-page.team-workspace-page .team-plan-stat[data-accent='credit'] .team-plan-stat-value {
+  color: var(--credit-amount);
+}
+.team-page.team-workspace-page .team-plan-stat[data-warn='true'] .team-plan-stat-value {
+  color: var(--jm-warning);
+}
+.team-page.team-workspace-page .team-plan-stat-value small {
+  color: var(--jm-muted);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: var(--font-weight-normal);
+}
+.team-page.team-workspace-page .team-plan-meter {
+  width: 100%;
+  height: 6px;
+  background: color-mix(in srgb, var(--jm-text) 8%, transparent);
+}
+.team-page.team-workspace-page .team-plan-stat-hint {
+  margin-top: auto;
+  color: var(--jm-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.team-page.team-workspace-page .team-plan-discounts {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--jm-border);
+}
+.team-page.team-workspace-page .team-plan-discounts h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  line-height: 22px;
+}
+.team-page.team-workspace-page .team-plan-discounts h3 svg {
+  width: 15px;
+  height: 15px;
+  color: var(--credit-amount);
+}
+.team-page.team-workspace-page .team-plan-discounts ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.team-page.team-workspace-page .team-plan-discounts li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--jm-border);
+  border-radius: 12px;
+}
+.team-page.team-workspace-page .team-plan-model {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.team-page.team-workspace-page .team-plan-model img,
+.team-page.team-workspace-page .team-plan-model-mark {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  object-fit: contain;
+}
+.team-page.team-workspace-page .team-plan-model-mark {
+  display: grid;
+  place-items: center;
+  background: var(--jm-inset);
+  color: var(--jm-muted);
+  font-size: 13px;
+  font-weight: var(--font-weight-medium);
+}
+.team-page.team-workspace-page .team-plan-model > span:last-child {
+  display: grid;
+  min-width: 0;
+}
+.team-page.team-workspace-page .team-plan-model strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: var(--font-weight-medium);
+}
+.team-page.team-workspace-page .team-plan-model small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--jm-muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+.team-page.team-workspace-page .team-plan-discount {
+  display: grid;
+  flex: none;
+  justify-items: end;
+}
+.team-page.team-workspace-page .team-plan-discount strong {
+  color: var(--credit-amount);
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: var(--font-weight-semibold);
+}
+.team-page.team-workspace-page .team-plan-discount small {
+  color: var(--credit-amount);
+  font-size: 11px;
+  line-height: 16px;
+}
+.team-page.team-workspace-page .team-plan-empty {
+  margin: 0;
+  color: var(--jm-muted);
+  font-size: 13px;
+}
+.team-page.team-workspace-page .team-resource-transfer .team-form {
+  max-width: none;
+  margin: 0;
+}
+.team-page.team-workspace-page .team-transfer-description {
+  margin: 0 0 16px;
+}
+.team-page.team-workspace-page .team-form .op-choice {
+  border: 1px solid var(--jm-border);
+  background: var(--jm-panel);
+}
+
+.team-credit-adjustment > .team-form {
+  margin-bottom: 0;
+}
+
+@media (max-width: 1180px) {
+  .team-page.team-workspace-page .team-dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .team-page.team-workspace-page .team-dashboard-side {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+}
+@media (max-width: 1100px) {
+  .team-page.team-workspace-page.op-page {
+    padding-inline: 24px;
+  }
+}
+@media (max-width: 860px) {
+  .team-page.team-workspace-page .team-balance-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .team-page.team-workspace-page :is(.team-basic-settings, .team-policy-options, .team-plan-stats) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .team-page.team-workspace-page.op-page {
+    padding-inline: 16px;
+  }
+  .team-page.team-workspace-page .team-hero {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .team-avatar[data-kind='team'] {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    font-size: 18px;
+  }
+  .team-page.team-workspace-page .team-hero-title h1 {
+    font-size: 18px;
+    line-height: 26px;
+  }
+  .team-page.team-workspace-page .team-workflow-navigation {
+    flex-wrap: wrap;
+    border-bottom: 0;
+  }
+  .team-page.team-workspace-page .team-workflow-navigation > .view-tabs {
+    flex-basis: 100%;
+    order: 2;
+    border-bottom: 1px solid var(--jm-border);
+  }
+  .team-page.team-workspace-page .team-hero-actions {
+    order: 1;
+    width: 100%;
+    padding-bottom: 0;
+  }
+  .team-page.team-workspace-page .team-hero-actions > .jm-button {
+    flex: 1;
+    height: 40px;
+  }
+  .team-page.team-workspace-page .team-workflow-navigation > .view-tabs {
+    gap: 20px;
+  }
+  .team-page.team-workspace-page .team-card {
+    padding: 16px;
+  }
+  .team-page.team-workspace-page .team-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .team-page.team-workspace-page .team-tiles.team-balance-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .team-page.team-workspace-page .team-balance-legend [data-part='total'] {
+    flex-basis: 100%;
+    padding-inline-end: 0;
+    border-inline-end: 0;
+  }
+  .team-page.team-workspace-page .team-tile {
+    min-height: 96px;
+    padding: 12px 14px;
+  }
+  .team-page.team-workspace-page .team-tile-value {
+    font-size: 22px;
+    line-height: 30px;
+  }
+  .team-page.team-workspace-page .team-trend,
+  .team-page.team-workspace-page .team-trend-scale {
+    height: 140px;
+  }
+  .team-page.team-workspace-page .team-search {
+    width: 100%;
+    height: 40px;
+  }
+  .team-page.team-workspace-page .op-table {
+    min-width: 600px;
+  }
+  .team-page.team-workspace-page .op-table:has(thead th:nth-child(2):last-child) {
+    min-width: 0;
+  }
+  .team-page.team-workspace-page .team-leave {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .team-page.team-workspace-page .team-invite-row {
+    flex-wrap: wrap;
+  }
+  .team-page.team-workspace-page .team-setting-row {
+    padding: 16px;
+  }
+  .team-page.team-workspace-page .team-settings-footer {
+    padding: 16px;
+  }
+  .team-page.team-workspace-page .team-plan-card {
+    padding: 16px;
+  }
+  .team-page.team-workspace-page .team-plan-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .team-page.team-workspace-page .team-plan-recharge {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+  }
+  .team-page.team-workspace-page .view-tabs[data-variant='pill'] > button {
+    min-height: 40px;
+  }
+}

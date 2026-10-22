@@ -81,7 +81,7 @@ func TestUploadExecutionReadBackAndHTTPBoundaries(t *testing.T) {
 	service := &app.Service{Credits: store, Prices: &frozenFixturePrices{version: 1}, Authorize: freeAuthorization, Store: store, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: model}}
 	files := uploadfiles.New()
 	service.Files = files
-	host, handler := httpapi.New(service, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(service), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	host.Files = files
 	server := httptest.NewServer(handler)
@@ -259,7 +259,7 @@ func TestCancelThenStartWhileOldResponseSettles(t *testing.T) {
 	defer store.Close()
 	model := &slowFirstModel{entered: make(chan struct{}), release: make(chan struct{})}
 	service := &app.Service{Credits: store, Prices: &frozenFixturePrices{version: 1}, Authorize: freeAuthorization, Store: store, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: model}}
-	p, err := service.ForActor(legacyHTTPActor).Create(ctx, "cancel-restart", "x.txt", []byte("祖父坐在工具间。"), 0)
+	p, err := fixtureProject(t, service, legacyHTTPActor).Create(ctx, "cancel-restart", "x.txt", []byte("祖父坐在工具间。"), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,7 +270,7 @@ func TestCancelThenStartWhileOldResponseSettles(t *testing.T) {
 			conn.Exec(context.Background(), "DELETE FROM drama_catalog_v1.projects WHERE id=$1", p.ID)
 		}
 	}()
-	host, handler := httpapi.New(service, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(service), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -344,7 +344,7 @@ func TestRecoverPersistedResponseAcrossFreshStoreAndUnknownIsNotResent(t *testin
 			}
 			model := &protocolModel{}
 			service := &app.Service{Credits: first, Prices: &frozenFixturePrices{version: 1}, Authorize: freeAuthorization, Store: first, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: model}}
-			p, err := service.ForActor(legacyHTTPActor).Create(ctx, "recovery-contract", "x.txt", []byte("祖父坐在工具间。"), 0)
+			p, err := fixtureProject(t, service, legacyHTTPActor).Create(ctx, "recovery-contract", "x.txt", []byte("祖父坐在工具间。"), 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -374,7 +374,7 @@ func TestRecoverPersistedResponseAcrossFreshStoreAndUnknownIsNotResent(t *testin
 				}
 			}()
 			restarted := &app.Service{Credits: second, Prices: &frozenFixturePrices{version: 1}, Authorize: freeAuthorization, Store: second, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: model}}
-			host, _ := httpapi.New(restarted, nil, "../../../demo", 0)
+			host, _ := httpapi.New(configuredFixture(restarted), nil, "../../../demo", 0)
 			defer host.Shutdown(ctx)
 			if err = host.Recover(ctx); err != nil {
 				t.Fatal(err)

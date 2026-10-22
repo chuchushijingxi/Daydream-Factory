@@ -56,9 +56,22 @@ func (s *Service) Execute(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
+	// 执行权由原端口取得后，才按已读取的持久空间派生读写端口。
+	// 这也保留端口装饰器的外发/执行门，不能先派生而绕过 Acquire。
+	if p.SpaceID != "" {
+		s = s.forSpace(p.SpaceID)
+	}
 	r := p.LatestRun()
 	if r == nil || r.Status != "running" {
 		return nil
+	}
+	execution := *s
+	s = &execution
+	if r.Credit != nil {
+		s.agentUserID = r.Credit.ActorID
+	}
+	if err = s.checkAgentAccess(ctx, p); err != nil {
+		return s.stopAgentForPermission(ctx, id, err)
 	}
 	if err = s.ensureCredit(ctx, p, r); err != nil {
 		code := errorCode(err)
@@ -113,6 +126,9 @@ func (s *Service) executePhase(ctx context.Context, id, runID string) (advanced 
 	p, err := s.Store.Snapshot(ctx, id)
 	if err != nil || p.LatestRun().Status != "running" || p.LatestRun().ID != runID {
 		return false, err
+	}
+	if err = s.checkAgentAccess(ctx, p); err != nil {
+		return false, s.stopAgentForPermission(ctx, id, err)
 	}
 	if s.Agent == nil {
 		return false, s.fail(ctx, id, runID, "MODEL_UNAVAILABLE", fault.ErrModelUnavailable.Error())

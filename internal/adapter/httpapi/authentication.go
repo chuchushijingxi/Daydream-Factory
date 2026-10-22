@@ -93,6 +93,10 @@ func (h *Handler) Routes() []Route {
 }
 func (h *Handler) authenticated(next http.Handler, mode string, w http.ResponseWriter, r *http.Request) {
 	if mode == "public" {
+		if h.ReadOnly && paymentNotifyPath(r) {
+			write(w, http.StatusServiceUnavailable, map[string]string{"code": "SERVICE_READ_ONLY", "message": "当前服务只读，请稍后重试支付通知"})
+			return
+		}
 		if h.rejectReadOnly(w, r) {
 			return
 		}
@@ -156,7 +160,12 @@ func (h *Handler) authenticated(next http.Handler, mode string, w http.ResponseW
 	if h.rejectReadOnly(w, r) {
 		return
 	}
-	requestCtx, cancel := context.WithCancel(r.Context())
+	spaceID, e := requestSpace(r, a.UserID)
+	if e != nil {
+		fail(w, e)
+		return
+	}
+	requestCtx, cancel := context.WithCancel(ports.WithRequestedSpace(r.Context(), spaceID))
 	defer cancel()
 	r = r.WithContext(context.WithValue(context.WithValue(requestCtx, actorKey{}, a), tokenKey{}, c.Value))
 	// 短请求只认证一次；长写入在后续每个分块写出前重查会话撤销。

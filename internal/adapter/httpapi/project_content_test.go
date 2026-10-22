@@ -73,13 +73,13 @@ func contentService(t *testing.T, store *postgres.Store, model ports.Model) *app
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &app.Service{Credits: store, Prices: &frozenFixturePrices{version: 1}, Store: store, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Styles: styles, Authorize: freeAuthorization, Models: &modelregistry.Registry{Model: model}}
+	return &app.Service{Resolver: store, Access: store, EditorNames: store, Credits: store, Prices: &frozenFixturePrices{version: 1}, Store: store, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Styles: styles, Authorize: freeAuthorization, Models: &modelregistry.Registry{Model: model}}
 }
 
 func createProjectContent(t *testing.T, s *app.Service, assets []d.Asset) d.Project {
 	t.Helper()
 	ctx := context.Background()
-	p, err := s.ForActor(legacyHTTPActor).Create(ctx, "P4 虚构免费夹具", "fictional.txt", []byte("林岚，32岁修理师，左眉尾浅疤、黑发低马尾。\n她在修理间使用铜钥匙开门。\n晚宴上她身穿黑礼服。"), 0)
+	p, err := fixtureProject(t, s, legacyHTTPActor).Create(ctx, "P4 虚构免费夹具", "fictional.txt", []byte("林岚，32岁修理师，左眉尾浅疤、黑发低马尾。\n她在修理间使用铜钥匙开门。\n晚宴上她身穿黑礼服。"), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -292,7 +292,7 @@ func TestProjectContentPostgresActualEinoWireReceiptsRevisionAndCRUD(t *testing.
 	}
 	service := contentService(t, store, model)
 	p := createProjectContent(t, service, pgAssets())
-	host, handler := httpapi.New(service, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(service), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -407,7 +407,7 @@ func TestProjectContentPostgresEmptyVisualPersistsWithoutModelPermitOrFees(t *te
 	s.Authorize = nil
 	s.Agent = nil
 	p := createProjectContent(t, s, []d.Asset{})
-	host, handler := httpapi.New(s, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	defer host.Shutdown(context.Background())
 	path := "http://127.0.0.1/api/projects/" + p.ID + "/visual-prompt-runs"
@@ -462,7 +462,7 @@ func TestProjectContentPostgresEmptyVisualPersistsWithoutModelPermitOrFees(t *te
 	restarted := openProjectContentPG(t)
 	fresh := contentService(t, restarted, nil)
 	fresh.Authorize = nil
-	host2, handler2 := httpapi.New(fresh, nil, "../../../demo", 0)
+	host2, handler2 := httpapi.New(configuredFixture(fresh), nil, "../../../demo", 0)
 	handler2 = withPostgresSession(t, host2, handler2, "workspace")
 	defer host2.Shutdown(context.Background())
 	if err := host2.Recover(context.Background()); err != nil {
@@ -541,6 +541,11 @@ func TestProjectContentSingleCategoryAndRunningRecoveryFromCommittedResponse(t *
 					finish = "finish_visual_prompts"
 				}
 				r := p.LatestRun()
+				// Use the normal Start* frozen identity; a fresh executor must receive
+				// real access ports rather than fabricating a historical charge to resume.
+				if r.Credit == nil || r.Credit.ActorID != legacyHTTPActor.UserID || r.Credit.AccountID != p.SpaceID || r.Credit.Amount != 0 {
+					t.Fatal("normal free quotation did not freeze the initiating actor/account", r.Credit)
+				}
 				r.End = len(p.ScriptSource.Spans)
 				r.Calls = append(r.Calls, d.Call{ID: "persisted", Stage: r.Stage, End: r.End, Status: d.CallStatus(status), Actions: []d.Action{save}, FinishReason: "tool_calls", ReservedMicroCNY: 999, Request: json.RawMessage(`{}`), Usage: billing.Usage{Known: status == "received"}})
 				if status == "interrupted" {
@@ -704,7 +709,7 @@ func TestProjectContentHTTPDTOSizeSameOriginAndReadOnlyFields(t *testing.T) {
 	store := openProjectContentPG(t)
 	s := contentService(t, store, nil)
 	p := createProjectContent(t, s, []d.Asset{})
-	fixtureHost, handler := httpapi.New(s, nil, "../../../demo", 0)
+	fixtureHost, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, fixtureHost, handler, "workspace")
 	path := "http://127.0.0.1/api/projects/" + p.ID + "/settings"
 	for _, test := range []struct {

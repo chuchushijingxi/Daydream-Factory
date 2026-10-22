@@ -26,10 +26,10 @@ func TestProjectSummaryCharacterImagesFollowCurrentRolesAndOwner(t *testing.T) {
 	if err = store.Migrate(ctx); err != nil {
 		t.Fatal(err)
 	}
-	owner := identity.New("preview_owner")
-	reader := store.ForProjectOwner(owner)
+	owner := fixtureSpace(t, store, identity.New("preview_owner"))
+	reader := store.ForProjectSpace(owner)
 	for _, count := range []int{0, 1, 2, 4} {
-		p := d.Project{ID: identity.New("preview_project"), OwnerID: owner, Revision: 1,
+		p := d.Project{ID: identity.New("preview_project"), OwnerID: owner, SpaceID: owner, CreatorID: owner, Revision: 1,
 			Title: "角色图片", Original: []byte("原始剧本不进入列表"),
 			Assets: []d.Asset{{ID: "location", Kind: "location", ImageFileID: "not-a-character"},
 				{ID: "empty", Kind: "character", Looks: []d.Look{{ID: "look", ImageFileID: "not-the-main-image"}}}}}
@@ -64,7 +64,7 @@ func TestProjectSummaryCharacterImagesFollowCurrentRolesAndOwner(t *testing.T) {
 				t.Fatal("current project missing")
 			}
 		}
-		other, e := store.ForProjectOwner("another-preview-owner").ListSummaries(ctx)
+		other, e := store.ForProjectSpace("another-preview-owner").ListSummaries(ctx)
 		if e != nil || len(other) != 0 {
 			t.Fatal("another owner received project thumbnails", other, e)
 		}
@@ -123,7 +123,9 @@ func TestProjectQueryProjectionsPreserveVisibilityRecoveryAndModelReferences(t *
 		{ID: identity.New("query_running"), Revision: 1, Runs: []d.Run{{ID: "run-summary", Contract: d.EpisodeIndexContract, Stage: "episodeIndexReview", Status: d.RunRunning, Model: "query-model-current"}}},
 		{ID: identity.New("query_deleted"), Revision: 1, DeletedAt: &uploaded, ProjectSettings: &d.ProjectSettings{LLMModel: "query-model-deleted", ImageModel: "query-image", VideoModel: "query-video"}, Runs: []d.Run{{Status: d.RunRunning, Model: "query-model-history"}}},
 	}
-	for _, project := range projects {
+	for i := range projects {
+		projects[i] = fixtureProject(t, store, projects[i])
+		project := projects[i]
 		if err = store.Create(ctx, project); err != nil {
 			t.Fatal(err)
 		}

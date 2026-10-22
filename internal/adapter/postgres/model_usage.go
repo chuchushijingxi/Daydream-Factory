@@ -10,7 +10,7 @@ import (
 // Explicit JSON keys below are the complete allowlist. Raw request/response,
 // errors, user titles, tool arguments, callerContext and private URLs never enter it.
 const usageSources = `WITH language_runs AS MATERIALIZED (
- SELECT coalesce(p.owner_id,'') user_id,
+ SELECT r#>>'{credit,actorId}' user_id,p.space_id,
  coalesce(r#>>'{credit,id}',r->>'id') task_id,
  coalesce(r#>>'{credit,acceptedAt}',r->>'createdAt')::timestamptz task_at,
  r->>'contract' operation,r->>'status' status,r->>'model' model_id,
@@ -50,10 +50,10 @@ const usageSources = `WITH language_runs AS MATERIALIZED (
  CASE WHEN NOT bool_or(unknown_cost) THEN sum(output_tokens)::bigint END output_tokens,
  CASE WHEN NOT bool_or(unknown_cost) THEN sum(cache_tokens)::bigint END cache_tokens,
  NULL::jsonb media_usage,sum(call_count)::bigint call_count,sum(known_cost)::bigint known_cost,bool_or(unknown_cost) unknown_cost,
- CASE WHEN bool_or(status='failed') THEN 'GENERATION_FAILED' ELSE NULL END error_code
+ CASE WHEN bool_or(status='failed') THEN 'GENERATION_FAILED' ELSE NULL END error_code,min(space_id) space_id
  FROM language_runs GROUP BY task_id
 ), media_tasks AS MATERIALIZED (
- SELECT t.id task_id,coalesce(t.owner_id,'') user_id,t.payload->>'operation' operation,t.status,
+ SELECT t.id task_id,t.creator_id user_id,t.space_id,t.payload->>'operation' operation,t.status,
  t.payload->>'modelId' model_id,t.payload#>>'{binding,connectionId}' connection_id,t.created_at,
  t.input_snapshot#>'{callerContext,credit}' basis,
  CASE WHEN t.payload->>'endedAt' IS NOT NULL THEN (extract(epoch FROM (t.payload->>'endedAt')::timestamptz-t.created_at)*1000)::bigint END duration_ms,
@@ -78,17 +78,17 @@ const usageSources = `WITH language_runs AS MATERIALIZED (
  SELECT * FROM language_tasks UNION ALL
  SELECT task_id,task_id,user_id,operation,status,model_id,connection_id,created_at,basis,duration_ms,NULL::text,
  NULL::bigint,NULL::bigint,NULL::bigint,media_usage,call_count,known_cost,unknown_cost,
- CASE WHEN status='failed' THEN 'GENERATION_FAILED' ELSE NULL END FROM media_tasks
+ CASE WHEN status='failed' THEN 'GENERATION_FAILED' ELSE NULL END,space_id FROM media_tasks
 ), call_records AS NOT MATERIALIZED (
  SELECT c->>'id' id,lr.task_id,lr.user_id,lr.operation,c->>'status' status,lr.model_id,c->>'connectionId' connection_id,(c->>'createdAt')::timestamptz created_at,
  NULL::jsonb basis,(c->>'durationMs')::bigint duration_ms,c->>'requestId' request_id,
  (c->>'inputTokens')::bigint input_tokens,(c->>'outputTokens')::bigint output_tokens,(c->>'cacheHitTokens')::bigint cache_tokens,
- NULL::jsonb media_usage,1::bigint call_count,(c->>'knownCostMicroCny')::bigint known_cost,(c->>'unknownCost')::boolean unknown_cost,c->>'errorCode' error_code
+ NULL::jsonb media_usage,1::bigint call_count,(c->>'knownCostMicroCny')::bigint known_cost,(c->>'unknownCost')::boolean unknown_cost,c->>'errorCode' error_code,lr.space_id
  FROM language_runs lr CROSS JOIN LATERAL jsonb_array_elements(lr.safe_calls) c
  UNION ALL
  SELECT c->>'id',mt.task_id,mt.user_id,mt.operation,c->>'status',mt.model_id,mt.connection_id,(c->>'createdAt')::timestamptz,
  NULL::jsonb,NULL::bigint,c->>'requestId',NULL::bigint,NULL::bigint,NULL::bigint,NULL::jsonb,1::bigint,
- (c->>'knownCostMicroCny')::bigint,(c->>'unknownCost')::boolean,c->>'errorCode'
+ (c->>'knownCostMicroCny')::bigint,(c->>'unknownCost')::boolean,c->>'errorCode',mt.space_id
  FROM media_tasks mt CROSS JOIN LATERAL jsonb_array_elements(mt.safe_calls) c
 ), records AS (
  SELECT * FROM task_records WHERE $1='tasks' UNION ALL SELECT * FROM call_records WHERE $1='calls'
@@ -97,9 +97,9 @@ const usageSources = `WITH language_runs AS MATERIALIZED (
  CASE WHEN rec.status IN ('completed','succeeded') THEN coalesce(debit.amount,0)-coalesce(refund.amount,0) ELSE 0 END charged,
  CASE WHEN $1='calls' THEN 'task-billing' WHEN rec.status IN ('running','queued','unknown') THEN 'pending' WHEN rec.status IN ('failed','cancelled') AND debit.id IS NOT NULL AND refund.id IS NULL THEN 'refund-pending' WHEN refund.id IS NOT NULL THEN 'refunded' ELSE 'settled' END settlement
  FROM records rec
- LEFT JOIN drama_catalog_v1.credit_ledger debit ON $1='tasks' AND debit.operation_id='generation:'||coalesce(rec.basis->>'id',rec.task_id)||':deduct'
- LEFT JOIN drama_catalog_v1.credit_ledger refund ON $1='tasks' AND refund.operation_id='generation:'||coalesce(rec.basis->>'id',rec.task_id)||':refund'
- WHERE ($2='' OR rec.user_id=$2) AND ($3='' OR rec.task_id=$3) AND ($4='' OR rec.request_id=$4 OR rec.id=$4)
+ LEFT JOIN drama_catalog_v1.credit_ledger debit ON $1='tasks' AND debit.operation_id='generation:'||(rec.basis->>'id')||':deduct' AND debit.account_id=rec.basis->>'accountId'
+ LEFT JOIN drama_catalog_v1.credit_ledger refund ON $1='tasks' AND refund.operation_id='generation:'||(rec.basis->>'id')||':refund' AND refund.original_deduction_id=debit.id
+ WHERE ($14='' OR rec.space_id=$14) AND ($2='' OR rec.user_id=$2) AND ($3='' OR rec.task_id=$3) AND ($4='' OR rec.request_id=$4 OR rec.id=$4)
  AND ($5='' OR rec.model_id=$5) AND ($6='' OR rec.connection_id=$6) AND ($7='' OR rec.operation=$7) AND ($8='' OR rec.status=$8)
  AND ($9::timestamptz IS NULL OR rec.created_at >= $9) AND ($10::timestamptz IS NULL OR rec.created_at < $10)
  AND ($13='' OR rec.user_id=$13 OR rec.task_id=$13 OR rec.id=$13 OR rec.request_id=$13
@@ -118,7 +118,7 @@ func (s *Store) ModelUsage(ctx context.Context, f u.Filter) (u.Result, error) {
 	if f.Sort == "asc" {
 		order = "ASC"
 	}
-	args = append(args, f.PageSize, (f.Page-1)*f.PageSize, f.Search)
+	args = append(args, f.PageSize, (f.Page-1)*f.PageSize, f.Search, f.SpaceID)
 	var raw []byte
 	e = tx.QueryRow(ctx, usageQuery(order), args...).Scan(&out.Total, &out.Stats.CallCount, &out.Stats.Charged, &out.Stats.Refunded, &out.Stats.KnownCostMicroCNY, &out.Stats.UnknownCost, &out.ReadAt, &raw)
 	if e != nil {
@@ -139,8 +139,8 @@ func usageQuery(order string) string {
  ), selected AS (
  SELECT * FROM filtered ORDER BY created_at ` + order + ` NULLS LAST,id ` + order + ` LIMIT $11 OFFSET $12
  ), paged AS (
- SELECT jsonb_build_object('id',rec.id,'taskId',task_id,'userId',user_id,'username',usr.username,'email',usr.email,'operation',operation,'status',status,'modelId',model_id,'connectionId',connection_id,'requestId',request_id,'createdAt',rec.created_at,'durationMs',duration_ms,'inputTokens',input_tokens,'outputTokens',output_tokens,'cacheHitTokens',cache_tokens,'mediaUsage',media_usage,'callCount',call_count,'knownCostMicroCny',known_cost,'unknownCost',unknown_cost,'basis',basis,'prepaid',prepaid,'refunded',refunded,'charged',charged,'settlement',settlement,'deductionId',deduction_id,'refundId',refund_id,'errorCode',error_code) record,rec.created_at,rec.id
- FROM selected rec LEFT JOIN drama_catalog_v1.users usr ON usr.id=rec.user_id
+ SELECT jsonb_build_object('id',rec.id,'taskId',task_id,'userId',user_id,'username',usr.username,'email',usr.email,'operation',operation,'status',status,'modelId',model_id,'connectionId',connection_id,'requestId',request_id,'createdAt',rec.created_at,'durationMs',duration_ms,'inputTokens',input_tokens,'outputTokens',output_tokens,'cacheHitTokens',cache_tokens,'mediaUsage',media_usage,'callCount',call_count,'knownCostMicroCny',known_cost,'unknownCost',unknown_cost,'basis',basis,'prepaid',prepaid,'refunded',refunded,'charged',charged,'settlement',settlement,'deductionId',deduction_id,'refundId',refund_id,'errorCode',error_code,'spaceId',rec.space_id,'spaceName',CASE WHEN space.kind='personal' THEN '个人空间' ELSE team.name END,'spaceKind',space.kind) record,rec.created_at,rec.id
+ FROM selected rec LEFT JOIN drama_catalog_v1.users usr ON usr.id=rec.user_id JOIN drama_catalog_v1.spaces space ON space.id=rec.space_id LEFT JOIN drama_catalog_v1.teams team ON team.space_id=space.id
  ) SELECT total,calls,charged,refunded,known_cost,unknown_cost,transaction_timestamp(),
  coalesce((SELECT jsonb_agg(record ORDER BY created_at ` + order + ` NULLS LAST,id ` + order + `) FROM paged),'[]'::jsonb) FROM stats`
 }

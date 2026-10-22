@@ -16,8 +16,15 @@ import (
 type Service struct {
 	Credits                ports.CreditLedger
 	Prices                 ports.CreditPrices
+	Discounts              ports.CreditDiscounts
+	Editing                ports.ProjectEditing
+	EditorNames            ports.ProjectEditorNames
+	editingSession         string
+	agentUserID            string
 	billingBasis           string
-	owner                  string
+	scope                  *ports.SpaceScope
+	Resolver               ports.SpaceResolver
+	Access                 ports.SpaceAccess
 	MediaTasks             *taskapp.Service
 	Store                  ports.ProjectStore
 	Agent                  ports.Agent

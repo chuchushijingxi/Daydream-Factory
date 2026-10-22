@@ -191,6 +191,8 @@ type State struct {
 	Error                string        `json:"error,omitempty"`
 }
 type Task struct {
+	SpaceID    string
+	CreatorID  string
 	OwnerID    string
 	ID         string
 	ScopeID    string

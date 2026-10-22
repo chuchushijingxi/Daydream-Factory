@@ -1,3 +1,4 @@
+import type { ListFilter, ResourceAccess } from './spaces-types';
 import type { CreditPriceDTO, UsageBasisDTO } from './administration-types';
 export type ProjectSettings = {
   aspectRatio: string;
@@ -13,7 +14,11 @@ export type Character = {
   appearance: string;
   personality: string;
 };
-export type AssetImage = { fileId: string; originalUrl: string; thumbnailUrl: string };
+export type AssetImage = {
+  fileId: string;
+  originalUrl: string;
+  thumbnailUrl: string;
+};
 export type Look = {
   id: string;
   name: string;
@@ -62,6 +67,9 @@ export type VisualStyle = {
   };
 };
 export type Project = {
+  spaceId: string;
+  ownerId: string;
+  creatorId: string;
   id: string;
   title: string;
   uploadedAt: string | null;
@@ -107,6 +115,12 @@ export type ScriptSource = {
   }[];
 };
 export type ProjectRow = {
+  spaceId: string;
+  ownerId: string;
+  creatorId: string;
+  creatorName: string;
+  sharedWithMe: boolean;
+  effectiveAccess: ResourceAccess;
   id: string;
   title: string;
   filename: string;
@@ -272,6 +286,9 @@ export type MediaTask = {
   } | null;
 };
 export interface UploadedFile {
+  spaceId: string;
+  ownerId: string;
+  creatorId: string;
   fileId: string;
   filename: string;
   contentType: string;
@@ -324,7 +341,7 @@ export interface CatalogAPI {
     },
   ): Promise<ModelConfiguration>;
   getStatus(): Promise<ServiceStatus>;
-  listProjects(): Promise<ProjectRow[]>;
+  listProjects(filter?: ListFilter): Promise<ProjectRow[]>;
   getProject(id: string): Promise<Project>;
   getSource(id: string): Promise<ScriptSource>;
   deleteProject(

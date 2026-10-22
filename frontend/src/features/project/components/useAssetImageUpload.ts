@@ -100,6 +100,25 @@ export function useAssetImageUpload({
       if (!operation.signal.aborted) setBusy(false);
     }
   };
+  const select = async (file: UploadedFile) => {
+    if (!enabled || busy || !project) return;
+    const operation = new AbortController();
+    controller.current = operation;
+    setBusy(true);
+    setPending(file);
+    setReadback(false);
+    setError('');
+    try {
+      await associate(file, project.revision, operation.signal);
+    } catch (e) {
+      if (!operation.signal.aborted) {
+        failed(e, true);
+        throw e;
+      }
+    } finally {
+      if (!operation.signal.aborted) setBusy(false);
+    }
+  };
   const recover = async () => {
     if (!project || !target || busy || !pending) return;
     const operation = new AbortController();
@@ -127,5 +146,5 @@ export function useAssetImageUpload({
       if (!operation.signal.aborted) setBusy(false);
     }
   };
-  return { scope, busy, error, pending, readback, enabled, upload, recover };
+  return { scope, busy, error, pending, readback, enabled, upload, select, recover };
 }

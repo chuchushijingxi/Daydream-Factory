@@ -12,7 +12,7 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	p, err := h.Service.ForActor(actor(r)).WithBillingBasis(input.BillingBasis).UploadFromFile(r.Context(), r.PathValue("id"), input.Revision, input.FileID)
+	p, err := h.projectService(r).WithBillingBasis(input.BillingBasis).UploadFromFile(r.Context(), r.PathValue("id"), input.Revision, input.FileID)
 	if err != nil {
 		fail(w, err)
 		return
@@ -24,7 +24,7 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) readSource(w http.ResponseWriter, r *http.Request) {
-	p, err := h.Service.ForActor(actor(r)).ReadProject(r.Context(), r.PathValue("id"))
+	p, err := h.projectService(r).ReadProject(r.Context(), r.PathValue("id"))
 	if err != nil {
 		fail(w, err)
 		return

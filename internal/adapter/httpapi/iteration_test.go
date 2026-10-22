@@ -102,8 +102,8 @@ func TestEinoContinuesPastTwoCallsAndRepairsRejectedWrite(t *testing.T) {
 	}
 	defer store.Close()
 	m := &continuingModel{t: t}
-	s := &app.Service{Authorize: freeAuthorization, Store: store, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: m}}
-	p, err := s.Create(ctx, "Eino iteration contract", "x.txt", []byte("祖父留下钥匙。\n小雨看向镜子。"), 0)
+	s := &app.Service{Credits: store, Prices: &frozenFixturePrices{version: 1}, Authorize: freeAuthorization, Store: store, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: m}}
+	p, err := fixtureProject(t, s, legacyHTTPActor).Create(ctx, "Eino iteration contract", "x.txt", []byte("祖父留下钥匙。\n小雨看向镜子。"), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestEinoContinuesPastTwoCallsAndRepairsRejectedWrite(t *testing.T) {
 			_, _ = conn.Exec(ctx, "DELETE FROM drama_catalog_v1.projects WHERE id=$1", p.ID)
 		}
 	}()
-	p, err = s.Start(ctx, p.ID, p.Revision)
+	p, err = quotedLegacyService(t, s, p.ID, app.QuoteInput{Revision: p.Revision, Operation: "asset-preparation"}).Start(ctx, p.ID, p.Revision)
 	if err == nil {
 		err = s.Execute(ctx, p.ID)
 	}

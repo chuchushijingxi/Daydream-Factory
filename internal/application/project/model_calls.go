@@ -78,6 +78,9 @@ func (s *Service) generateAttempt(ctx context.Context, id, expectedRunID string,
 	if r == nil || r.ID != expectedRunID || r.Status != "running" || r.SourceVersion != p.ScriptSource.Version {
 		return ports.Response{}, fault.ErrCancelled
 	}
+	if err = s.checkAgentAccess(ctx, p); err != nil {
+		return ports.Response{}, s.stopAgentForPermission(ctx, id, err)
+	}
 	dialogue, err := selectTaskDialogue(p, messages)
 	if err != nil {
 		return ports.Response{}, err

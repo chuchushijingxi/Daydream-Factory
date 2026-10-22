@@ -3,6 +3,9 @@ import { http, jsonPost, type createHttpClient } from './client';
 import { createUsageApi } from './model-usage-client';
 import { createSmtpApi } from './smtp-client';
 import { createCreditApi } from './credit-client';
+export { creditLedgerView } from './credit-client';
+import { pageView } from './response-values';
+export { pageView, safeInteger, creditInput } from './response-values';
 import { translate } from '../contexts/translate';
 import type {
   UserDTO,
@@ -65,12 +68,13 @@ export type LedgerView = {
   legacyAmount?: string;
   identity: string;
   at: string;
-  direction: 'add' | 'deduct' | 'refund' | 'expire';
+  direction: 'add' | 'deduct' | 'refund' | 'expire' | 'reclaim';
   amount: string;
   balance: string;
   reason: string;
   source: string;
   originalDebit: string | null;
+  originalAddition: string | null;
   actorLabel: string;
 };
 export type CreditBalanceView = {
@@ -81,7 +85,7 @@ export type CreditBalanceView = {
 };
 export type CreditPageSize = '10' | '20' | '50';
 export type CreditFilters = {
-  direction: 'all' | 'acquired' | 'consumed' | 'expired';
+  direction: 'all' | 'acquired' | 'consumed' | 'expired' | 'reclaimed';
   category: 'all' | 'recharge' | 'gift' | 'legacy';
   start: string;
   end: string;
@@ -132,6 +136,7 @@ export type ChargeView = {
   freeEnd: string | null;
 };
 export type UsageFilters = {
+  spaceId?: string;
   start: string;
   end: string;
   search: string;
@@ -144,6 +149,9 @@ export type UsageFilters = {
 export type UsageView = 'tasks' | 'calls';
 export type UsagePageSize = '10' | '20' | '50';
 export type UsageRow = {
+  spaceId?: string;
+  spaceName?: string;
+  spaceKind?: 'personal' | 'team';
   identity: string;
   at: string;
   userLabel: string;
@@ -241,19 +249,6 @@ const malformed = () =>
     'PROGRAM_FAILED',
     translate('服务端回执与模块合同不一致，未采用响应。'),
   );
-export function safeInteger(value: number): string {
-  if (!Number.isSafeInteger(value) || value < 0) throw malformed();
-  return String(value);
-}
-export function creditInput(value: string): number {
-  if (!/^[1-9][0-9]*$/.test(value) || BigInt(value) > 9007199254740991n)
-    throw new ApiError(
-      400,
-      'CREDIT_INVALID_AMOUNT',
-      translate('积分须为 1 至 9,007,199,254,740,991 的整数。'),
-    );
-  return Number(value);
-}
 function userView(v: UserDTO): UserView {
   if (
     !v?.id ||
@@ -271,27 +266,6 @@ function userView(v: UserDTO): UserView {
     roleLabel: translate(v.role === 'operator' ? '运营人员' : '普通用户'),
     enabled: v.status === 'enabled',
     createdAt: v.createdAt,
-  };
-}
-export function pageView<T, U>(v: PageDTO<T>, map: (item: T) => U): PageView<U> {
-  if (
-    !Array.isArray(v.items) ||
-    !Number.isSafeInteger(v.page) ||
-    v.page < 1 ||
-    !Number.isSafeInteger(v.pageSize) ||
-    v.pageSize < 1 ||
-    v.pageSize > 100
-  )
-    throw malformed();
-  const total = safeInteger(v.total);
-  return {
-    items: v.items.map(map),
-    previous: v.page > 1 ? String(v.page - 1) : null,
-    next: BigInt(v.page) * BigInt(v.pageSize) < BigInt(total) ? String(v.page + 1) : null,
-    caption: translate('共 {total} 条 · 第 {page} 页', {
-      total: BigInt(total).toLocaleString('zh-CN'),
-      page: v.page,
-    }),
   };
 }
 function paging(page = '') {

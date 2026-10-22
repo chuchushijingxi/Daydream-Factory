@@ -1,3 +1,4 @@
+import { UploadPicker } from '../../../components/spaces/UploadPicker';
 import { protectedResourceUrl } from '../../../api/client';
 import { useEffect, useRef, useState } from 'react';
 import { Download, Upload, LoaderCircle, Eye } from 'lucide-react';
@@ -40,13 +41,15 @@ export function AssetImageCard({
   const { c } = useCatalogText();
   const { currentProject: p } = useWorkspace();
   const input = useRef<HTMLInputElement>(null);
-  const { scope, busy, error, pending, readback, enabled, upload, recover } = useAssetImageUpload({
-    target,
-    editable,
-    active,
-    onSaved,
-  });
+  const { scope, busy, error, pending, readback, enabled, upload, select, recover } =
+    useAssetImageUpload({
+      target,
+      editable,
+      active,
+      onSaved,
+    });
   const [preview, setPreview] = useState(false);
+  const [selecting, setSelecting] = useState(false);
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const [originalFailed, setOriginalFailed] = useState(false);
   const [retryImage, setRetryImage] = useState(0);
@@ -139,6 +142,14 @@ export function AssetImageCard({
             {busy ? <LoaderCircle className="animate-spin" aria-hidden /> : <Upload aria-hidden />}
             {busy ? c('上传并保存中…') : c('上传')}
           </button>
+          <button
+            type="button"
+            className="asset-image-chip"
+            disabled={!enabled || busy || readback}
+            onClick={() => setSelecting(true)}
+          >
+            {c('选择已上传')}
+          </button>
           {image ? (
             <a className="asset-image-chip" href={protectedResourceUrl(image.originalUrl)} download>
               <Download aria-hidden />
@@ -180,6 +191,7 @@ export function AssetImageCard({
           ) : null}
         </div>
       ) : null}
+      <UploadPicker open={selecting} onOpenChange={setSelecting} onSelect={select} />
       <Dialog open={preview && Boolean(image)} onOpenChange={setPreview}>
         <DialogContent
           variant="preview"

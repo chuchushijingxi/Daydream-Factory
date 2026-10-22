@@ -4,6 +4,10 @@
 @import './styles/globals.css';
 @import './styles/design-tokens.css';
 @import './styles/auth-page.css';
+@import './features/payments/payments.css';
+@import './pages/operations/payments.css';
+@import './pages/operations/teams/team-contract.css';
+@import './pages/legal/legal.css';
 
 /**
  * 使用小米官方静态 Web 字体的 CSS 字重：Regular 400 / Medium 500 /
@@ -330,3 +334,6 @@
     color: rgb(148 163 184);
   }
 }
+
+/* 退款扣回是独立负向记录，沿用余额扣减的主题颜色。 */
+.credit-record-amount[data-direction='reclaim'] { color: var(--credit-muted); }

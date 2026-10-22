@@ -10,11 +10,11 @@ import (
 	"time"
 )
 
-const creditColumns = `id,operation_id,account_id,kind,amount,balance,source,subject,reason,coalesce(original_deduction_id,''),created_at,category,recharge_amount,gift_amount,legacy_amount,daily_amount,daily_expires_at`
+const creditColumns = `id,operation_id,account_id,kind,amount,balance,source,subject,reason,coalesce(original_deduction_id,''),created_at,category,recharge_amount,gift_amount,legacy_amount,daily_amount,daily_expires_at,coalesce(holder_id,''),coalesce(original_addition_id,'')`
 
 func scanCredit(row pgx.Row) (d.Entry, error) {
 	var e d.Entry
-	err := row.Scan(&e.ID, &e.OperationID, &e.AccountID, &e.Kind, &e.Amount, &e.Balance, &e.Source, &e.Subject, &e.Reason, &e.OriginalDeductionID, &e.CreatedAt, &e.Category, &e.RechargeAmount, &e.GiftAmount, &e.LegacyAmount, &e.DailyAmount, &e.DailyExpiresAt)
+	err := row.Scan(&e.ID, &e.OperationID, &e.AccountID, &e.Kind, &e.Amount, &e.Balance, &e.Source, &e.Subject, &e.Reason, &e.OriginalDeductionID, &e.CreatedAt, &e.Category, &e.RechargeAmount, &e.GiftAmount, &e.LegacyAmount, &e.DailyAmount, &e.DailyExpiresAt, &e.HolderID, &e.OriginalAdditionID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		err = fault.ErrNotFound
 	}
@@ -70,31 +70,27 @@ func (s *Store) creditChange(ctx context.Context, kind string, c d.Change) (d.En
 	return receipt, nil
 }
 
-// creditChangeTx is the only money mutation implementation. Account creation
-// may join it to its existing PG transaction; this function never commits.
+// creditChangeTx 是 Add/Deduct/Refund 唯一变更实现，可加入调用方事务；不自行提交。
 func (s *Store) creditChangeTx(ctx context.Context, tx pgx.Tx, kind string, c d.Change) (d.Entry, error) {
+	if kind != "add" && kind != "deduct" && kind != "refund" {
+		return d.Entry{}, fault.ErrInvalid
+	}
 	if e := c.Validate(kind); e != nil {
 		return d.Entry{}, e
 	}
-	if _, e := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('drama-agent:credit:'||$1,0))`, c.OperationID); e != nil {
-		return d.Entry{}, e
+	old, found, e := existingCreditTx(ctx, tx, kind, c)
+	if e != nil || found {
+		return old, e
 	}
-	old, e := scanCredit(tx.QueryRow(ctx, `SELECT `+creditColumns+` FROM drama_catalog_v1.credit_ledger WHERE operation_id=$1`, c.OperationID))
-	if e == nil {
-		if !old.Same(kind, c) {
-			return d.Entry{}, fault.New("CREDIT_IDEMPOTENCY_CONFLICT", "原账务编号对应不同内容")
-		}
-		return old, nil
-	}
-	if !errors.Is(e, fault.ErrNotFound) {
-		return d.Entry{}, e
-	}
-	account, source := c.AccountID, c.Source
+	account, source, holder := c.AccountID, c.Source, c.HolderID
 	var allocation d.Allocation
 	if kind == "refund" {
 		original, err := scanCredit(tx.QueryRow(ctx, `SELECT `+creditColumns+` FROM drama_catalog_v1.credit_ledger WHERE id=$1 FOR UPDATE`, c.OriginalDeductionID))
 		if err != nil {
 			return d.Entry{}, err
+		}
+		if original.HolderID != c.HolderID {
+			return d.Entry{}, fault.New("CREDIT_IDEMPOTENCY_CONFLICT", "退款持有人与原扣款不一致")
 		}
 		var returned d.Allocation
 		err = tx.QueryRow(ctx, `SELECT coalesce(sum(recharge_amount),0),coalesce(sum(gift_amount),0),coalesce(sum(legacy_amount),0),coalesce(sum(daily_amount),0) FROM drama_catalog_v1.credit_ledger WHERE original_deduction_id=$1 AND kind='refund'`, original.ID).Scan(&returned.Recharge, &returned.Gift, &returned.Legacy, &returned.Daily)
@@ -105,7 +101,7 @@ func (s *Store) creditChangeTx(ctx context.Context, tx pgx.Tx, kind string, c d.
 		if err != nil {
 			return d.Entry{}, err
 		}
-		account, source = original.AccountID, original.Source
+		account, source, holder = original.AccountID, original.Source, original.HolderID
 	}
 	if _, e = tx.Exec(ctx, `INSERT INTO drama_catalog_v1.credit_accounts(account_id) VALUES($1) ON CONFLICT DO NOTHING`, account); e != nil {
 		return d.Entry{}, e
@@ -124,6 +120,27 @@ func (s *Store) creditChangeTx(ctx context.Context, tx pgx.Tx, kind string, c d.
 	}
 	expiredRefund := d.Allocation{}
 	if kind == "deduct" {
+		if holder != "" {
+			held, err := holderCreditsTx(ctx, tx, account, holder)
+			if err != nil {
+				return d.Entry{}, err
+			}
+			held, err = held.Deduct(c.Amount)
+			if err != nil {
+				return d.Entry{}, err
+			}
+			if _, err = tx.Exec(ctx, `UPDATE drama_catalog_v1.credit_allocations SET balance=$3 WHERE account_id=$1 AND holder_id=$2`, account, holder, held.Balance); err != nil {
+				return d.Entry{}, err
+			}
+		} else {
+			allocated, err := allocatedCreditsTx(ctx, tx, account)
+			if err != nil {
+				return d.Entry{}, err
+			}
+			if allocated > 0 && wallet.Balance-allocated < c.Amount {
+				return d.Entry{}, fault.New("CREDIT_UNALLOCATED_INSUFFICIENT", "未分配积分不足")
+			}
+		}
 		wallet, allocation, e = wallet.Deduct(c.Amount)
 	} else {
 		if kind == "add" {
@@ -143,8 +160,23 @@ func (s *Store) creditChangeTx(ctx context.Context, tx pgx.Tx, kind string, c d.
 	if e != nil {
 		return d.Entry{}, e
 	}
+	if kind == "refund" && holder != "" {
+		held, err := holderCreditsTx(ctx, tx, account, holder)
+		if err != nil {
+			return d.Entry{}, err
+		}
+		if restored := c.Amount - expiredRefund.Total(); restored > 0 {
+			held, err = held.Refund(restored)
+			if err != nil {
+				return d.Entry{}, err
+			}
+		}
+		if _, e = tx.Exec(ctx, `UPDATE drama_catalog_v1.credit_allocations SET balance=$3 WHERE account_id=$1 AND holder_id=$2`, account, holder, held.Balance); e != nil {
+			return d.Entry{}, e
+		}
+	}
 	receipt := d.Entry{
-		ID: identity.New("credit"), OperationID: c.OperationID, AccountID: account,
+		ID: identity.New("credit"), OperationID: c.OperationID, AccountID: account, HolderID: holder,
 		Kind: kind, Amount: c.Amount, Balance: wallet.Balance,
 		Source: source, Subject: c.Subject, Reason: c.Reason, OriginalDeductionID: c.OriginalDeductionID,
 		Category: allocation.Category(), RechargeAmount: allocation.Recharge, GiftAmount: allocation.Gift,
@@ -163,6 +195,24 @@ func (s *Store) creditChangeTx(ctx context.Context, tx pgx.Tx, kind string, c d.
 	return receipt, saveCreditWalletTx(ctx, tx, account, wallet)
 }
 
+// 同一操作编号共享锁和语义回读；支付扣回也沿这一个入口防止幂等规则漂移。
+func existingCreditTx(ctx context.Context, tx pgx.Tx, kind string, c d.Change) (d.Entry, bool, error) {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('drama-agent:credit:'||$1,0))`, c.OperationID); err != nil {
+		return d.Entry{}, false, err
+	}
+	old, err := scanCredit(tx.QueryRow(ctx, `SELECT `+creditColumns+` FROM drama_catalog_v1.credit_ledger WHERE operation_id=$1`, c.OperationID))
+	if err == nil {
+		if !old.Same(kind, c) {
+			return d.Entry{}, false, fault.New("CREDIT_IDEMPOTENCY_CONFLICT", "原账务编号对应不同内容")
+		}
+		return old, true, nil
+	}
+	if errors.Is(err, fault.ErrNotFound) {
+		return d.Entry{}, false, nil
+	}
+	return d.Entry{}, false, err
+}
+
 const creditWalletColumns = `balance,recharge_balance,gift_balance,legacy_balance,daily_balance,daily_expires_at`
 
 func scanCreditWallet(row pgx.Row) (d.Wallet, error) {
@@ -178,11 +228,14 @@ func saveCreditWalletTx(ctx context.Context, tx pgx.Tx, account string, w d.Wall
 	return err
 }
 func insertCreditTx(ctx context.Context, tx pgx.Tx, e d.Entry) (d.Entry, error) {
-	var original any
+	var original, addition any
 	if e.OriginalDeductionID != "" {
 		original = e.OriginalDeductionID
 	}
-	return scanCredit(tx.QueryRow(ctx, `INSERT INTO drama_catalog_v1.credit_ledger(id,operation_id,account_id,kind,amount,balance,source,subject,reason,original_deduction_id,category,recharge_amount,gift_amount,legacy_amount,daily_amount,daily_expires_at,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,clock_timestamp()) RETURNING `+creditColumns, e.ID, e.OperationID, e.AccountID, e.Kind, e.Amount, e.Balance, e.Source, e.Subject, e.Reason, original, e.Category, e.RechargeAmount, e.GiftAmount, e.LegacyAmount, e.DailyAmount, e.DailyExpiresAt))
+	if e.OriginalAdditionID != "" {
+		addition = e.OriginalAdditionID
+	}
+	return scanCredit(tx.QueryRow(ctx, `INSERT INTO drama_catalog_v1.credit_ledger(id,operation_id,account_id,kind,amount,balance,source,subject,reason,original_deduction_id,category,recharge_amount,gift_amount,legacy_amount,daily_amount,daily_expires_at,holder_id,original_addition_id,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NULLIF($17,''),$18,clock_timestamp()) RETURNING `+creditColumns, e.ID, e.OperationID, e.AccountID, e.Kind, e.Amount, e.Balance, e.Source, e.Subject, e.Reason, original, e.Category, e.RechargeAmount, e.GiftAmount, e.LegacyAmount, e.DailyAmount, e.DailyExpiresAt, e.HolderID, addition))
 }
 
 func (s *Store) Balance(ctx context.Context, id string) (int64, error) {

@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	modeladapter "drama-agent/internal/adapter/model"
 	"drama-agent/internal/application/ports"
@@ -118,9 +119,12 @@ func TestMissingUsageIsUnknownAndActualMalformedResponseIsRetained(t *testing.T)
 }
 
 func TestActualResponseInterruptionIsTypedAndPartialToolsAreDiscarded(t *testing.T) {
-	for _, scenario := range []string{"tcp-cut", "malformed-json", "http-401", "http-401-cut", "cancelled"} {
+	for _, scenario := range []string{"tcp-cut", "tcp-cut-complete-json", "chunked-cut-complete-json", "malformed-json", "http-401", "http-401-cut", "cancelled"} {
 		t.Run(scenario, func(t *testing.T) {
 			partial := `{"choices":[{"message":{"role":"assistant","tool_calls":[`
+			if strings.HasSuffix(scenario, "complete-json") {
+				partial = `{"choices":[{"message":{"role":"assistant","tool_calls":[{"id":"destructive","type":"function","function":{"name":"save_catalog","arguments":"{}"}}]},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":2,"completion_tokens":1}}`
+			}
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				switch scenario {
 				case "http-401":
@@ -129,7 +133,9 @@ func TestActualResponseInterruptionIsTypedAndPartialToolsAreDiscarded(t *testing
 				case "malformed-json":
 					w.Write([]byte("{malformed response"))
 				default:
-					w.Header().Set("Content-Length", "10000")
+					if scenario != "chunked-cut-complete-json" {
+						w.Header().Set("Content-Length", "10000")
+					}
 					if scenario == "http-401-cut" {
 						w.WriteHeader(http.StatusUnauthorized)
 					}
@@ -156,10 +162,10 @@ func TestActualResponseInterruptionIsTypedAndPartialToolsAreDiscarded(t *testing
 			result, err := model.Generate(ctx, ports.Request{System: "test", Input: "{}", MaxOutputTokens: 32, Tools: app.Tools()}, func(json.RawMessage) error { return nil })
 			var interrupted interface{ ResponseInterrupted() bool }
 			marked := errors.As(err, &interrupted) && interrupted.ResponseInterrupted()
-			if err == nil || marked != (scenario == "tcp-cut") || len(result.Actions) != 0 || result.Usage.Known {
+			if err == nil || marked != (scenario == "tcp-cut" || strings.HasSuffix(scenario, "complete-json")) || len(result.Actions) != 0 || result.Usage.Known {
 				t.Fatalf("incorrect failure classification: marked=%v err=%v response=%+v", marked, err, result)
 			}
-			if scenario == "tcp-cut" && string(result.Raw) != partial {
+			if (scenario == "tcp-cut" || strings.HasSuffix(scenario, "complete-json")) && string(result.Raw) != partial {
 				t.Fatal("partial wire evidence lost")
 			}
 		})
@@ -261,5 +267,41 @@ func TestDeepSeekRetainsReasoningAndToolHistoryOnTheWire(t *testing.T) {
 	}
 	if result.Reasoning != "本轮思考" || result.Text != "继续处理" || result.FinishReason != "tool_calls" || len(result.Actions) != 1 || result.Actions[0].ID != "call-2" || !result.Usage.Known || result.Usage.Input != 20 || result.Usage.Output != 10 || result.Usage.CacheHit != 4 {
 		t.Fatalf("reasoning, action, or usage mapping changed: %+v", result)
+	}
+}
+
+func TestCompleteResponseFramingPreservesActionsAndSingleRequest(t *testing.T) {
+	body := `{"choices":[{"message":{"role":"assistant","tool_calls":[{"id":"complete","type":"function","function":{"name":"finish_batch","arguments":"{}"}}]},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":2,"completion_tokens":1}}` + "\n  "
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { requests++; w.Write([]byte(body)) }))
+	defer server.Close()
+	model, err := modeladapter.New(context.Background(), "local-only", server.URL, md.DeepSeekModelID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := model.Generate(context.Background(), ports.Request{System: "test", Input: "{}", MaxOutputTokens: 32, Tools: app.Tools()}, func(json.RawMessage) error { return nil })
+	if err != nil || requests != 1 || len(result.Actions) != 1 || result.Actions[0].ID != "complete" || !result.Usage.Known || string(result.Raw) != body {
+		t.Fatal("normal framing changed response or sent again", requests, result, err)
+	}
+}
+func TestResponseRemainderCheckKeepsCallerDeadline(t *testing.T) {
+	body := `{"choices":[{"message":{"role":"assistant","content":"complete-looking"},"finish_reason":"stop"}],"usage":{"prompt_tokens":2,"completion_tokens":1}}`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Length", "10000")
+		w.Write([]byte(body))
+		w.(http.Flusher).Flush()
+		<-r.Context().Done()
+	}))
+	defer server.Close()
+	model, err := modeladapter.New(context.Background(), "local-only", server.URL, md.DeepSeekModelID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	result, err := model.Generate(ctx, ports.Request{System: "test", Input: "{}", MaxOutputTokens: 32}, func(json.RawMessage) error { return nil })
+	var interrupted interface{ ResponseInterrupted() bool }
+	if err == nil || ctx.Err() == nil || len(result.Actions) != 0 || result.Usage.Known || errors.As(err, &interrupted) {
+		t.Fatal("caller deadline did not reject the unfinished framing", result, err)
 	}
 }

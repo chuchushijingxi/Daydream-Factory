@@ -42,7 +42,7 @@ export type CreditReceiptDTO = {
   id: string;
   operationId: string;
   accountId: string;
-  kind: 'add' | 'deduct' | 'refund' | 'expire';
+  kind: 'add' | 'deduct' | 'refund' | 'expire' | 'reclaim';
   amount: number;
   balance: number;
   category: CreditCategory;
@@ -53,6 +53,7 @@ export type CreditReceiptDTO = {
   subject: string;
   reason: string;
   originalDeductionId?: string;
+  originalAdditionId?: string;
   createdAt: string;
 };
 export type CreditSummaryDTO = {
@@ -112,6 +113,9 @@ export type UsageBasisDTO = Omit<ChargeQuoteDTO, 'basis'> & {
   acceptedAt: string;
 };
 export type UsageRecordDTO = {
+  spaceId?: string;
+  spaceName?: string;
+  spaceKind?: 'personal' | 'team';
   id: string;
   taskId: string;
   userId: string;

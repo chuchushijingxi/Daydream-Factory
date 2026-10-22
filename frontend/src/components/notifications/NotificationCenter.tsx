@@ -17,6 +17,9 @@ import { Spinner } from '../ui/spinner';
 import { SafeMarkdown } from './SafeMarkdown';
 import { useNotificationUpdates } from './useNotificationUpdates';
 import { useCatalogText } from '../../contexts/useCatalogText';
+import { useNavigate } from 'react-router-dom';
+import { useOptionalSpace } from '../../state/SpaceContext';
+import { notificationTarget, type NotificationLink } from '../../api/notifications-client';
 export const notificationDate = (at: string) =>
   new Intl.DateTimeFormat('zh-CN', {
     month: '2-digit',
@@ -395,9 +398,7 @@ function NotificationCenterContent({
             );
           }}
         >
-          <Dialog.Title className="jm-dialog-title">
-            {detail?.title || c('通知详情')}
-          </Dialog.Title>
+          <Dialog.Title className="jm-dialog-title">{detail?.title || c('通知详情')}</Dialog.Title>
           <Dialog.Close asChild>
             <button
               className="notification-icon-button notification-detail-close"
@@ -411,6 +412,15 @@ function NotificationCenterContent({
               <>
                 <time dateTime={detail.publishedAt}>{notificationDate(detail.publishedAt)}</time>
                 <SafeMarkdown messageId={detail.id}>{detail.body}</SafeMarkdown>
+                {detail.link && notificationTarget(detail.link) ? (
+                  <NotificationTarget
+                    link={detail.link}
+                    onClose={() => {
+                      closeDetail();
+                      setOpen(false);
+                    }}
+                  />
+                ) : null}
               </>
             ) : detailBusy ? (
               <div className="notification-empty" role="status">
@@ -447,5 +457,44 @@ export function NotificationCenter({
       client={client}
       compact={compact}
     />
+  );
+}
+
+function NotificationTarget({ link, onClose }: { link: NotificationLink; onClose: () => void }) {
+  const { c } = useCatalogText(),
+    space = useOptionalSpace(),
+    navigate = useNavigate();
+  const [busy, setBusy] = useState(false),
+    guard = useRef(false);
+  const open = async () => {
+    const target = notificationTarget(link);
+    if (!target || guard.current) return;
+    guard.current = true;
+    setBusy(true);
+    try {
+      if (
+        target.switchSpace &&
+        (!space || !(await space.switchSpace(link.spaceId, { keepRoute: true })))
+      )
+        return;
+      onClose();
+      navigate(target.path);
+    } finally {
+      guard.current = false;
+      setBusy(false);
+    }
+  };
+  return (
+    <Button className="space-notification-action" busy={busy} onClick={() => void open()}>
+      {c(
+        link.type === 'invite'
+          ? '查看邀请'
+          : link.type === 'ownership_transfer'
+            ? '确认所有权转让'
+            : link.type === 'project'
+              ? '打开项目'
+              : '查看团队',
+      )}
+    </Button>
   );
 }

@@ -1,0 +1,217 @@
+/* 运营团队合同详情：概览数据卡 + 分组表单 + 底部操作，替代原先单列长表单。 */
+.team-contract-page {
+  display: grid;
+  gap: 16px;
+  max-width: 1120px;
+}
+.team-contract-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.team-contract-status .team-status-row {
+  margin: 0;
+}
+.team-contract-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--jm-border);
+  border-radius: 12px;
+  background: var(--jm-border);
+}
+.team-contract-overview > div {
+  min-width: 0;
+  padding: 14px 18px;
+  background: var(--jm-panel);
+}
+.team-contract-overview dt {
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--jm-muted);
+}
+.team-contract-overview dd {
+  margin: 4px 0 0;
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.team-contract-overview dd small {
+  display: block;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: var(--font-weight-normal);
+  color: var(--jm-muted);
+}
+.team-contract-form {
+  display: grid;
+  gap: 0;
+  border-radius: 12px;
+  background: var(--jm-panel);
+}
+.team-contract-form > section {
+  display: grid;
+  gap: 16px;
+  padding: 20px 24px;
+}
+.team-contract-form > section + section {
+  border-top: 1px solid var(--jm-border);
+}
+.team-contract-form > section > header h2 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 24px;
+  font-weight: var(--font-weight-medium);
+}
+.team-contract-form > section > header p {
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+.team-contract-form > .op-inline-error,
+.team-contract-form > .op-inline-note,
+.team-contract-form > [role='status'],
+.team-contract-form > [role='alert'] {
+  margin: 0 24px;
+}
+.team-contract-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 20px;
+}
+.team-contract-grid .op-field input,
+.team-contract-grid .jm-date-time-trigger {
+  height: 40px;
+}
+div.team-discounts {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.team-discounts-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.team-discounts-head h3 {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: var(--font-weight-medium);
+}
+.team-discounts-head p {
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+.team-discount-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--jm-border);
+  border-radius: 10px;
+}
+.team-discount-list > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 12px;
+}
+.team-discount-list > li + li {
+  border-top: 1px solid var(--jm-border);
+}
+.op-choice.team-discount-model {
+  width: 100%;
+  min-width: 0;
+}
+.team-discount-percent {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 12px 0 0;
+  border-radius: 8px;
+  background: var(--jm-inset);
+}
+.team-discount-percent input {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  padding: 0 4px 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--jm-text);
+  font-size: 13px;
+  text-align: right;
+  outline: none;
+}
+.team-discount-percent span {
+  color: var(--jm-muted);
+  font-size: 13px;
+}
+.team-discount-empty {
+  margin: 0;
+  padding: 14px 12px;
+  border: 1px dashed var(--jm-border);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--jm-muted);
+  text-align: center;
+}
+.team-contract-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--jm-inset);
+}
+.team-contract-switch strong {
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: var(--font-weight-medium);
+}
+.team-contract-switch p {
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+.team-contract-switch .mc-switch[aria-checked='true'] {
+  background: var(--jm-danger);
+}
+.team-contract-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--jm-border);
+}
+@media (max-width: 900px) {
+  .team-contract-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .team-contract-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .team-contract-form > section,
+  .team-contract-actions {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .team-discount-list > li {
+    grid-template-columns: minmax(0, 1fr) 96px;
+  }
+  .team-discount-list > li > .jm-button {
+    grid-column: 1 / 3;
+    justify-self: end;
+  }
+}

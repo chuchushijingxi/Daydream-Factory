@@ -5,7 +5,9 @@
 @media(max-width:1100px){.op-summary{gap:16px;padding:16px;grid-template-columns:repeat(2,minmax(0,1fr))}.op-page{padding:24px}.op-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.account-top{height:64px;padding:0 20px}.account-card{margin-top:32px}.account-card h1{font-size:22px}.op-page{padding:24px 16px}.op-page-heading{align-items:flex-start;flex-wrap:wrap}.op-page-heading h1{font-size:18px;line-height:26px}.op-filters{gap:8px}.op-search{width:100%;max-width:none}.op-summary{gap:16px 8px;padding:16px}.op-summary>span{display:block}.op-summary strong{display:block;font-size:20px}.op-choice{min-width:0;flex:1}.op-filters .op-field{max-width:none;flex-basis:100%}.op-registration{align-items:flex-start;flex-direction:column;padding:16px}.op-balance{grid-template-columns:1fr;gap:8px}.op-balance>div{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:10px 12px}.op-balance dd{min-width:0;margin:0;font-size:20px;line-height:26px;text-align:right}.op-sidebar-footer .jm-sidebar-nav{height:44px}.op-detail-grid{grid-template-columns:1fr}.op-read-time{text-align:left}.op-pagination{flex-wrap:wrap}.op-adjustment .op-filters>.jm-button{width:100%}}
 .charge-notice{display:block;font-size:12px;line-height:20px;color:var(--jm-muted);max-width:560px;overflow-wrap:anywhere}.charge-notice strong{font-weight:var(--font-weight-medium);color:var(--jm-text)}.charge-notice small{display:block;font-size:12px}.single-visual-action>.charge-notice{max-width:260px}.sb-command-menu .charge-notice{max-width:280px}.op-choice-menu{padding:4px;transform-origin:var(--radix-dropdown-menu-content-transform-origin)}.op-choice-menu .xy-menu-row{min-height:36px;outline:none;cursor:pointer;padding:0 12px;display:flex;align-items:center;white-space:normal}.op-choice-menu .xy-menu-row[data-highlighted]{background:var(--jm-hover)}
-@media(prefers-reduced-motion:reduce){.op-choice-menu[data-state]{animation:none}}
+/* 选项沿 jimeng 下拉配方：项间 4px、8px 圆角，选中与悬停的底色不连成一块。 */
+.op-choice-menu [role=group]{display:flex;flex-direction:column;gap:4px}.op-choice-menu .xy-menu-row{border-radius:8px}
+@media(prefers-reduced-motion:reduce){.op-choice-menu[data-state]{animation:none}.op-nav-sub-wrap{transition:none}}
 .op-summary strong{overflow-wrap:anywhere}.op-usage-detail .op-table-scroll{max-width:100%}.charge-notice .jm-button{vertical-align:baseline}.op-tabs button:disabled{cursor:not-allowed;color:var(--jm-muted)}
 /* Override the creator's mobile absolute rail only inside the operations shell. */
 .op-shell>.op-sidebar{position:relative;inset:auto;width:216px;flex:0 0 216px;transform:none}.op-shell>.op-sidebar[data-collapsed=true]{width:56px;flex-basis:56px}.op-nav-backdrop{display:none}
@@ -16,11 +18,26 @@
 .op-shell,.account-page,.op-denied{--jm-workspace:#f8f9fa;--xy-sidebar:#fff}
 :root.dark .op-shell,:root.dark .account-page,:root.dark .op-denied{--jm-workspace:#121212;--xy-sidebar:#1a1a1a}
 .op-sidebar .jm-sidebar-head{height:56px;min-height:56px}.op-sidebar-caption{margin-bottom:4px}.op-sidebar>.jm-sidebar-links{margin-top:8px}
+.op-nav-group{position:relative}
+.op-nav-toggle{cursor:pointer;font-family:inherit;text-align:left}
+.op-nav-caret{width:16px;height:16px;margin-left:auto;transition:transform 150ms ease}
+.op-nav-group[data-open=true] .op-nav-caret{transform:rotate(180deg)}
+.op-nav-group[data-open=true]:not([data-current=true])>.op-nav-toggle{background:var(--jm-inset)}
+.op-nav-sub-wrap{display:grid;grid-template-rows:0fr;visibility:hidden;transition:grid-template-rows 240ms ease-out,visibility 240ms ease-out}
+.op-nav-group[data-open=true]>.op-nav-sub-wrap{grid-template-rows:1fr;visibility:visible}
+.op-nav-sub{display:grid;gap:2px;margin-top:2px;min-height:0;overflow:hidden}
+.op-nav-sub .jm-sidebar-nav{height:32px;padding:0 8px 0 36px;font-size:13px;font-weight:var(--font-weight-normal)}
+.op-sidebar[data-collapsed=true] .op-nav-sub-wrap{display:contents;visibility:visible;transition:none}
+.op-sidebar[data-collapsed=true]{overflow:visible}
+.op-sidebar[data-collapsed=true] .jm-sidebar-links{overflow:visible}
+.op-sidebar[data-collapsed=true] .op-nav-sub{position:absolute;left:calc(100% + 8px);top:0;z-index:60;width:max-content;min-width:148px;padding:6px;background:var(--jm-panel);border:1px solid var(--jm-border);border-radius:10px;box-shadow:var(--jm-shadow)}
+.op-sidebar[data-collapsed=true] .op-nav-group:not(:hover):not(:focus-within)>.op-nav-sub-wrap{visibility:hidden;opacity:0;pointer-events:none}
+.op-sidebar[data-collapsed=true] .op-nav-sub .jm-sidebar-nav{width:100%;justify-content:flex-start;height:34px;padding:0 12px;font-size:13px;white-space:nowrap}
 .op-registration-control{display:flex;align-items:center;gap:12px;flex-shrink:0}.op-credit-dialog .op-adjustment{display:grid;gap:20px;margin:0}.op-credit-dialog .op-adjustment footer{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}.op-wallet-dialog{width:min(960px,calc(100vw - 32px))}.op-account-id{display:block;font-size:12px;line-height:20px;overflow-wrap:anywhere}.op-wallet-dialog .op-table-scroll{max-height:360px}.op-credit-dialog .op-choice{width:100%}
 .op-view-explanation{margin:-8px 0 24px;color:var(--jm-muted);font-size:13px;line-height:22px}
 .op-credit-dialog,.op-wallet-dialog{padding:24px}.op-credit-dialog .op-choice{flex:none;height:36px;min-height:36px}
 
-.op-usage-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:16px 0}.op-usage-pagination .op-pagination{margin:0}.op-usage-pagination .op-choice{flex:none;min-width:116px;height:36px}
+.op-usage-pagination{display:flex;justify-content:flex-end;margin:16px 0}.op-usage-pagination .op-pagination{margin:0;min-width:0;flex-wrap:wrap;column-gap:8px;row-gap:8px}.op-usage-pagination .op-choice{flex:none;min-width:108px;height:32px;padding:0 10px;font-size:12px}.op-usage-pagination .op-pagination>span{white-space:nowrap}
 .op-choice>.op-choice-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .op-choice>svg{flex-shrink:0}
 .op-usage-filters .op-filters>.op-choice[aria-label="模型筛选"]{flex:0 0 240px;width:240px;min-width:240px}

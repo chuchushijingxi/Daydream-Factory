@@ -117,8 +117,8 @@ func (s *Store) FlushRuntimeEvents(ctx context.Context) error {
 		case "task":
 			var version uint64
 			var at *time.Time
-			var owner, scope string
-			err = tx.QueryRow(ctx, `SELECT revision,CASE WHEN next_run_at IS NULL THEN NULL ELSE greatest(next_run_at,lease_until) END,coalesce(owner_id,''),scope_id FROM drama_catalog_v1.tasks WHERE id=$1`, id).Scan(&version, &at, &owner, &scope)
+			var space, scope string
+			err = tx.QueryRow(ctx, `SELECT revision,CASE WHEN next_run_at IS NULL THEN NULL ELSE greatest(next_run_at,lease_until) END,space_id,scope_id FROM drama_catalog_v1.tasks WHERE id=$1`, id).Scan(&version, &at, &space, &scope)
 			if errors.Is(err, pgx.ErrNoRows) {
 				err = nil
 				continue
@@ -130,15 +130,15 @@ func (s *Store) FlushRuntimeEvents(ctx context.Context) error {
 				return err
 			}
 			projectID := strings.TrimPrefix(scope, "project:")
-			if err = r.Invalidate(ctx, "progress:"+owner+":"+projectID); err != nil {
+			if err = r.Invalidate(ctx, "progress:"+space+":"+projectID); err != nil {
 				return err
 			}
 			if err = r.Publish(ctx, scope); err != nil {
 				return err
 			}
 		case "project":
-			var owner string
-			err = tx.QueryRow(ctx, `SELECT coalesce(owner_id,'') FROM drama_catalog_v1.projects WHERE id=$1`, id).Scan(&owner)
+			var space string
+			err = tx.QueryRow(ctx, `SELECT space_id FROM drama_catalog_v1.projects WHERE id=$1`, id).Scan(&space)
 			if errors.Is(err, pgx.ErrNoRows) {
 				err = nil
 				continue
@@ -146,7 +146,7 @@ func (s *Store) FlushRuntimeEvents(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			if err = r.Invalidate(ctx, "projects:"+owner, "projects:system", "progress:"+owner+":"+id); err != nil {
+			if err = r.Invalidate(ctx, "projects:"+space, "projects:system", "progress:"+space+":"+id); err != nil {
 				return err
 			}
 			if err = r.Publish(ctx, key); err != nil {
@@ -163,7 +163,7 @@ func (s *Store) FlushRuntimeEvents(ctx context.Context) error {
 			if err = r.Publish(ctx, key); err != nil {
 				return err
 			}
-		case "credits":
+		case "credits", "team":
 			if err = r.Publish(ctx, key); err != nil {
 				return err
 			}

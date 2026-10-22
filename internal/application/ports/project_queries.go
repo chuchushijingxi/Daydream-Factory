@@ -15,6 +15,9 @@ type ProjectMediaReader interface {
 
 // ProjectSummary 只投影列表需要的字段，避免读取原文与全部调用证据。
 type ProjectSummary struct {
+	ListMetadata
+	SpaceID    string             `json:"spaceId"`
+	OwnerID    string             `json:"ownerId"`
 	ID         string             `json:"id"`
 	Title      string             `json:"title"`
 	Filename   string             `json:"filename"`
@@ -55,4 +58,10 @@ type ProjectQueries interface {
 	ListSummaries(context.Context) ([]ProjectSummary, error)
 	RunningProjectIDs(context.Context) ([]string, error)
 	ModelReferences
+}
+
+// VisibleProjects is the user-facing SQL-filtered projection. Internal recovery
+// and model-reference queries retain ProjectQueries and do not impersonate users.
+type VisibleProjects interface {
+	ListVisibleSummaries(context.Context, SpaceScope, ListFilter) ([]ProjectSummary, error)
 }

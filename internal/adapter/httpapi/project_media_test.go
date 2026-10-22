@@ -89,7 +89,7 @@ func TestProjectMediaHTTPStrictStartReceiptAdoptionRangeAndScope(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer q.Close()
-	p := d.Project{ID: identity.New("media_http"), OwnerID: "http-fixture", Revision: 1, Title: "隔离媒体 HTTP", ScriptSource: d.ScriptSource{Version: 1}, Assets: []d.Asset{{ID: "asset", Kind: "prop", Name: "铜钥匙"}}, Runs: []d.Run{{ID: "catalog", Contract: d.CatalogExtractionContract, SourceVersion: 1, Status: d.RunCompleted}}, VisualPrompts: []d.VisualPrompt{{VisualPromptInput: d.VisualPromptInput{Target: d.VisualTarget{AssetID: "asset"}, Text: "铜制钥匙，完整测试外观"}, SourceVersion: 1, Origin: "user"}}, Storyboard: &d.Storyboard{SourceVersion: 1}}
+	p := d.Project{ID: identity.New("media_http"), SpaceID: "http-fixture", CreatorID: "http-fixture", OwnerID: "http-fixture", Revision: 1, Title: "隔离媒体 HTTP", ScriptSource: d.ScriptSource{Version: 1}, Assets: []d.Asset{{ID: "asset", Kind: "prop", Name: "铜钥匙"}}, Runs: []d.Run{{ID: "catalog", Contract: d.CatalogExtractionContract, SourceVersion: 1, Status: d.RunCompleted}}, VisualPrompts: []d.VisualPrompt{{VisualPromptInput: d.VisualPromptInput{Target: d.VisualTarget{AssetID: "asset"}, Text: "铜制钥匙，完整测试外观"}, SourceVersion: 1, Origin: "user"}}, Storyboard: &d.Storyboard{SourceVersion: 1}}
 	seedMediaHTTPStoryboard(&p)
 	p.Assets = append(p.Assets, d.Asset{ID: "batch_asset", Kind: "prop", Name: "玻璃杯"})
 	p.VisualPrompts = append(p.VisualPrompts, d.VisualPrompt{VisualPromptInput: d.VisualPromptInput{Target: d.VisualTarget{AssetID: "batch_asset"}, Text: "透明玻璃杯，完整测试外观"}, SourceVersion: 1, Origin: "user"})
@@ -102,7 +102,7 @@ func TestProjectMediaHTTPStrictStartReceiptAdoptionRangeAndScope(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	host, raw := httpapi.New(service, nil, "../../../demo", 0)
+	host, raw := httpapi.New(configuredFixture(service), nil, "../../../demo", 0)
 	host.Files = files
 	handler := authenticatedFixture(host, raw)
 	if path := os.Getenv("DRAMA_MEDIA_UI_URL_FILE"); path != "" {

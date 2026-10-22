@@ -1,3 +1,4 @@
+import { useOptionalSpace } from '../../state/SpaceContext';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { SessionOptionalContext, useSession } from '../../state/SessionContext';
 import { sessionBoundary } from '../../api/session-boundary';
@@ -18,8 +19,11 @@ function shanghaiDate() {
 // A separate workspace command. Authentication and read-only balance requests
 // never award credits; the server's day receipt makes retries safe.
 export function DailyGiftClaim() {
-  const session = useContext(SessionOptionalContext);
-  return session?.user ? <DailyGiftClaimContent /> : null;
+  const session = useContext(SessionOptionalContext),
+    space = useOptionalSpace();
+  return session?.user && (!space || (space.ready && space.current?.kind === 'personal')) ? (
+    <DailyGiftClaimContent />
+  ) : null;
 }
 function DailyGiftClaimContent() {
   const { c } = useCatalogText();

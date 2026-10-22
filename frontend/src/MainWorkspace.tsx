@@ -1,6 +1,13 @@
 import { useCatalogText } from './contexts/useCatalogText';
 import { useState } from 'react';
-import { Navigate, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import {
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
 import { Button } from './components/ui/button';
 import { Spinner } from './components/ui/spinner';
 import { useWorkspace } from './state/WorkspaceContext';
@@ -17,6 +24,12 @@ import { CreationsPage } from './pages/creations/CreationsPage';
 import { CreditsPage } from './pages/credits/CreditsPage';
 import { PersonalCreditsProvider } from './features/credits/PersonalCredits';
 import { DailyGiftClaim } from './features/credits/DailyGiftClaim';
+import { TeamSettingsPage } from './pages/team/TeamSettingsPage';
+import { PendingInvitesPage } from './pages/invite/PendingInvitesPage';
+import { InviteAcceptPage } from './pages/invite/InviteAcceptPage';
+import { OwnershipAcceptPage } from './pages/invite/OwnershipAcceptPage';
+import { RechargeProvider } from './features/payments/Recharge';
+import { RechargeOrdersPage } from './pages/payments/RechargeOrdersPage';
 function AssetStep({ children }: { children: React.ReactNode }) {
   const { c } = useCatalogText();
   const { currentProject: p, status, storyboardIndex, storyboardError } = useWorkspace();
@@ -74,8 +87,15 @@ function WorkspaceContent() {
           </div>
         ) : (
           <Routes>
+            <Route path="/team/:spaceId" element={<TeamSettingsPage />}>
+              <Route path="contract" element={null} />
+            </Route>
+            <Route path="/invites" element={<PendingInvitesPage />} />
+            <Route path="/invite/:token" element={<InviteAcceptPage />} />
+            <Route path="/team/:spaceId/ownership/:transferId" element={<OwnershipAcceptPage />} />
             <Route path="/projects" element={<ProjectListPage />} />
             <Route path="/credits" element={<CreditsPage />} />
+            <Route path="/payments/orders" element={<RechargeOrdersPage />} />
             <Route path="/creations" element={<CreationsPage />} />
             <Route path="/playlet/:id/outline" element={<ScriptContentPage />} />
             <Route
@@ -135,7 +155,11 @@ function WorkspaceShell() {
               ? ' xy-home-workspace'
               : pathname === '/creations'
                 ? ' creations-workspace'
-              : '') +
+                : pathname === '/invites' ||
+                    pathname.startsWith('/invite/') ||
+                    pathname.startsWith('/team/')
+                  ? ' space-settings-workspace'
+                  : '') +
         (/^\/playlet\/[^/]+\/(outline|episodes|production)$/.test(pathname)
           ? ' editor-workspace'
           : '')
@@ -155,7 +179,9 @@ function WorkspaceShell() {
 export function MainWorkspace() {
   return (
     <PersonalCreditsProvider>
-      <WorkspaceShell />
+      <RechargeProvider>
+        <WorkspaceShell />
+      </RechargeProvider>
     </PersonalCreditsProvider>
   );
 }

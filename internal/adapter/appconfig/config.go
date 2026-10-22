@@ -18,6 +18,8 @@ import (
 )
 
 type Config struct {
+	Environment     string        `yaml:"environment"`
+	Payment         Payment       `yaml:"payment"`
 	ReadOnly        bool          `yaml:"-"`
 	StartupTimeout  time.Duration `yaml:"-"`
 	ShutdownTimeout time.Duration `yaml:"-"`
@@ -162,9 +164,6 @@ func DecodeDocument(raw []byte, filename string) (Config, error) {
 	if d.Decode(&cfg) != nil || d.Decode(new(any)) != io.EOF {
 		return Config{}, fmt.Errorf("invalid configuration YAML or unknown field; compare config/app.example.yaml")
 	}
-	if err := cfg.Validate(); err != nil {
-		return Config{}, err
-	}
 	base, err := filepath.Abs(filepath.Dir(filename))
 	if err != nil {
 		return Config{}, fmt.Errorf("cannot resolve configuration directory")
@@ -179,10 +178,14 @@ func DecodeDocument(raw []byte, filename string) (Config, error) {
 			*path = filepath.Join(base, *path)
 		}
 	}
+	cfg.resolvePaymentPaths(base)
+	if err := cfg.Validate(); err != nil {
+		return Config{}, err
+	}
 	return cfg, nil
 }
 
-func (c Config) Validate() error {
+func (c *Config) Validate() error {
 	for _, field := range []struct{ name, value string }{
 		{"database.url", c.Database.URL}, {"nsq.address", c.NSQ.Address}, {"storage.endpoint", c.Storage.Endpoint},
 		{"redis.address", c.Redis.Address}, {"redis.namespace", c.Redis.Namespace},
@@ -217,5 +220,5 @@ func (c Config) Validate() error {
 		return fmt.Errorf("configuration nsq.topic/channel must be persistent names")
 	}
 
-	return nil
+	return c.validatePayment()
 }

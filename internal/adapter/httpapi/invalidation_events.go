@@ -8,12 +8,17 @@ import (
 
 // Business handlers subscribe through their application port; this common
 // transport sends no content and uses the existing revocation-aware writer.
-func (h *Handler) serveInvalidationEvents(w http.ResponseWriter, r *http.Request, updates <-chan struct{}, topic string) {
+func (h *Handler) serveInvalidationEvents(w http.ResponseWriter, r *http.Request, updates <-chan struct{}, topic string, checks ...func() error) {
 	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
 	w.Header().Set("Cache-Control", "private, no-store")
 	w.Header().Set("X-Accel-Buffering", "no")
 	controller := http.NewResponseController(w)
 	send := func(body string) error {
+		for _, check := range checks {
+			if err := check(); err != nil {
+				return err
+			}
+		}
 		_ = controller.SetWriteDeadline(time.Now().Add(h.StreamWriteTimeout))
 		if _, err := fmt.Fprint(w, body); err != nil {
 			return err

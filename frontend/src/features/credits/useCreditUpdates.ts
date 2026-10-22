@@ -1,3 +1,4 @@
+import { useOptionalSpace } from '../../state/SpaceContext';
 import { useContext, useEffect, useRef, useState } from 'react';
 import { SessionOptionalContext } from '../../state/SessionContext';
 import { sessionBoundary } from '../../api/session-boundary';
@@ -7,6 +8,7 @@ import { translate } from '../../contexts/translate';
 
 // One authenticated stream per mounted scope; GET rereads remain authoritative.
 export function useCreditUpdates(enabled: boolean, target: string | null, onChange?: () => void) {
+  const space = useOptionalSpace();
   const session = useContext(SessionOptionalContext),
     callback = useRef(onChange);
   callback.current = onChange;
@@ -36,7 +38,7 @@ export function useCreditUpdates(enabled: boolean, target: string | null, onChan
     const connect = async () => {
       try {
         await shareInvalidations(
-          JSON.stringify([sessionAudience(), session.user!.identity]),
+          JSON.stringify([sessionAudience(), session.user!.identity, space?.spaceId, space?.epoch]),
           'credits:' + JSON.stringify(target),
           (change, signal) => session.service.watchCredits(target, change, signal),
           changed,
@@ -45,6 +47,7 @@ export function useCreditUpdates(enabled: boolean, target: string | null, onChan
       } catch {
         if (stopped || epoch !== sessionBoundary.epoch || controller.signal.aborted) return;
         setError(translate('积分实时同步暂不可用，正在重连。'));
+        if (space?.current?.kind === 'team') void space.refresh().catch(() => {});
         timer = setTimeout(
           () => void connect(),
           Math.min(30000, 1000 * 2 ** Math.min(attempt++, 5)),
@@ -58,6 +61,14 @@ export function useCreditUpdates(enabled: boolean, target: string | null, onChan
       clearTimeout(timer);
       clearTimeout(batch);
     };
-  }, [enabled, target, session?.service, session?.user?.identity, session?.epoch]);
+  }, [
+    enabled,
+    target,
+    session?.service,
+    session?.user?.identity,
+    session?.epoch,
+    space?.spaceId,
+    space?.epoch,
+  ]);
   return { revision, error };
 }

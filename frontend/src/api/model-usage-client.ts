@@ -1,15 +1,14 @@
 import { responseFields } from './response-fields';
 import { ApiError, type createHttpClient } from './client';
 import { translate } from '../contexts/translate';
-import {
-  pageView,
-  safeInteger,
-  type ChargeView,
-  type UsageFilters,
-  type UsagePage,
-  type UsagePageSize,
-  type UsageRow,
-  type UsageView,
+import { pageView, safeInteger } from './response-values';
+import type {
+  ChargeView,
+  UsageFilters,
+  UsagePage,
+  UsagePageSize,
+  UsageRow,
+  UsageView,
 } from './administration';
 import type { ModelConfiguration } from './types';
 import type { UsageBasisDTO, UsageRecordDTO, UsageResultDTO } from './administration-types';
@@ -52,6 +51,9 @@ const localizedLabel = (labels: Record<string, string>, code: string) => {
   return label ? translate(label) : code;
 };
 const usageFields: Record<keyof UsageRecordDTO, true> = {
+  spaceId: true,
+  spaceName: true,
+  spaceKind: true,
   id: true,
   taskId: true,
   userId: true,
@@ -90,10 +92,16 @@ function projection(v: UsageRecordDTO) {
     (v.username !== null && typeof v.username !== 'string') ||
     (v.email !== null && typeof v.email !== 'string')
   )
+    throw new ApiError(200, 'PROGRAM_FAILED', translate('使用记录身份或费用状态回执不完整。'));
+  if (
+    (v.spaceId !== undefined && typeof v.spaceId !== 'string') ||
+    (v.spaceName !== undefined && typeof v.spaceName !== 'string') ||
+    (v.spaceKind !== undefined && v.spaceKind !== 'personal' && v.spaceKind !== 'team')
+  )
     throw new ApiError(
       200,
-      'PROGRAM_FAILED',
-      translate('使用记录身份或费用状态回执不完整。'),
+      'CONTENT_BOUNDARY_VIOLATION',
+      translate('使用记录空间信息不符合安全投影合同。'),
     );
   if (v.mediaUsage) {
     v.mediaUsage = responseFields(v.mediaUsage, ['imageCount', 'videoSeconds']);
@@ -171,6 +179,9 @@ function row(v: UsageRecordDTO, view: UsageView): UsageRow {
   const unsettled = v.settlement === 'pending' || v.settlement === 'refund-pending';
   return {
     identity: v.id,
+    spaceId: v.spaceId,
+    spaceName: v.spaceName,
+    spaceKind: v.spaceKind,
     at: v.createdAt,
     userLabel: v.username || translate(v.userId ? '未记录用户名' : '未记录用户'),
     userEmail: v.email,
@@ -213,6 +224,7 @@ export function createUsageApi(transport: ReturnType<typeof createHttpClient>) {
       from: filters.start,
       until: filters.end,
       [filters.searchBy || 'q']: filters.search.trim(),
+      spaceId: filters.spaceId || '',
       modelId: filters.model,
       connectionId: filters.connection,
       operation: filters.business,
@@ -224,7 +236,12 @@ export function createUsageApi(transport: ReturnType<typeof createHttpClient>) {
       ['items', 'total', 'page', 'pageSize', 'stats', 'readAt'],
     );
     v.stats = responseFields(v.stats, [
-      'count', 'callCount', 'charged', 'refunded', 'knownCostMicroCny', 'unknownCost',
+      'count',
+      'callCount',
+      'charged',
+      'refunded',
+      'knownCostMicroCny',
+      'unknownCost',
     ]);
     if (!Array.isArray(v.items) || typeof v.stats.unknownCost !== 'boolean')
       throw new ApiError(200, 'PROGRAM_FAILED', translate('使用记录统计回执不完整。'));
@@ -290,8 +307,7 @@ export function createUsageApi(transport: ReturnType<typeof createHttpClient>) {
         query('calls', taskFilter),
       ]);
       const task = tasks.items.find((x) => x.taskId === item.taskId);
-      if (!task)
-        throw new ApiError(404, 'NOT_FOUND', translate('未找到关联任务计费依据。'));
+      if (!task) throw new ApiError(404, 'NOT_FOUND', translate('未找到关联任务计费依据。'));
       return {
         charge: task.basis ? chargeView(task.basis) : null,
         safeError: task.errorCode,

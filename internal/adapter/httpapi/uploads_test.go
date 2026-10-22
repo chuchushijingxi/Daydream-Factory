@@ -60,7 +60,7 @@ func TestScriptHTTPUsesFileIDWithOptionalPreferencesAndRejectsOldMultipart(t *te
 	files := uploadfiles.New()
 	store := &fileProjectStore{}
 	service := &app.Service{Store: store, Files: files, Importer: scriptimport.Importer{}}
-	host, handler := httpapi.New(service, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(service), nil, "../../../demo", 0)
 	handler = authenticatedFixture(host, handler)
 	host.Files = files
 	defer host.Shutdown(context.Background())

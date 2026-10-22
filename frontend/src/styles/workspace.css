@@ -22,6 +22,24 @@
 .xy-workspace-content {
   position: relative;
 }
+/* 非项目页共用积分顶栏：外壳统一让出顶栏高度，页面在顶栏下方滚动并被裁切，
+   不再从透明顶栏底下穿过。页面只用 --xy-page-top 决定标题离顶栏的距离，不各自预留。 */
+:root {
+  --xy-titlebar-height: 72px;
+  --xy-page-top: 8px;
+}
+.jm-workspace:not(.xy-project-workspace) .xy-workspace-content {
+  padding-top: var(--xy-titlebar-height);
+}
+/* 工作台内复用运营表单页（邀请等）时同样只取共享顶部距离。 */
+.jm-workspace .op-page {
+  padding-top: var(--xy-page-top);
+}
+@media (max-width: 700px) {
+  :root {
+    --xy-titlebar-height: 64px;
+  }
+}
 .xy-project-main {
   position: relative;
 }
@@ -30,7 +48,7 @@
   position: absolute;
   inset: 0 0 auto;
   z-index: 20;
-  height: 72px;
+  height: var(--xy-titlebar-height);
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -40,14 +58,11 @@
 .xy-home-titlebar > .credit-balance-trigger {
   pointer-events: auto;
 }
-.xy-home-workspace .xy-workspace-content {
-  padding-top: 72px;
-}
 /* 减少上方弹性留白，为首行项目让出空间；列表数量不反推上传框位置。 */
 .xy-home-create {
   display: grid;
   grid-template-rows: minmax(min-content, .3fr) auto minmax(0, 1fr);
-  height: calc(100dvh - 72px);
+  height: calc(100dvh - var(--xy-titlebar-height));
   min-height: 0;
   width: 100%;
 }
@@ -68,14 +83,7 @@
 }
 @media (max-width: 700px) {
   .xy-home-titlebar {
-    height: 64px;
     padding-inline: 16px;
-  }
-  .xy-home-workspace .xy-workspace-content {
-    padding-top: 64px;
-  }
-  .xy-home-create {
-    height: calc(100dvh - 64px);
   }
 }
 .xy-project-workspace {

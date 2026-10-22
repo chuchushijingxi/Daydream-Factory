@@ -18,7 +18,7 @@ func commandBoundary(p *d.Project, revision uint64) error {
 }
 
 func (s *Service) command(ctx context.Context, id string, revision uint64, change func(*d.Project) error) (d.Project, error) {
-	p, err := s.Project(ctx, id)
+	p, err := s.editingProject(ctx, id)
 	if err != nil {
 		return p, err
 	}

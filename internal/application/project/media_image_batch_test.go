@@ -55,6 +55,7 @@ func TestImageBatchChargesAndRefundsEachOriginalTaskExactlyOnce(t *testing.T) {
 	ctx := context.Background()
 	s.Prices = imageBatchPrices{}
 	runtime.Service.Resolver = &imageBatchResolver{}
+	s.MediaTasks.Resolver = runtime.Service.Resolver
 	if _, err := s.Credits.Add(ctx, c.Change{AccountID: p.OwnerID, Subject: p.OwnerID, Amount: 20, Category: c.Gift, OperationID: identity.New("batch-test-fund"), Source: "isolated-fixture", Reason: "batch-image-test"}); err != nil {
 		t.Fatal(err)
 	}
@@ -86,10 +87,10 @@ func TestImageBatchChargesAndRefundsEachOriginalTaskExactlyOnce(t *testing.T) {
 		}
 	}
 	for i := 0; i < 2; i++ {
-		if err := s.RecoverMediaCredits(ctx); err != nil {
+		if err := mediaFixtureWorker(s).RecoverMediaCredits(ctx); err != nil {
 			t.Fatal(err)
 		}
-		if err := s.RecoverImageFills(ctx); err != nil {
+		if err := mediaFixtureWorker(s).RecoverImageFills(ctx); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -144,7 +145,7 @@ func TestImageBatchPersistsPerTargetAndRecoversEmptyImagesWithoutBrowser(t *test
 	failures := make(chan error, 2)
 	for i := 0; i < 2; i++ {
 		wg.Add(1)
-		go func() { defer wg.Done(); failures <- s.RecoverImageFills(ctx) }()
+		go func() { defer wg.Done(); failures <- mediaFixtureWorker(s).RecoverImageFills(ctx) }()
 	}
 	wg.Wait()
 	close(failures)
@@ -153,7 +154,7 @@ func TestImageBatchPersistsPerTargetAndRecoversEmptyImagesWithoutBrowser(t *test
 			t.Fatal(err)
 		}
 	}
-	if err := s.RecoverImageFills(ctx); err != nil {
+	if err := mediaFixtureWorker(s).RecoverImageFills(ctx); err != nil {
 		t.Fatal(err)
 	}
 	after, err := s.Project(ctx, p.ID)
@@ -170,7 +171,7 @@ func TestImageBatchPersistsPerTargetAndRecoversEmptyImagesWithoutBrowser(t *test
 			t.Fatal("replay", item)
 		}
 	}
-	if err := s.RecoverImageFills(ctx); err != nil {
+	if err := mediaFixtureWorker(s).RecoverImageFills(ctx); err != nil {
 		t.Fatal(err)
 	}
 	stable, _ := s.Project(ctx, p.ID)
@@ -213,7 +214,7 @@ func TestImageBatchPreservesConcurrentUploadAndStalePromptAndReportsPartialAccep
 	if err := s.Store.Commit(ctx, p, revision); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.RecoverImageFills(ctx); err != nil {
+	if err := mediaFixtureWorker(s).RecoverImageFills(ctx); err != nil {
 		t.Fatal(err)
 	}
 	after, _ := s.Project(ctx, p.ID)

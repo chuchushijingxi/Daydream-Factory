@@ -14,7 +14,7 @@ func (s *Store) WithdrawNotification(ctx context.Context, author, id string, rev
 		return app.Message{}, e
 	}
 	defer tx.Rollback(ctx)
-	v, e := scanNotification(tx.QueryRow(ctx, `SELECT `+notificationColumns+` FROM drama_catalog_v1.notification_messages WHERE id=$1 AND author_id=$2 AND $2<>'' FOR UPDATE`, id, author))
+	v, e := scanNotification(tx.QueryRow(ctx, `SELECT `+notificationColumns+` FROM drama_catalog_v1.notification_messages WHERE kind='operator' AND id=$1 AND author_id=$2 AND $2<>'' FOR UPDATE`, id, author))
 	if e != nil {
 		return app.Message{}, e
 	}
@@ -25,7 +25,7 @@ func (s *Store) WithdrawNotification(ctx context.Context, author, id string, rev
 	if !needed {
 		return v, nil
 	}
-	v, e = scanNotification(tx.QueryRow(ctx, `UPDATE drama_catalog_v1.notification_messages SET status='withdrawn',withdrawn_at=now(),revision=revision+1 WHERE id=$1 AND author_id=$2 AND revision=$3 AND status='published' RETURNING `+notificationColumns, id, author, revision))
+	v, e = scanNotification(tx.QueryRow(ctx, `UPDATE drama_catalog_v1.notification_messages SET status='withdrawn',withdrawn_at=now(),revision=revision+1 WHERE kind='operator' AND id=$1 AND author_id=$2 AND revision=$3 AND status='published' RETURNING `+notificationColumns, id, author, revision))
 	if e != nil {
 		return app.Message{}, e
 	}
@@ -56,7 +56,7 @@ func (s *Store) SaveNotificationImage(ctx context.Context, author, messageID str
 		return app.Image{}, e
 	}
 	defer tx.Rollback(ctx)
-	m, e := scanNotification(tx.QueryRow(ctx, `SELECT `+notificationColumns+` FROM drama_catalog_v1.notification_messages WHERE id=$1 AND author_id=$2 AND $2<>'' FOR UPDATE`, messageID, author))
+	m, e := scanNotification(tx.QueryRow(ctx, `SELECT `+notificationColumns+` FROM drama_catalog_v1.notification_messages WHERE kind='operator' AND id=$1 AND author_id=$2 AND $2<>'' FOR UPDATE`, messageID, author))
 	if e != nil {
 		return app.Image{}, e
 	}
@@ -77,5 +77,5 @@ func (s *Store) NotificationImage(ctx context.Context, user, messageID, imageID 
 }
 
 func (s *Store) OperatorNotificationImage(ctx context.Context, author, messageID, imageID string) (app.Image, error) {
-	return scanNotificationImage(s.pool.QueryRow(ctx, `SELECT `+notificationImageColumns+` FROM drama_catalog_v1.notification_images WHERE id=$1 AND message_id=$2 AND $3<>'' AND EXISTS(SELECT 1 FROM drama_catalog_v1.notification_messages m WHERE m.id=$2 AND m.author_id=$3)`, imageID, messageID, author), messageID)
+	return scanNotificationImage(s.pool.QueryRow(ctx, `SELECT `+notificationImageColumns+` FROM drama_catalog_v1.notification_images WHERE id=$1 AND message_id=$2 AND $3<>'' AND EXISTS(SELECT 1 FROM drama_catalog_v1.notification_messages m WHERE m.kind='operator' AND m.id=$2 AND m.author_id=$3)`, imageID, messageID, author), messageID)
 }

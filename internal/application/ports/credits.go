@@ -13,7 +13,7 @@ type CreditLedger interface {
 	Refund(context.Context, d.Change) (d.Entry, error)
 	Balance(context.Context, string) (int64, error)
 	CreditOperation(context.Context, string) (d.Entry, error)
-	// CreditOperations 批读已冻结编号的原账目；调用方仍核对 Entry.Same/owner，不从任务状态猜金额。
+	// CreditOperations 批读已冻结编号的原账目；调用方仍核对 Entry.Same/冻结账户与持有人，不从任务状态猜金额。
 	CreditOperations(context.Context, []string) (map[string]d.Entry, error)
 	CreditEntries(context.Context, string, int, int) ([]d.Entry, int64, error)
 }
@@ -43,7 +43,8 @@ type CreditRecoveryProjects interface {
 	UnsettledCreditProjectIDs(context.Context) ([]string, error)
 }
 type MediaCreditRecovery struct {
-	OwnerID, ProjectID, ChargeID string
+	SpaceID, ProjectID, ChargeID string
+	AccountID, HolderID, ActorID string
 	Amount                       int64
 }
 type CreditRecoveryMedia interface {
@@ -53,4 +54,9 @@ type CreditRecoveryMedia interface {
 // CreditUpdates 只携带失效提示，不含余额或业务内容；通道关闭表示源故障，应重连并重读权威 GET。
 type CreditUpdates interface {
 	WatchCreditAccount(context.Context, string) (<-chan struct{}, func(), error)
+}
+
+// TeamUpdates 只携带团队成员、邀请与加入申请的失效提示；收到后重读权威 GET。
+type TeamUpdates interface {
+	WatchTeam(context.Context, string) (<-chan struct{}, func(), error)
 }

@@ -115,8 +115,8 @@ func TestActualInterruptedCorrectionRetriesWithSavedCatalogAndDialogue(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	service := &app.Service{Authorize: freeAuthorization, Store: store, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: model}}
-	p, err := service.Create(ctx, "local retry test", "retry.txt", []byte("祖父将铜钥匙交给小雨。\n另一把铜钥匙放在门边。"), 0)
+	service := &app.Service{Credits: store, Prices: &frozenFixturePrices{version: 1}, Authorize: freeAuthorization, Store: store, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: model}}
+	p, err := fixtureProject(t, service, legacyHTTPActor).Create(ctx, "local retry test", "retry.txt", []byte("祖父将铜钥匙交给小雨。\n另一把铜钥匙放在门边。"), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,11 +127,16 @@ func TestActualInterruptedCorrectionRetriesWithSavedCatalogAndDialogue(t *testin
 			conn.Exec(ctx, "DELETE FROM drama_catalog_v1.projects WHERE id=$1", p.ID)
 		}
 	}()
-	p, err = service.Start(ctx, p.ID, p.Revision)
+	p, err = quotedLegacyService(t, service, p.ID, app.QuoteInput{Revision: p.Revision, Operation: "asset-preparation"}).Start(ctx, p.ID, p.Revision)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err = service.Execute(ctx, p.ID); err != nil {
+		if failed, readErr := store.Snapshot(ctx, p.ID); readErr == nil && failed.LatestRun() != nil {
+			for _, call := range failed.LatestRun().Calls {
+				t.Logf("call %s stage=%s status=%s actions=%+v", call.ID, call.Stage, call.Status, call.Actions)
+			}
+		}
 		t.Fatal(err)
 	}
 	p, err = store.Snapshot(ctx, p.ID)

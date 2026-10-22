@@ -81,12 +81,12 @@ func TestMediaPreferenceHTTPAndPGReadbackWithoutModelExecution(t *testing.T) {
 		}
 	}
 	configBefore, _ := store.ModelConfigSnapshot(ctx)
-	p, err := s.ForActor(legacyHTTPActor).Create(ctx, "Fictional media preference", "fictional.txt", []byte("Full fictional script; no generation."), 0)
+	p, err := fixtureProject(t, s, legacyHTTPActor).Create(ctx, "Fictional media preference", "fictional.txt", []byte("Full fictional script; no generation."), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	cleanProjectContentRow(t, p)
-	host, handler := httpapi.New(s, c, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(s), c, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	defer host.Shutdown(ctx)
 	request := func(method, path string, body any, want int) []byte {

@@ -32,6 +32,13 @@ func (s *Service) CreateFromFile(ctx context.Context, title, fileID string, limi
 	if err != nil {
 		return d.Project{}, err
 	}
+	scope, err := s.resolveSpace(ctx)
+	if err != nil {
+		return d.Project{}, err
+	}
+	if file.SpaceID != scope.SpaceID {
+		return d.Project{}, fault.ErrNotFound
+	}
 	return s.createFromSource(ctx, title, file.Filename, raw, file.ID, limit, choices)
 }
 
@@ -46,7 +53,11 @@ func (s *Service) createFromSource(ctx context.Context, title, filename string, 
 	if err != nil {
 		return d.Project{}, err
 	}
-	p := d.Project{OwnerID: s.owner, ID: identity.New("project"), Title: title, Revision: 1, ScriptSource: source, Assets: []d.Asset{}, Runs: []d.Run{}, VisualPrompts: []d.VisualPrompt{}, LimitMicroCNY: limit}
+	scope, err := s.resolveSpace(ctx)
+	if err != nil {
+		return d.Project{}, err
+	}
+	p := d.Project{SpaceID: scope.SpaceID, OwnerID: scope.UserID, CreatorID: scope.UserID, ID: identity.New("project"), Title: title, Revision: 1, ScriptSource: source, Assets: []d.Asset{}, Runs: []d.Run{}, VisualPrompts: []d.VisualPrompt{}, LimitMicroCNY: limit}
 	if choices.Settings != nil || choices.StyleID != "" || choices.PromptVersion != "" {
 		release, err := s.configurationGuard(ctx)
 		if err != nil {
@@ -92,7 +103,7 @@ func (s *Service) createFromSource(ctx context.Context, title, filename string, 
 		p.Storyboard = d.NewStoryboard(source.Version)
 		s.initialEpisodeIndex(ctx, &p)
 		p.LatestRun().ContinueAssetPreparation = true
-		if p.OwnerID != "" && p.LatestRun().Credit == nil && (p.LatestRun().ErrorCode == "BILLING_BASIS_CHANGED" || p.LatestRun().ErrorCode == "MODEL_PRICE_UNAVAILABLE") {
+		if p.LatestRun().Credit == nil && (p.LatestRun().ErrorCode == "BILLING_BASIS_CHANGED" || p.LatestRun().ErrorCode == "MODEL_PRICE_UNAVAILABLE") {
 			return p, fault.New(p.LatestRun().ErrorCode, p.LatestRun().Error)
 		}
 	}
@@ -112,12 +123,21 @@ func (s *Service) UploadFromFile(ctx context.Context, id string, revision uint64
 			return "", nil, "", fault.New("FILE_STORAGE_UNAVAILABLE", "文件存储不可用")
 		}
 		file, raw, err := s.Files.ReadOriginal(ctx, fileID)
+		if err == nil {
+			p, readErr := s.editingProject(ctx, id)
+			if readErr != nil {
+				return "", nil, "", readErr
+			}
+			if file.SpaceID != p.SpaceID {
+				return "", nil, "", fault.ErrNotFound
+			}
+		}
 		return file.Filename, raw, file.ID, err
 	})
 }
 
 func (s *Service) replaceSource(ctx context.Context, id string, revision uint64, load func() (string, []byte, string, error)) (d.Project, error) {
-	p, err := s.Project(ctx, id)
+	p, err := s.editingProject(ctx, id)
 	if err != nil {
 		return p, err
 	}
@@ -169,7 +189,7 @@ func (s *Service) replaceSource(ctx context.Context, id string, revision uint64,
 			}
 		}
 		s.initialEpisodeIndex(ctx, &p)
-		if p.OwnerID != "" && (p.LatestRun().ErrorCode == "BILLING_BASIS_CHANGED" || p.LatestRun().ErrorCode == "MODEL_PRICE_UNAVAILABLE") {
+		if p.LatestRun().ErrorCode == "BILLING_BASIS_CHANGED" || p.LatestRun().ErrorCode == "MODEL_PRICE_UNAVAILABLE" {
 			return p, fault.New(p.LatestRun().ErrorCode, p.LatestRun().Error)
 		}
 		p.LatestRun().ContinueAssetPreparation = continueAssets

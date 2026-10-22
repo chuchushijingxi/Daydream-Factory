@@ -2,17 +2,15 @@ import { responseFields } from './response-fields';
 import { watchInvalidations } from './invalidation-stream';
 import { jsonPost, type createHttpClient } from './client';
 import { ApiError } from './http-error';
-import {
-  pageView,
-  safeInteger,
-  creditInput,
-  type Administration,
-  type CreditBalanceView,
-  type CreditFilters,
-  type CreditPageSize,
-  type CreditLedgerPage,
-  type CreditPolicyView,
-  type LedgerView,
+import { pageView, safeInteger, creditInput } from './response-values';
+import type {
+  Administration,
+  CreditBalanceView,
+  CreditFilters,
+  CreditPageSize,
+  CreditLedgerPage,
+  CreditPolicyView,
+  LedgerView,
 } from './administration';
 import type {
   CreditBalanceDTO,
@@ -39,7 +37,7 @@ export function creditBalanceView(value: CreditBalanceDTO): CreditBalanceView {
     throw malformed();
   return mapped;
 }
-function ledgerView(value: CreditReceiptDTO): LedgerView {
+export function creditLedgerView(value: CreditReceiptDTO): LedgerView {
   value = responseFields(value, [
     'id',
     'operationId',
@@ -55,6 +53,7 @@ function ledgerView(value: CreditReceiptDTO): LedgerView {
     'subject',
     'reason',
     'originalDeductionId',
+    'originalAdditionId',
     'createdAt',
   ]);
   if (
@@ -69,9 +68,13 @@ function ledgerView(value: CreditReceiptDTO): LedgerView {
     ].some((field) => typeof field !== 'string' || !field) ||
     (value.originalDeductionId !== undefined &&
       (typeof value.originalDeductionId !== 'string' || !value.originalDeductionId)) ||
+    (value.originalAdditionId !== undefined &&
+      (typeof value.originalAdditionId !== 'string' || !value.originalAdditionId)) ||
     (value.kind === 'refund' && !value.originalDeductionId) ||
+    (value.kind === 'reclaim' && (!value.originalAdditionId || !!value.originalDeductionId || !['recharge', 'gift'].includes(value.category))) ||
+    (value.kind !== 'reclaim' && !!value.originalAdditionId) ||
     (value.kind === 'expire' && (value.category !== 'gift' || !!value.originalDeductionId)) ||
-    !['add', 'deduct', 'refund', 'expire'].includes(value.kind) ||
+    !['add', 'deduct', 'refund', 'expire', 'reclaim'].includes(value.kind) ||
     !['recharge', 'gift', 'legacy', 'mixed'].includes(value.category) ||
     !value.source ||
     !value.subject ||
@@ -107,6 +110,7 @@ function ledgerView(value: CreditReceiptDTO): LedgerView {
     reason: value.reason,
     source: value.source,
     originalDebit: value.originalDeductionId || null,
+    originalAddition: value.originalAdditionId || null,
     actorLabel: value.subject,
   };
 }
@@ -144,7 +148,7 @@ function ledgerPage(value: CreditLedgerDTO): CreditLedgerPage {
     analysis.reduce((sum, row) => sum + BigInt(row.amount), 0n) !== BigInt(summary.settledConsumed)
   )
     throw malformed();
-  return { ...pageView(value, ledgerView), summary, analysis };
+  return { ...pageView(value, creditLedgerView), summary, analysis };
 }
 function policyView(value: CreditPolicyDTO): CreditPolicyView {
   value = responseFields(value, ['revision', 'registrationGift', 'dailyGift', 'timezone']);
@@ -164,7 +168,7 @@ function query(page = '1', filters?: CreditFilters, pageSize: CreditPageSize = '
   const params = new URLSearchParams({ page: page || '1', pageSize });
   if (filters) {
     if (
-      !['all', 'acquired', 'consumed', 'expired'].includes(filters.direction) ||
+      !['all', 'acquired', 'consumed', 'expired', 'reclaimed'].includes(filters.direction) ||
       !['all', 'recharge', 'gift', 'legacy'].includes(filters.category)
     )
       throw malformed();
@@ -218,7 +222,7 @@ export function createCreditApi(
     async myRecentLedger() {
       const value = responseFields(await read<{ items: CreditReceiptDTO[] }>('/api/credits/ledger/recent'), ['items']);
       if (!Array.isArray(value.items) || value.items.length > 5) throw malformed();
-      return value.items.map(ledgerView);
+      return value.items.map(creditLedgerView);
     },
     async userWallet(identity, page, pageSize) {
       const base = userPath(identity);
@@ -258,7 +262,7 @@ export function createCreditApi(
         (input.direction === 'add' && receipt.category !== input.category)
       )
         throw malformed();
-      return { state: 'committed', entry: ledgerView(receipt) };
+      return { state: 'committed', entry: creditLedgerView(receipt) };
     },
     async adjustment(command) {
       try {
@@ -266,7 +270,7 @@ export function createCreditApi(
           '/api/operations/credit-operations/' + encodeURIComponent(command),
         );
         if (receipt.operationId !== command) throw malformed();
-        return { state: 'committed', entry: ledgerView(receipt) };
+        return { state: 'committed', entry: creditLedgerView(receipt) };
       } catch (error) {
         if (error instanceof ApiError && error.status === 404 && error.code === 'NOT_FOUND')
           return {

@@ -1,3 +1,4 @@
+import { sharedResourceApi } from '../../api/shared-resource';
 import { useRef, useState } from 'react';
 import { Check, Minus } from 'lucide-react';
 import { api } from '../../api/client.ts';
@@ -37,10 +38,11 @@ export function useProjectManagement() {
   const available = Boolean(
     status && !status.readOnly && status.capabilities.projectDeletion === true,
   );
-  const visibleSelected = projects.filter((p) => selected.has(p.id)),
-    all = projects.length > 0 && visibleSelected.length === projects.length;
+  const editableProjects = projects.filter((p) => p.effectiveAccess === 2);
+  const visibleSelected = editableProjects.filter((p) => selected.has(p.id)),
+    all = editableProjects.length > 0 && visibleSelected.length === editableProjects.length;
   const toggle = (id: string) => {
-    if (busy) return;
+    if (busy || !editableProjects.some((p) => p.id === id)) return;
     setSelected((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
@@ -73,10 +75,17 @@ export function useProjectManagement() {
       // 恰好冻结本次确认中展示的版本；遇到第一个拒绝或结果不明即停止，
       // 不获取新修订、不重发。
       for (const p of candidates) {
-        await api.deleteProject(p.id, {
-          revision: p.revision,
-        });
-        removed++;
+        if (p.effectiveAccess !== 2) throw new Error(c('无权删除该项目。'));
+        const lease = await sharedResourceApi.editing(p.id, 'POST');
+        if (!lease.owned)
+          throw new Error(c('{name} 正在编辑，未删除项目。', { name: lease.username }));
+        try {
+          await api.deleteProject(p.id, { revision: p.revision });
+          removed++;
+        } finally {
+          await sharedResourceApi.release(p.id);
+        }
+
         setSelected((prev) => {
           const next = new Set(prev);
           next.delete(p.id);
@@ -161,7 +170,9 @@ export function useProjectManagement() {
             aria-checked={all ? true : visibleSelected.length ? 'mixed' : false}
             className="project-select-all"
             disabled={busy}
-            onClick={() => setSelected(all ? new Set() : new Set(projects.map((p) => p.id)))}
+            onClick={() =>
+              setSelected(all ? new Set() : new Set(editableProjects.map((p) => p.id)))
+            }
           >
             <ProjectSelectionMark checked={all} mixed={!all && visibleSelected.length > 0} />
             {c('全选')}

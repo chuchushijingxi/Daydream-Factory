@@ -43,3 +43,9 @@ License texts and copyright notices for compiled Go and frontend dependencies:
 These are also included under /usr/share/licenses/drama-agent/third-party/
 in the application container. Python distributions and OS packages retain
 licenses in their installed package metadata and system copyright files.
+
+The local checkout QR encoder uses qrcode-generator 2.0.4 by Kazuhiko Arase,
+licensed under MIT. Its 2009 implementation and 2016 TypeScript copyright
+notices and complete MIT license are retained in
+ deploy/licenses/frontend-dependencies.txt
+Source: https://github.com/kazuhikoarase/qrcode-generator

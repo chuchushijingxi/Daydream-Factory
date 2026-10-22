@@ -896,9 +896,10 @@
     transform: scale(0.5);
   }
 }
+/* 提示与右上角积分入口同一行：在外壳顶栏内垂直居中（42px 为单行提示高度）。 */
 .jm-toaster {
   position: fixed;
-  top: 64px;
+  top: max(8px, calc((var(--xy-titlebar-height, 72px) - 42px) / 2));
   left: 50%;
   translate: -50% 0;
   z-index: 110;

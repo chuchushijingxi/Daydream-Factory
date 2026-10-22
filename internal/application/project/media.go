@@ -12,6 +12,7 @@ import (
 	"drama-agent/internal/domain/fault"
 	md "drama-agent/internal/domain/modelconfig"
 	d "drama-agent/internal/domain/project"
+	"drama-agent/internal/domain/spaces"
 	td "drama-agent/internal/domain/task"
 )
 
@@ -121,7 +122,7 @@ func mediaInput(p *d.Project, in MediaCommand) (string, string, string, error) {
 	return "video", text, d.Digest([]any{p.ScriptSource.Version, t, sh.VideoPrompt.Parts, text}), nil
 }
 func (s *Service) mediaView(ctx context.Context, p *d.Project, v taskapp.View) (MediaView, error) {
-	snap, err := s.MediaTasks.Input(ctx, mediaScope(p.ID), v.ID)
+	snap, err := s.tasksForProject(*p).Input(ctx, mediaScope(p.ID), v.ID)
 	if err != nil {
 		return MediaView{}, err
 	}
@@ -155,7 +156,7 @@ func (s *Service) mediaViewFromSnapshot(p *d.Project, v taskapp.View, snap td.Sn
 	out := MediaView{AspectRatio: frozen.AspectRatio, ImageType: meta.Request.ImageType, Options: options, View: v, ProjectID: p.ID, Kind: kind, Target: meta.Request.Target, InputRevision: meta.Request.Revision, SourceVersion: meta.SourceVersion, Stale: e != nil || digest != meta.InputDigest}
 	out.FillMissingImage = meta.FillMissingImage
 	var err error
-	out.Credit, err = mediaCredit(p.OwnerID, p.ID, meta.Credit, v.Status, entries)
+	out.Credit, err = mediaCredit(p.ID, meta.Credit, v.Status, entries)
 	if err != nil {
 		return MediaView{}, err
 	}
@@ -204,10 +205,16 @@ func (s *Service) StartMedia(ctx context.Context, id string, in MediaCommand) (M
 // 单项和批量共用输入、计费、幂等及独立任务受理；批量使用同一已核对快照，
 // 避免本批先完成的补图推进revision，误拒绝仍基于相同材料的其他目标。
 func (s *Service) startMedia(ctx context.Context, p d.Project, in MediaCommand, fillMissing bool) (MediaView, error) {
+	if err := s.requireProject(ctx, p, spaces.Edit); err != nil {
+		return MediaView{}, err
+	}
+	if err := s.requireEditing(ctx, p); err != nil {
+		return MediaView{}, err
+	}
 	id := p.ID
-	old, err := s.MediaTasks.GetByCommand(ctx, mediaScope(id), in.CommandID)
+	old, err := s.tasksForProject(p).GetByCommand(ctx, mediaScope(id), in.CommandID)
 	if err == nil {
-		snap, e := s.MediaTasks.Input(ctx, mediaScope(id), old.ID)
+		snap, e := s.tasksForProject(p).Input(ctx, mediaScope(id), old.ID)
 		if e != nil {
 			return MediaView{}, e
 		}
@@ -272,19 +279,18 @@ func (s *Service) startMedia(ctx context.Context, p d.Project, in MediaCommand, 
 		DurationSeconds float64 `json:"durationSeconds,omitempty"`
 	}{prompt, ratio, options.Resolution, options.DurationSeconds})
 	meta, _ := json.Marshal(MediaContext{FillMissingImage: fillMissing, Credit: charge, Request: in, SourceVersion: p.ScriptSource.Version, InputDigest: digest})
-	tasks := s.MediaTasks
-	if p.OwnerID != "" {
-		// 归属已由项目存储确立；即使是受信内部调用，也显式带入独立任务。
-		tasks = tasks.ForOwner(p.OwnerID)
+	tasks := s.tasksForProject(p)
+	if err := s.requireEditing(ctx, p); err != nil {
+		return MediaView{}, err
 	}
 	v, err := tasks.Submit(ctx, taskapp.Command{RequirePermit: charge != nil, ScopeID: mediaScope(id), CommandID: in.CommandID, Operation: kind + ".generate", ModelID: in.ModelID, Input: input, CallerContext: meta, ActiveKey: d.Digest(in.Target)})
 	if err != nil {
 		var f *fault.Error
 		if errors.As(err, &f) && f.Code == "COMMAND_ID_CONFLICT" {
 			// 并发相同启动可能冻结不同时间戳；重放只以被受理的不可变请求为准，不用落败快照。
-			old, e := s.MediaTasks.GetByCommand(ctx, mediaScope(id), in.CommandID)
+			old, e := s.tasksForProject(p).GetByCommand(ctx, mediaScope(id), in.CommandID)
 			if e == nil {
-				snap, e := s.MediaTasks.Input(ctx, mediaScope(id), old.ID)
+				snap, e := s.tasksForProject(p).Input(ctx, mediaScope(id), old.ID)
 				var accepted MediaContext
 				if e == nil && json.Unmarshal(snap.CallerContext, &accepted) == nil && d.Digest(accepted.Request) == d.Digest(in) && accepted.FillMissingImage == fillMissing {
 					return s.mediaView(ctx, &p, old)
@@ -316,7 +322,7 @@ func (s *Service) Media(ctx context.Context, id, taskID string) (MediaView, erro
 	if err != nil {
 		return MediaView{}, err
 	}
-	v, err := s.MediaTasks.Get(ctx, mediaScope(id), taskID)
+	v, err := s.tasksForProject(p).Get(ctx, mediaScope(id), taskID)
 	if err != nil {
 		return MediaView{}, err
 	}
@@ -337,7 +343,7 @@ func (s *Service) ListMedia(ctx context.Context, id, cursor string, limit int, k
 	if err != nil {
 		return MediaListing{}, err
 	}
-	list, err := s.MediaTasks.List(ctx, mediaScope(id), operation, cursor, limit)
+	list, err := s.tasksForProject(p).List(ctx, mediaScope(id), operation, cursor, limit)
 	if err != nil {
 		return MediaListing{}, err
 	}
@@ -346,7 +352,7 @@ func (s *Service) ListMedia(ctx context.Context, id, cursor string, limit int, k
 	for _, v := range list.Items {
 		ids = append(ids, v.ID)
 	}
-	snapshots, err := s.MediaTasks.Inputs(ctx, mediaScope(id), ids)
+	snapshots, err := s.tasksForProject(p).Inputs(ctx, mediaScope(id), ids)
 	if err != nil {
 		return out, err
 	}
@@ -364,14 +370,21 @@ func (s *Service) ListMedia(ctx context.Context, id, cursor string, limit int, k
 	return out, nil
 }
 func (s *Service) CancelMedia(ctx context.Context, id, taskID string, revision uint64) (MediaView, error) {
-	if _, err := s.Media(ctx, id, taskID); err != nil {
-		return MediaView{}, err
-	}
-	v, err := s.MediaTasks.Cancel(ctx, mediaScope(id), taskID, revision)
+	p, err := s.editingProject(ctx, id)
 	if err != nil {
 		return MediaView{}, err
 	}
-	p, err := s.Project(ctx, id)
+	if _, err := s.Media(ctx, id, taskID); err != nil {
+		return MediaView{}, err
+	}
+	if err = s.requireEditing(ctx, p); err != nil {
+		return MediaView{}, err
+	}
+	v, err := s.tasksForProject(p).Cancel(ctx, mediaScope(id), taskID, revision)
+	if err != nil {
+		return MediaView{}, err
+	}
+	p, err = s.Project(ctx, id)
 	if err != nil {
 		return MediaView{}, err
 	}
@@ -381,7 +394,11 @@ func (s *Service) MediaFile(ctx context.Context, id, taskID, output string) ([]b
 	if _, err := s.Media(ctx, id, taskID); err != nil {
 		return nil, taskapp.FileView{}, err
 	}
-	return s.MediaTasks.File(ctx, mediaScope(id), taskID, output)
+	p, err := s.mediaProject(ctx, id)
+	if err != nil {
+		return nil, taskapp.FileView{}, err
+	}
+	return s.tasksForProject(p).File(ctx, mediaScope(id), taskID, output)
 }
 func (s *Service) AdoptMedia(ctx context.Context, id, taskID, output string, revision uint64) (d.Project, error) {
 	v, err := s.Media(ctx, id, taskID)
@@ -407,7 +424,7 @@ func (s *Service) AdoptMedia(ctx context.Context, id, taskID, output string, rev
 	if p.Revision != revision {
 		return p, fault.ErrConflict
 	}
-	snap, err := s.MediaTasks.Input(ctx, mediaScope(id), taskID)
+	snap, err := s.tasksForProject(p).Input(ctx, mediaScope(id), taskID)
 	if err != nil {
 		return p, err
 	}
@@ -420,11 +437,64 @@ func (s *Service) AdoptMedia(ctx context.Context, id, taskID, output string, rev
 		return p, fault.New("MEDIA_OUTPUT_STALE", "生成输入已变化，历史结果保留，请重新生成")
 	}
 	if kind == "image" {
-		return s.SaveImage(ctx, id, revision, d.VisualTarget{AssetID: v.Target.AssetID, LookID: v.Target.LookID}, file.FileID)
+		files, err := s.containerFiles()
+		if err != nil {
+			return p, err
+		}
+		adopted, err := files.ContainerFile(ctx, p.SpaceID, file.FileID)
+		if err != nil {
+			return p, err
+		}
+		return s.saveKnownImage(ctx, p, revision, d.VisualTarget{AssetID: v.Target.AssetID, LookID: v.Target.LookID}, file.FileID, adopted)
 	}
 	selection := d.MediaSelection{ShotID: v.Target.ShotID, TaskID: taskID, OutputID: output, InputDigest: digest}
 	if err := p.AdoptMediaSelection(selection); err != nil {
 		return p, err
 	}
 	return s.commit(ctx, p, revision)
+}
+
+func (s *Service) tasksForProject(p d.Project) *taskapp.Service {
+	if s.scope != nil {
+		return s.MediaTasks.ForScope(*s.scope).ForResource(spaces.Resource{SpaceID: p.SpaceID, OwnerID: p.OwnerID, Kind: "project", ID: p.ID})
+	}
+	if p.SpaceID != "" {
+		return s.MediaTasks.ForTrustedScope(ports.SpaceScope{SpaceID: p.SpaceID, UserID: p.OwnerID})
+	}
+	return s.MediaTasks
+}
+
+// mediaOutputThumbnail只消费已鉴权的真实task/output引用。历史图片无需先采用到资产，
+// 也不能借可读项目读取客户端自行声明的fileId；视频仍由任务结果模块派生封面。
+func (s *Service) mediaOutputThumbnail(ctx context.Context, p d.Project, view MediaView, output string) ([]byte, error) {
+	if view.Status != td.Succeeded || view.Result == nil {
+		return nil, fault.ErrNotFound
+	}
+	for _, file := range view.Result.Files {
+		if file.ID != output {
+			continue
+		}
+		if strings.HasPrefix(file.ContentType, "image/") {
+			if file.FileID == "" {
+				return nil, fault.ErrNotFound
+			}
+			files, err := s.containerFiles()
+			if err != nil {
+				return nil, err
+			}
+			published, raw, err := files.ReadContainerFile(ctx, p.SpaceID, file.FileID, true)
+			if err != nil {
+				return nil, err
+			}
+			if published.ID != file.FileID || published.SpaceID != p.SpaceID || !strings.HasPrefix(published.Original.ContentType, "image/") || published.Thumbnail == nil {
+				return nil, fault.ErrNotFound
+			}
+			return raw, nil
+		}
+		if file.ContentType != "video/mp4" {
+			return nil, fault.ErrNotFound
+		}
+		return s.tasksForProject(p).Thumbnail(ctx, mediaScope(p.ID), view.ID, output)
+	}
+	return nil, fault.ErrNotFound
 }

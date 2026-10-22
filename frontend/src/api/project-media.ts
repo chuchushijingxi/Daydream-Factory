@@ -2,7 +2,7 @@ import { responseFields } from './response-fields';
 import { ApiError, http, jsonPost } from './client';
 import type { MediaTask, Project } from './types';
 import type { UsageBasisDTO } from './administration-types';
-import { safeInteger } from './administration';
+import { safeInteger } from './response-values';
 import { validateChargeBasis } from './model-usage-client';
 import { translate } from '../contexts/translate';
 export type MediaTarget =
@@ -63,7 +63,13 @@ function valid(v: ProjectMedia, p: string) {
     throw new ApiError(200, 'PROGRAM_FAILED', translate('媒体任务回执不完整。'));
   if (v.credit !== null) {
     const c = responseFields(v.credit, [
-      'basis', 'prepaid', 'refunded', 'charged', 'settlement', 'deductionId', 'refundId',
+      'basis',
+      'prepaid',
+      'refunded',
+      'charged',
+      'settlement',
+      'deductionId',
+      'refundId',
     ]);
     v.credit = c;
     if (
@@ -90,11 +96,7 @@ function valid(v: ProjectMedia, p: string) {
         base(p) + '/' + encodeURIComponent(v.id) + '/outputs/' + encodeURIComponent(file.id);
       if (
         file.contentUrl !== prefix + '/file' ||
-        (file.thumbnailUrl &&
-          file.thumbnailUrl !== prefix + '/thumbnail' &&
-          (!file.thumbnailUrl.startsWith('/api/files/') ||
-            file.thumbnailUrl.includes('?') ||
-            file.thumbnailUrl.includes('#')))
+        (file.thumbnailUrl && file.thumbnailUrl !== prefix + '/thumbnail')
       )
         throw new ApiError(
           200,
@@ -107,22 +109,37 @@ function valid(v: ProjectMedia, p: string) {
 }
 export const projectMediaApi = {
   async batchImages(p: string, commands: MediaCommand[]) {
-    const result = await request<{ items: ImageBatchItem[] }>(base(p) + '/batch-images', { commands });
+    const result = await request<{ items: ImageBatchItem[] }>(base(p) + '/batch-images', {
+      commands,
+    });
     const seen = new Set<string>();
     if (!Array.isArray(result.items) || result.items.length !== commands.length)
       throw new ApiError(200, 'PROGRAM_FAILED', translate('批量受理回执不完整，请核对原请求。'));
     for (const item of result.items) {
       if (!item || typeof item !== 'object')
         throw new ApiError(200, 'PROGRAM_FAILED', translate('批量受理回执不完整，请核对原请求。'));
-      const command = commands.find(c => c.commandId === item.commandId);
-      if (!command || seen.has(item.commandId) || JSON.stringify(item.target) !== JSON.stringify(command.target) ||
-        (!!item.task === !!item.error) || (item.error && (!item.error.code || !item.error.message)))
+      const command = commands.find((c) => c.commandId === item.commandId);
+      if (
+        !command ||
+        seen.has(item.commandId) ||
+        JSON.stringify(item.target) !== JSON.stringify(command.target) ||
+        !!item.task === !!item.error ||
+        (item.error && (!item.error.code || !item.error.message))
+      )
         throw new ApiError(200, 'PROGRAM_FAILED', translate('批量受理回执不匹配，请核对原请求。'));
       seen.add(item.commandId);
       if (item.task) {
         valid(item.task, p);
-        if (item.task.kind !== 'image' || JSON.stringify(item.task.target) !== JSON.stringify(command.target) || !item.task.fillMissingImage)
-          throw new ApiError(200, 'PROGRAM_FAILED', translate('批量图片任务回执不匹配，请核对原请求。'));
+        if (
+          item.task.kind !== 'image' ||
+          JSON.stringify(item.task.target) !== JSON.stringify(command.target) ||
+          !item.task.fillMissingImage
+        )
+          throw new ApiError(
+            200,
+            'PROGRAM_FAILED',
+            translate('批量图片任务回执不匹配，请核对原请求。'),
+          );
       }
     }
     return result.items;
@@ -132,7 +149,10 @@ export const projectMediaApi = {
   },
   async list(p: string, cursor?: string, kind?: 'image' | 'video') {
     const v = await request<{ items: ProjectMedia[]; nextCursor: string | null }>(
-      base(p) + '?limit=100' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : '') + (kind ? '&kind=' + kind : ''),
+      base(p) +
+        '?limit=100' +
+        (cursor ? '&cursor=' + encodeURIComponent(cursor) : '') +
+        (kind ? '&kind=' + kind : ''),
     );
     v.items.forEach((x) => valid(x, p));
     return v;

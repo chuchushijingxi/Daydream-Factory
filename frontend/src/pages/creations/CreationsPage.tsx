@@ -83,7 +83,7 @@ export function CreationsPage() {
       error: '',
     }));
     try {
-      const v = await mediaLibraryApi.list(kind, search, cursor);
+      const v = await mediaLibraryApi.list(kind, search, cursor, 'all');
       if (sequence.current !== ticket) return;
       setPage((old) => ({
         scope,
@@ -201,6 +201,10 @@ export function CreationsPage() {
                       ) : null}
                     </div>
                     <strong>{item.promptPreview || item.projectTitle}</strong>
+                    <span className="space-resource-meta">
+                      {c('创建人：{name}', { name: item.creatorName })}
+                      {item.sharedWithMe ? <span>{c('共享给我')}</span> : null}
+                    </span>
                   </button>
                   <footer>
                     <time dateTime={item.createdAt}>

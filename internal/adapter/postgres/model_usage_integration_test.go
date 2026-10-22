@@ -20,6 +20,9 @@ func TestUsageMediaProjectionPaginationAndUnknownCosts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err = conn.Exec(ctx, `INSERT INTO drama_catalog_v1.spaces(id,kind) VALUES($1,'personal')`, owner); err != nil {
+		t.Fatal(err)
+	}
 	taskID := identity.New("usage-media")
 	requestID, submissionID := identity.New("usage-request"), identity.New("usage-submission")
 	at := time.Date(2026, 10, 17, 0, 0, 0, 0, time.UTC)
@@ -29,7 +32,7 @@ func TestUsageMediaProjectionPaginationAndUnknownCosts(t *testing.T) {
 		map[string]any{"id": "not-sent-submission", "startedAt": at, "disposition": "not_sent", "receipt": map[string]any{"billing": map[string]any{"status": "known", "knownMicroCny": 999}}},
 	}}
 	raw, _ := json.Marshal(payload)
-	_, err = conn.Exec(ctx, `INSERT INTO drama_catalog_v1.tasks(id,scope_id,command_id,status,revision,input_snapshot,payload,created_at,owner_id) VALUES($1,$1,$1,'succeeded',1,'{}',$2,$3,$4)`, taskID, raw, at, owner)
+	_, err = conn.Exec(ctx, `INSERT INTO drama_catalog_v1.tasks(id,scope_id,command_id,status,revision,input_snapshot,payload,created_at,space_id,owner_id,creator_id) VALUES($1,$1,$1,'succeeded',1,'{}',$2,$3,$4,$4,$4)`, taskID, raw, at, owner)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +125,10 @@ func TestUsageMediaProjectionPaginationAndUnknownCosts(t *testing.T) {
 		}
 	}
 	orphanID, missingOwner := identity.New("orphan-media"), identity.New("missing-owner")
-	_, err = conn.Exec(ctx, `INSERT INTO drama_catalog_v1.tasks(id,scope_id,command_id,status,revision,input_snapshot,payload,created_at,owner_id) VALUES($1,$1,$1,'succeeded',1,'{}',$2,$3,$4)`, orphanID, raw, at, missingOwner)
+	if _, err = conn.Exec(ctx, `INSERT INTO drama_catalog_v1.spaces(id,kind) VALUES($1,'personal')`, missingOwner); err != nil {
+		t.Fatal(err)
+	}
+	_, err = conn.Exec(ctx, `INSERT INTO drama_catalog_v1.tasks(id,scope_id,command_id,status,revision,input_snapshot,payload,created_at,space_id,owner_id,creator_id) VALUES($1,$1,$1,'succeeded',1,'{}',$2,$3,$4,$4,$4)`, orphanID, raw, at, missingOwner)
 	if err != nil {
 		t.Fatal(err)
 	}

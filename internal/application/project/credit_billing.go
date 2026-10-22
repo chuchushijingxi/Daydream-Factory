@@ -13,20 +13,24 @@ import (
 )
 
 type ChargeQuote struct {
-	MediaOptions   *md.MediaOptions `json:"mediaOptions,omitempty"`
-	SourceVersion  uint64           `json:"sourceVersion"`
-	InputRevision  uint64           `json:"inputRevision"`
-	Basis          string           `json:"basis"`
-	ModelID        string           `json:"modelId"`
-	ConnectionID   string           `json:"connectionId"`
-	Scope          string           `json:"scope"`
-	Quantity       int64            `json:"quantity"`
-	Unit           string           `json:"unit"`
-	PriceVersion   uint64           `json:"priceVersion"`
-	Rule           c.PriceRule      `json:"rule"`
-	OriginalAmount int64            `json:"originalAmount"`
-	Amount         int64            `json:"amount"`
-	Free           bool             `json:"free"`
+	AccountID       string           `json:"accountId"`
+	HolderID        string           `json:"holderId,omitempty"`
+	ActorID         string           `json:"actorId"`
+	DiscountPercent int              `json:"discountPercent"`
+	MediaOptions    *md.MediaOptions `json:"mediaOptions,omitempty"`
+	SourceVersion   uint64           `json:"sourceVersion"`
+	InputRevision   uint64           `json:"inputRevision"`
+	Basis           string           `json:"basis"`
+	ModelID         string           `json:"modelId"`
+	ConnectionID    string           `json:"connectionId"`
+	Scope           string           `json:"scope"`
+	Quantity        int64            `json:"quantity"`
+	Unit            string           `json:"unit"`
+	PriceVersion    uint64           `json:"priceVersion"`
+	Rule            c.PriceRule      `json:"rule"`
+	OriginalAmount  int64            `json:"originalAmount"`
+	Amount          int64            `json:"amount"`
+	Free            bool             `json:"free"`
 }
 
 func (s *Service) WithBillingBasis(basis string) *Service {
@@ -143,7 +147,18 @@ func (s *Service) quote(ctx context.Context, p d.Project, r *d.Run, at time.Time
 		scopeIdentity = r.Targets
 	}
 	digest := d.Digest([]any{p.ScriptSource.Version, text, scope, scopeIdentity})
-	q := ChargeQuote{SourceVersion: p.ScriptSource.Version, InputRevision: p.Revision, ModelID: s.modelID(p), ConnectionID: connection, Scope: scope, Quantity: n, Unit: "characters", PriceVersion: version, Rule: rule, OriginalAmount: amount, Amount: amount, Free: rule.Free(at)}
+	target, percent, e := s.chargePricing(ctx, p, s.modelID(p), rule.Free(at))
+	if e != nil {
+		return ChargeQuote{}, "", e
+	}
+	charged := int64(0)
+	if !rule.Free(at) {
+		charged, e = c.PriceDiscount(n, rule.UnitPrice, 100, percent)
+		if e != nil {
+			return ChargeQuote{}, "", e
+		}
+	}
+	q := ChargeQuote{AccountID: target.AccountID, HolderID: target.HolderID, ActorID: target.ActorID, DiscountPercent: percent, SourceVersion: p.ScriptSource.Version, InputRevision: p.Revision, ModelID: s.modelID(p), ConnectionID: connection, Scope: scope, Quantity: n, Unit: "characters", PriceVersion: version, Rule: rule, OriginalAmount: amount, Amount: charged, Free: rule.Free(at)}
 	if q.Free {
 		q.Amount = 0
 	}
@@ -151,9 +166,10 @@ func (s *Service) quote(ctx context.Context, p d.Project, r *d.Run, at time.Time
 	return q, digest, nil
 }
 func (s *Service) freezeCredit(ctx context.Context, p d.Project, r *d.Run) error {
-	if p.OwnerID == "" {
+	// 无持久空间的纯内存应用夹具不具备记账身份；正式仓储拒绝这类资源。
+	if s.Credits == nil && s.scope == nil && p.SpaceID == "" {
 		return nil
-	} // 保留的内部历史工作无归属用户，不收费。
+	}
 	if r.Credit != nil {
 		return nil
 	}
@@ -167,13 +183,14 @@ func (s *Service) freezeCredit(ctx context.Context, p d.Project, r *d.Run) error
 	if s.billingBasis == "" || q.Basis != s.billingBasis {
 		return fault.New("BILLING_BASIS_CHANGED", "计费依据已变化，请回读当前报价")
 	}
-	r.Credit = &c.Charge{SourceVersion: q.SourceVersion, InputRevision: q.InputRevision, Unit: q.Unit, ID: r.ID, ModelID: q.ModelID, ConnectionID: q.ConnectionID, Scope: q.Scope, ScopeDigest: digest, Quantity: q.Quantity, PriceVersion: q.PriceVersion, Rule: q.Rule, AcceptedAt: r.CreatedAt, OriginalAmount: q.OriginalAmount, Amount: q.Amount, Free: q.Free}
+	r.Credit = &c.Charge{AccountID: q.AccountID, HolderID: q.HolderID, ActorID: q.ActorID, DiscountPercent: q.DiscountPercent, SourceVersion: q.SourceVersion, InputRevision: q.InputRevision, Unit: q.Unit, ID: r.ID, ModelID: q.ModelID, ConnectionID: q.ConnectionID, Scope: q.Scope, ScopeDigest: digest, Quantity: q.Quantity, PriceVersion: q.PriceVersion, Rule: q.Rule, AcceptedAt: r.CreatedAt, OriginalAmount: q.OriginalAmount, Amount: q.Amount, Free: q.Free}
 	return nil
 }
 func creditDeductionID(id string) string { return "generation:" + id + ":deduct" }
 func creditRefundID(id string) string    { return "generation:" + id + ":refund" }
 func (s *Service) ensureCredit(ctx context.Context, p d.Project, r *d.Run) error {
-	if p.OwnerID == "" {
+	// 无持久空间的纯内存应用夹具不具备记账身份；正式仓储拒绝这类资源。
+	if s.Credits == nil && s.scope == nil && p.SpaceID == "" {
 		return nil
 	}
 	if r.Credit == nil || s.Credits == nil {
@@ -182,9 +199,13 @@ func (s *Service) ensureCredit(ctx context.Context, p d.Project, r *d.Run) error
 	if r.Credit.Amount == 0 {
 		return nil
 	}
-	_, e := s.Credits.Deduct(ctx, c.Change{AccountID: p.OwnerID, Amount: r.Credit.Amount, OperationID: creditDeductionID(r.Credit.ID), Source: p.ID, Subject: p.OwnerID, Reason: "generation"})
+	change := generationDebit(p.ID, r.Credit)
+	entry, e := s.Credits.Deduct(ctx, change)
 	if e != nil {
-		return e
+		return generationCreditError(e, r.Credit)
+	}
+	if !entry.Same("deduct", change) {
+		return fault.New("CREDIT_IDEMPOTENCY_CONFLICT", "原预扣回执与任务依据不符")
 	}
 	// 扣减在途时取消可能已提交；放行任何供应商请求前先重读业务事实，
 	// 迟到取消在这次重读中即时结算，返还与预扣共用同一幂等编号。
@@ -198,7 +219,7 @@ func (s *Service) ensureCredit(ctx context.Context, p d.Project, r *d.Run) error
 	return nil
 }
 func (s *Service) settleCredits(ctx context.Context, p d.Project) error {
-	if s.Credits == nil || p.OwnerID == "" {
+	if s.Credits == nil {
 		return nil
 	}
 	groups := map[string][]d.Run{}
@@ -228,9 +249,12 @@ func (s *Service) settleCredits(ctx context.Context, p d.Project) error {
 			return e
 		}
 
+		if !debit.Same("deduct", generationDebit(p.ID, charge)) {
+			return fault.New("CREDIT_IDEMPOTENCY_CONFLICT", "原预扣回执与任务依据不符")
+		}
 		existing, check := s.Credits.CreditOperation(ctx, creditRefundID(charge.ID))
 		if check == nil {
-			if existing.Kind != "refund" || existing.OriginalDeductionID != debit.ID || existing.AccountID != debit.AccountID || existing.Amount != debit.Amount {
+			if !existing.Same("refund", generationRefund(charge.ID, debit)) || existing.AccountID != debit.AccountID {
 				return fault.New("CREDIT_IDEMPOTENCY_CONFLICT", "返还编号与原扣款不一致")
 			}
 			continue
@@ -238,7 +262,7 @@ func (s *Service) settleCredits(ctx context.Context, p d.Project) error {
 		if !errors.Is(check, fault.ErrNotFound) {
 			return check
 		}
-		if _, e = s.Credits.Refund(ctx, c.Change{OriginalDeductionID: debit.ID, Amount: debit.Amount, OperationID: creditRefundID(charge.ID), Subject: p.OwnerID, Reason: "generation-incomplete"}); e != nil {
+		if _, e = s.Credits.Refund(ctx, generationRefund(charge.ID, debit)); e != nil {
 			return e
 		}
 	}
@@ -322,6 +346,9 @@ func (s *Service) Quote(ctx context.Context, id string, in QuoteInput) (ChargeQu
 		if err != nil {
 			return ChargeQuote{}, err
 		}
+		if file.SpaceID != p.SpaceID {
+			return ChargeQuote{}, fault.ErrNotFound
+		}
 		source, err := s.Importer.Parse(file.Filename, raw, p.ScriptSource.Version+1)
 		if err != nil {
 			return ChargeQuote{}, err
@@ -373,6 +400,13 @@ func (s *Service) QuoteFile(ctx context.Context, fileID string, settings d.Proje
 	if e != nil {
 		return ChargeQuote{}, e
 	}
+	scope, e := s.resolveSpace(ctx)
+	if e != nil {
+		return ChargeQuote{}, e
+	}
+	if file.SpaceID != scope.SpaceID {
+		return ChargeQuote{}, fault.ErrNotFound
+	}
 	source, e := s.Importer.Parse(file.Filename, raw, 1)
 	if e != nil {
 		return ChargeQuote{}, e
@@ -380,7 +414,7 @@ func (s *Service) QuoteFile(ctx context.Context, fileID string, settings d.Proje
 	if e = s.validateSettings(ctx, settings, nil); e != nil {
 		return ChargeQuote{}, e
 	}
-	p := d.Project{Revision: 1, ScriptSource: source, ProjectSettings: &settings}
+	p := d.Project{SpaceID: scope.SpaceID, OwnerID: scope.UserID, CreatorID: scope.UserID, Revision: 1, ScriptSource: source, ProjectSettings: &settings}
 	r := d.Run{Contract: d.EpisodeIndexContract}
 	q, _, e := s.quote(ctx, p, &r, time.Now().UTC())
 	return q, e

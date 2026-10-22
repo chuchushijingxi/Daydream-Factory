@@ -104,7 +104,7 @@ func TestVisualMixedReadSavePostgresEinoRejectsThenRepairsThroughActualReceipt(t
 	if calls.Load() != 3 || after.LatestRun().Status != "completed" || after.Prompt(d.VisualTarget{AssetID: "c"}).Text != "修正后的完整小范围正文" || !reflect.DeepEqual(before.Assets, after.Assets) || !reflect.DeepEqual(before.ScriptSource, after.ScriptSource) {
 		t.Fatal("real fixture loop did not repair/preserve", calls.Load(), after.LatestRun())
 	}
-	fixtureHost, handler := httpapi.New(s, nil, "../../../demo", 0)
+	fixtureHost, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, fixtureHost, handler, "workspace")
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, httptest.NewRequest("GET", "http://127.0.0.1/api/projects/"+p.ID, nil))
@@ -173,7 +173,7 @@ func TestVisualPostgresBrokenEncoderWithCompleteIndexNeverCallsTextModel(t *test
 	if textCalls.Load() != 0 || after.LatestRun().Status != "failed" || after.LatestRun().ErrorCode != "EVIDENCE_UNAVAILABLE" || len(after.LatestRun().Calls) != 0 || after.UsedMicroCNY() != before.UsedMicroCNY() || !reflect.DeepEqual(before.Assets, after.Assets) || !reflect.DeepEqual(before.ScriptSource, after.ScriptSource) {
 		t.Fatal("unusable runtime reached text provider or changed project", textCalls.Load())
 	}
-	fixtureHost, handler := httpapi.New(s, nil, "../../../demo", 0)
+	fixtureHost, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, fixtureHost, handler, "workspace")
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, httptest.NewRequest("GET", "http://127.0.0.1/api/projects/"+p.ID, nil))

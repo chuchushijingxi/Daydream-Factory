@@ -7,7 +7,7 @@ import (
 )
 
 func (h *Handler) originalScript(w http.ResponseWriter, r *http.Request) {
-	p, raw, err := h.Service.ForActor(actor(r)).OriginalScript(r.Context(), r.PathValue("id"))
+	p, raw, err := h.projectService(r).OriginalScript(r.Context(), r.PathValue("id"))
 	if err != nil {
 		fail(w, err)
 		return

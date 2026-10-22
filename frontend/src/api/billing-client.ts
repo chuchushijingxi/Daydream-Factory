@@ -1,7 +1,7 @@
 import { http, jsonPost, ApiError } from './client';
 import type { ChargeQuoteDTO } from './administration-types';
 import type { ProjectSettings } from './types';
-import { safeInteger } from './administration';
+import { safeInteger } from './response-values';
 import type { MediaTarget } from './project-media';
 import { translate } from '../contexts/translate';
 export type QuoteInput =

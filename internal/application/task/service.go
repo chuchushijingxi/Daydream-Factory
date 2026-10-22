@@ -18,12 +18,17 @@ import (
 	"drama-agent/internal/application/ports"
 	"drama-agent/internal/domain/fault"
 	"drama-agent/internal/domain/identity"
+	"drama-agent/internal/domain/spaces"
 	d "drama-agent/internal/domain/task"
 )
 
 type Service struct {
 	Capacity          ports.TaskCapacity
-	owner             *string
+	scope             *ports.SpaceScope
+	trusted           *ports.SpaceScope
+	resource          *spaces.Resource
+	SpaceResolver     ports.SpaceResolver
+	SpaceAccess       ports.SpaceAccess
 	Store             ports.TaskStore
 	Resolver          ports.TaskResolver
 	Permit            ports.TaskSubmissionPermit
@@ -54,6 +59,9 @@ type Command struct {
 	CallerContext json.RawMessage `json:"callerContext"`
 }
 type View struct {
+	SpaceID        string      `json:"spaceId"`
+	OwnerID        string      `json:"ownerId"`
+	CreatorID      string      `json:"creatorId"`
 	ID             string      `json:"id"`
 	ScopeID        string      `json:"scopeId"`
 	Revision       uint64      `json:"revision"`
@@ -114,7 +122,7 @@ func fileView(f d.Output) FileView {
 
 // viewOf 投影任务为 HTTP 只读视图；与业务 project 聚合无关，仅包内使用。
 func viewOf(t d.Task) View {
-	v := View{ID: t.ID, ScopeID: t.ScopeID, Revision: t.Revision, Operation: t.State.Operation, ModelID: t.State.ModelID, Status: t.Status, NextRunAt: t.NextRunAt, Billing: t.Billing(), ErrorCode: ptr(t.State.ErrorCode), Error: ptr(t.State.Error), CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt}
+	v := View{SpaceID: t.SpaceID, OwnerID: t.OwnerID, CreatorID: t.CreatorID, ID: t.ID, ScopeID: t.ScopeID, Revision: t.Revision, Operation: t.State.Operation, ModelID: t.State.ModelID, Status: t.Status, NextRunAt: t.NextRunAt, Billing: t.Billing(), ErrorCode: ptr(t.State.ErrorCode), Error: ptr(t.State.Error), CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt}
 	if remote := t.Remote(); remote != nil {
 		v.ProviderTaskID = ptr(remote.ID)
 	}
@@ -150,8 +158,13 @@ func canonical(raw []byte) (json.RawMessage, error) {
 	return json.Marshal(v)
 }
 func (s *Service) Submit(ctx context.Context, c Command) (View, error) {
-	if s.owner != nil && *s.owner == "" {
-		return View{}, fault.New("AUTH_REQUIRED", "缺少可信归属")
+	scope, err := s.operationScope(ctx, spaces.Edit)
+	if err != nil {
+		return View{}, err
+	}
+	store, err := s.scopedStore(scope)
+	if err != nil {
+		return View{}, err
 	}
 	if s.ReadOnly {
 		return View{}, fault.New("SERVICE_READ_ONLY", "当前服务只读")
@@ -162,7 +175,6 @@ func (s *Service) Submit(ctx context.Context, c Command) (View, error) {
 	if !validID(c.ScopeID) || !validID(c.CommandID) || !validID(c.ModelID) || !validID(c.Operation) || len(c.ActiveKey) > 256 || len(c.Input) > 64<<20 || len(c.CallerContext) > 1<<20 {
 		return View{}, fault.ErrInvalid
 	}
-	var err error
 	c.Input, err = canonical(c.Input)
 	if err != nil || bytes.Equal(c.Input, []byte("null")) {
 		return View{}, fault.ErrInvalid
@@ -177,7 +189,7 @@ func (s *Service) Submit(ctx context.Context, c Command) (View, error) {
 	}
 	h := sha256.Sum256(raw)
 	digest := hex.EncodeToString(h[:])
-	old, err := s.Store.TaskByCommand(ctx, c.ScopeID, c.CommandID)
+	old, err := store.TaskByCommand(ctx, c.ScopeID, c.CommandID)
 	if err == nil {
 		if old.State.CommandDigest != digest {
 			return View{}, fault.New("COMMAND_ID_CONFLICT", "同一命令对应不同请求")
@@ -212,12 +224,8 @@ func (s *Service) Submit(ctx context.Context, c Command) (View, error) {
 		}
 		policy.SaveUntil = now.Add(s.SaveTimeout)
 	}
-	owner := ""
-	if s.owner != nil {
-		owner = *s.owner
-	}
-	t := d.Task{OwnerID: owner, ID: identity.New("task"), ScopeID: c.ScopeID, CommandID: c.CommandID, Status: d.Queued, Snapshot: d.Snapshot{Input: c.Input, CallerContext: c.CallerContext}, State: d.State{RequirePermit: c.RequirePermit, Operation: c.Operation, ModelID: c.ModelID, Binding: binding, CommandDigest: digest, ActiveKey: c.ActiveKey, Policy: policy, Submissions: []d.Submission{}}}
-	t, err = s.Store.CreateTask(ctx, t)
+	t := d.Task{SpaceID: scope.SpaceID, OwnerID: scope.UserID, CreatorID: scope.UserID, ID: identity.New("task"), ScopeID: c.ScopeID, CommandID: c.CommandID, Status: d.Queued, Snapshot: d.Snapshot{Input: c.Input, CallerContext: c.CallerContext}, State: d.State{RequirePermit: c.RequirePermit, Operation: c.Operation, ModelID: c.ModelID, Binding: binding, CommandDigest: digest, ActiveKey: c.ActiveKey, Policy: policy, Submissions: []d.Submission{}}}
+	t, err = store.CreateTask(ctx, t)
 	if err != nil {
 		return View{}, err
 	}
@@ -229,14 +237,25 @@ func (s *Service) Submit(ctx context.Context, c Command) (View, error) {
 	return viewOf(t), nil
 }
 func (s *Service) Get(ctx context.Context, scope, id string) (View, error) {
-	t, err := s.Store.Task(ctx, id)
+	t, err := s.readTask(ctx, id, spaces.Read)
 	if err == nil && t.ScopeID != scope {
 		return View{}, fault.ErrNotFound
 	}
 	return viewOf(t), err
 }
 func (s *Service) GetByCommand(ctx context.Context, scope, id string) (View, error) {
-	t, err := s.Store.TaskByCommand(ctx, scope, id)
+	accessScope, err := s.operationScope(ctx, spaces.Read)
+	if err != nil {
+		return View{}, err
+	}
+	store, err := s.scopedStore(accessScope)
+	if err != nil {
+		return View{}, err
+	}
+	t, err := store.TaskByCommand(ctx, scope, id)
+	if err == nil {
+		err = s.requireTask(ctx, t, spaces.Read)
+	}
 	return viewOf(t), err
 }
 func (s *Service) List(ctx context.Context, scope, operation, cursor string, limit int) (Listing, error) {
@@ -257,7 +276,15 @@ func (s *Service) List(ctx context.Context, scope, operation, cursor string, lim
 			return Listing{}, fault.ErrInvalid
 		}
 	}
-	rows, err := s.Store.ListTasks(ctx, scope, operation, c, limit+1)
+	accessScope, err := s.operationScope(ctx, spaces.Read)
+	if err != nil {
+		return Listing{}, err
+	}
+	store, err := s.scopedStore(accessScope)
+	if err != nil {
+		return Listing{}, err
+	}
+	rows, err := store.ListTasks(ctx, scope, operation, c, limit+1)
 	if err != nil {
 		return Listing{}, err
 	}
@@ -278,11 +305,22 @@ func (s *Service) Cancel(ctx context.Context, scope, id string, revision uint64)
 	if s.ReadOnly {
 		return View{}, fault.New("SERVICE_READ_ONLY", "当前服务只读")
 	}
-	t, err := s.Store.CancelTask(ctx, scope, id, revision)
+	current, err := s.readTask(ctx, id, spaces.Edit)
+	if err != nil {
+		return View{}, err
+	}
+	if current.ScopeID != scope {
+		return View{}, fault.ErrNotFound
+	}
+	store := s.Store
+	if stores, ok := store.(ports.ScopedTasks); ok {
+		store = stores.ForTaskSpace(current.SpaceID)
+	}
+	t, err := store.CancelTask(ctx, scope, id, revision)
 	return viewOf(t), err
 }
 func (s *Service) File(ctx context.Context, scope, id, output string) ([]byte, FileView, error) {
-	t, err := s.Store.Task(ctx, id)
+	t, err := s.readTask(ctx, id, spaces.Read)
 	if err != nil {
 		return nil, FileView{}, err
 	}
@@ -303,7 +341,7 @@ func (s *Service) File(ctx context.Context, scope, id, output string) ([]byte, F
 }
 
 func (s *Service) Thumbnail(ctx context.Context, scope, id, output string) ([]byte, error) {
-	t, err := s.Store.Task(ctx, id)
+	t, err := s.readTask(ctx, id, spaces.Read)
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +376,7 @@ func (s *Service) Inputs(ctx context.Context, scope string, ids []string) (map[s
 	if scope == "" || len(ids) == 0 {
 		return out, nil
 	}
-	if store, ok := s.Store.(ports.TaskInputs); ok {
+	if store, ok := s.Store.(ports.TaskInputs); ok && s.scope == nil {
 		raw, err := store.TaskInputs(ctx, scope, ids)
 		if err != nil {
 			return nil, err
@@ -362,43 +400,115 @@ func (s *Service) Inputs(ctx context.Context, scope string, ids []string) (map[s
 	return out, nil
 }
 
-func (s *Service) ForOwner(owner string) *Service {
-	out := &Service{
-		owner: &owner, Store: deniedTasks{TaskStore: s.Store},
-		Resolver: s.Resolver, Provider: s.Provider, Results: s.Results, Queue: s.Queue,
-		Capacity: s.Capacity, Permit: s.Permit, ReadOnly: s.ReadOnly,
-		Policy: s.Policy, Lease: s.Lease,
+// derive 不复制执行并发门；派生实例只服务当前用例，后台执行使用原实例。
+func (s *Service) derive() *Service {
+	return &Service{Store: s.Store, Resolver: s.Resolver, SpaceResolver: s.SpaceResolver, SpaceAccess: s.SpaceAccess, scope: s.scope, trusted: s.trusted, resource: s.resource,
+		Capacity: s.Capacity, Permit: s.Permit, Provider: s.Provider, Results: s.Results, Queue: s.Queue, ReadOnly: s.ReadOnly, Policy: s.Policy, Lease: s.Lease,
 		SubmitConcurrency: s.SubmitConcurrency, QueryConcurrency: s.QueryConcurrency, SaveConcurrency: s.SaveConcurrency,
-		ObserveTimeout: s.ObserveTimeout, SaveTimeout: s.SaveTimeout, EvidenceTimeout: s.EvidenceTimeout, CapacityRetry: s.CapacityRetry,
-	}
+		ObserveTimeout: s.ObserveTimeout, SaveTimeout: s.SaveTimeout, EvidenceTimeout: s.EvidenceTimeout, CapacityRetry: s.CapacityRetry}
+}
+func (s *Service) ForScope(scope ports.SpaceScope) *Service {
+	out := s.derive()
+	out.scope = &scope
+	out.trusted = nil
+	return out
+}
 
-	if store, ok := s.Store.(ports.OwnedTasks); ok {
-		out.Store = store.ForTaskOwner(owner)
+// ForSpace 仅供后台恢复已接受任务，空间来自持久记录。
+func (s *Service) ForSpace(space string) *Service {
+	out := s.derive()
+	out.scope = nil
+	out.resource = nil
+	out.trusted = &ports.SpaceScope{SpaceID: space}
+	if store, ok := s.Store.(ports.ScopedTasks); ok {
+		out.Store = store.ForTaskSpace(space)
+	} else {
+		out.Store = deniedTasks{TaskStore: s.Store}
 	}
 	return out
 }
-func (s *Service) ForActor(a ports.Actor) *Service {
-	owner := ""
-	if a.Require() == nil {
-		owner = a.UserID
+
+// ForTrustedScope 用于内部创建任务，发起人与空间均已由业务持久事实确定。
+func (s *Service) ForTrustedScope(scope ports.SpaceScope) *Service {
+	out := s.derive()
+	out.scope = nil
+	out.trusted = &scope
+	out.resource = nil
+	return out
+}
+
+// ForResource 指定调用方已读取的容器；共享权限随容器，不由任务发起人推断。
+func (s *Service) ForResource(resource spaces.Resource) *Service {
+	out := s.derive()
+	out.resource = &resource
+	return out
+}
+func (s *Service) operationScope(ctx context.Context, need spaces.Access) (ports.SpaceScope, error) {
+	if s.scope == nil {
+		if s.trusted != nil {
+			return *s.trusted, nil
+		}
+		return ports.SpaceScope{}, nil
 	}
-	return s.ForOwner(owner)
+	if s.resource != nil {
+		return ports.RequireSpaceAccess(ctx, s.SpaceAccess, *s.scope, *s.resource, need)
+	}
+	scope, err := ports.ResolveSpace(ctx, s.SpaceResolver, *s.scope)
+	if err == nil && need == spaces.Edit && scope.ReadOnly {
+		err = fault.New("TEAM_READ_ONLY", "团队已只读")
+	}
+	return scope, err
+}
+func (s *Service) scopedStore(scope ports.SpaceScope) (ports.TaskStore, error) {
+	if s.scope == nil && s.trusted == nil {
+		return s.Store, nil
+	}
+	if store, ok := s.Store.(interface {
+		ForTaskScope(ports.SpaceScope) ports.TaskStore
+	}); ok {
+		return store.ForTaskScope(scope), nil
+	}
+	return nil, fault.New("AUTH_REQUIRED", "任务空间存储不可用")
+}
+func (s *Service) requireTask(ctx context.Context, t d.Task, need spaces.Access) error {
+	if s.scope == nil {
+		return nil
+	}
+	resource := spaces.Resource{SpaceID: t.SpaceID, OwnerID: t.OwnerID, Kind: "media", ID: t.ID}
+	if s.resource != nil {
+		if s.resource.SpaceID != t.SpaceID || s.resource.Kind == spaces.ProjectResource && t.ScopeID != "project:"+s.resource.ID {
+			return fault.ErrNotFound
+		}
+		resource = *s.resource
+	}
+	_, err := ports.RequireSpaceAccess(ctx, s.SpaceAccess, *s.scope, resource, need)
+	return err
+}
+func (s *Service) readTask(ctx context.Context, id string, need spaces.Access) (d.Task, error) {
+	t, err := s.Store.Task(ctx, id)
+	if err == nil {
+		err = s.requireTask(ctx, t, need)
+	}
+	if err != nil {
+		return d.Task{}, err
+	}
+	return t, nil
 }
 
 type deniedTasks struct{ ports.TaskStore }
 
 func (deniedTasks) CreateTask(context.Context, d.Task) (d.Task, error) {
-	return d.Task{}, fault.New("AUTH_REQUIRED", "任务归属存储不可用")
+	return d.Task{}, fault.New("AUTH_REQUIRED", "任务空间存储不可用")
 }
 func (deniedTasks) Task(context.Context, string) (d.Task, error) {
-	return d.Task{}, fault.New("AUTH_REQUIRED", "任务归属存储不可用")
+	return d.Task{}, fault.New("AUTH_REQUIRED", "任务空间存储不可用")
 }
 func (deniedTasks) TaskByCommand(context.Context, string, string) (d.Task, error) {
-	return d.Task{}, fault.New("AUTH_REQUIRED", "任务归属存储不可用")
+	return d.Task{}, fault.New("AUTH_REQUIRED", "任务空间存储不可用")
 }
 func (deniedTasks) ListTasks(context.Context, string, string, *ports.TaskCursor, int) ([]d.Task, error) {
-	return nil, fault.New("AUTH_REQUIRED", "任务归属存储不可用")
+	return nil, fault.New("AUTH_REQUIRED", "任务空间存储不可用")
 }
 func (deniedTasks) CancelTask(context.Context, string, string, uint64) (d.Task, error) {
-	return d.Task{}, fault.New("AUTH_REQUIRED", "任务归属存储不可用")
+	return d.Task{}, fault.New("AUTH_REQUIRED", "任务空间存储不可用")
 }

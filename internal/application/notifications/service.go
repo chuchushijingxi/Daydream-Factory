@@ -1,4 +1,4 @@
-// Package notifications owns operator-authored in-app messages and recipient receipts.
+// Package notifications owns in-app messages and recipient receipts.
 package notifications
 
 import (
@@ -15,12 +15,16 @@ import (
 
 type Input = domain.Draft
 type Message = domain.Message
+type Link = domain.Link
+type SystemInput = domain.SystemInput
 type Item struct {
-	ID          string     `json:"id"`
-	Title       string     `json:"title"`
-	Summary     string     `json:"summary"`
-	PublishedAt time.Time  `json:"publishedAt"`
-	ReadAt      *time.Time `json:"readAt"`
+	Kind        domain.Kind  `json:"kind"`
+	Link        *domain.Link `json:"link,omitempty"`
+	ID          string       `json:"id"`
+	Title       string       `json:"title"`
+	Summary     string       `json:"summary"`
+	PublishedAt time.Time    `json:"publishedAt"`
+	ReadAt      *time.Time   `json:"readAt"`
 }
 type Detail struct {
 	Item
@@ -61,6 +65,7 @@ func (q Query) Valid() bool {
 }
 
 type Store interface {
+	SystemNotification(context.Context, SystemInput) (Message, error)
 	NotificationList(context.Context, string, Query) (Page[StoredItem], error)
 	NotificationUnread(context.Context, string) (int64, error)
 	NotificationDetail(context.Context, string, string) (Detail, error)
@@ -81,6 +86,18 @@ type Service struct {
 	Store    Store
 	Updates  ports.NotificationUpdates
 	Markdown ports.NotificationMarkdown
+}
+
+// SystemNotify 只供已授权业务动作调用，不向HTTP暴露系统消息写入口。
+func (s *Service) SystemNotify(ctx context.Context, in SystemInput) (Message, error) {
+	input, err := in.Normalize()
+	if err != nil {
+		return Message{}, err
+	}
+	if s == nil || s.Store == nil {
+		return Message{}, fault.New("NOTIFICATION_UNAVAILABLE", "系统通知暂不可用")
+	}
+	return s.Store.SystemNotification(ctx, input)
 }
 
 func invalid() error {

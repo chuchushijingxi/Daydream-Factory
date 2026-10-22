@@ -62,6 +62,8 @@ function ContextProbe() {
 const { MainWorkspace } = await import('../src/MainWorkspace.tsx');
 let root,
   requests = [],
+  coordinationRequests = [],
+  editorLeases = new Set(),
   fixture,
   readOnly = true,
   pending = new Map(),
@@ -226,6 +228,7 @@ function project(id = 'project_fictional') {
   const targets = assets.map((a) => ({ assetId: a.id }));
   return {
     id,
+    spaceId: 'workspace_fixture', ownerId: 'workspace_fixture', creatorId: 'workspace_fixture',
     title: '虚构测试剧本',
     uploadedAt: '2026-10-12T03:04:00Z',
     revision: 4,
@@ -266,6 +269,20 @@ function project(id = 'project_fictional') {
   };
 }
 globalThis.fetch = async (url, options = {}) => {
+  // Existing assertions count content/model operations. Keep coordination in a
+  // separate complete log so acquiring a lease is never mistaken for generation.
+  url = new URL(String(url), 'http://fixture.invalid').pathname;
+  const coordination = url.match(/^\/api\/projects\/([^/]+)\/(permissions|editing)$/);
+  if (coordination) {
+    const method = options.method || 'GET', id = decodeURIComponent(coordination[1]);
+    coordinationRequests.push({url, method});
+    if (coordination[2] === 'permissions') return Response.json({spaceId: fixture.spaceId, ownerId: fixture.ownerId, creatorId: fixture.creatorId, access: readOnly ? 1 : 2, canShare: false});
+    if (method === 'DELETE') { editorLeases.delete(id); return Response.json({released: true}); }
+    if (readOnly) return Response.json({code: 'SERVICE_READ_ONLY', message: '只读测试夹具'}, {status: 403});
+    if (method === 'POST') editorLeases.add(id);
+    const owned = editorLeases.has(id);
+    return Response.json({userId: owned ? fixture.ownerId : '', username: owned ? '虚构编辑者' : '', expiresAt: owned ? new Date(Date.now()+90000).toISOString() : null, owned});
+  }
   requests.push({
     url,
     method: options.method || 'GET',
@@ -377,6 +394,7 @@ globalThis.fetch = async (url, options = {}) => {
     return Response.json([
       {
         id: fixture.id,
+        spaceId: fixture.spaceId, ownerId: fixture.ownerId, creatorId: fixture.creatorId, creatorName: '虚构编辑者', sharedWithMe: false, effectiveAccess: readOnly ? 1 : 2,
         title: fixture.title,
         filename: fixture.source.filename,
         uploadedAt: fixture.uploadedAt,
@@ -452,8 +470,8 @@ globalThis.fetch = async (url, options = {}) => {
     assert.ok(owner);
     owner.image = {
       fileId: body.fileId,
-      originalUrl: '/api/files/' + body.fileId + '/original',
-      thumbnailUrl: '/api/files/' + body.fileId + '/thumbnail',
+      originalUrl: '/api/projects/project_fictional/files/' + body.fileId + '/original',
+      thumbnailUrl: '/api/projects/project_fictional/files/' + body.fileId + '/thumbnail',
     };
     fixture.catalogEditedByUser = true;
     fixture.revision++;
@@ -504,6 +522,8 @@ async function mount(
   fixture = copy(p);
   readOnly = readonly;
   requests = [];
+  coordinationRequests = [];
+  editorLeases.clear();
   uploadedText = '';
   pending.clear();
   window.location.hash = '#' + route;
@@ -581,7 +601,7 @@ test('catalog upload opens its file input without details and saves a visible th
     assert.deepEqual(writes[1].body, { revision: 4, fileId: 'file_' + 'a'.repeat(32) });
     assert.equal(
       input.closest('article').querySelector('img').getAttribute('src'),
-      '/api/files/file_' + 'a'.repeat(32) + '/thumbnail?audience=workspace',
+      '/api/projects/project_fictional/files/file_' + 'a'.repeat(32) + '/thumbnail?audience=workspace',
     );
     assert.equal(document.querySelector('[role=dialog]'), null);
     assert.equal(fixture.usedOrReservedMicroCny, 0);
@@ -823,7 +843,7 @@ test('four detail targets upload with thumbnails, persist associations and previ
       .closest('figure');
     assert.equal(
       card.querySelector('img').getAttribute('src'),
-      '/api/files/file_' + 'a'.repeat(32) + '/thumbnail?audience=workspace',
+      '/api/projects/project_fictional/files/file_' + 'a'.repeat(32) + '/thumbnail?audience=workspace',
     );
     assert.equal(document.querySelector('.asset-original-dialog'), null);
     assert.ok(
@@ -835,7 +855,7 @@ test('four detail targets upload with thumbnails, persist associations and previ
     await flush();
     assert.equal(
       document.querySelector('.asset-original-dialog img').getAttribute('src'),
-      '/api/files/file_' + 'a'.repeat(32) + '/original?audience=workspace',
+      '/api/projects/project_fictional/files/file_' + 'a'.repeat(32) + '/original?audience=workspace',
     );
     await act(() =>
       document
@@ -896,8 +916,8 @@ test('ambiguous association is resolved by readback without another upload or sa
       const input = JSON.parse(options.body);
       fixture.assets[2].image = {
         fileId: input.fileId,
-        originalUrl: '/api/files/' + input.fileId + '/original',
-        thumbnailUrl: '/api/files/' + input.fileId + '/thumbnail',
+        originalUrl: '/api/projects/project_fictional/files/' + input.fileId + '/original',
+        thumbnailUrl: '/api/projects/project_fictional/files/' + input.fileId + '/thumbnail',
       };
       fixture.revision++;
       throw new TypeError('response lost');
@@ -1018,8 +1038,8 @@ test('thumbnail and original read failures retain saved association and offer lo
     fileId = 'file_' + 'a'.repeat(32);
   p.assets[2].image = {
     fileId,
-    originalUrl: '/api/files/' + fileId + '/original',
-    thumbnailUrl: '/api/files/' + fileId + '/thumbnail',
+    originalUrl: '/api/projects/project_fictional/files/' + fileId + '/original',
+    thumbnailUrl: '/api/projects/project_fictional/files/' + fileId + '/thumbnail',
   };
   await mount('/playlet/project_fictional/props', p, true);
   await act(() => document.querySelector<HTMLElement>('[aria-label="查看 虚构怀表"]').click());
@@ -1283,13 +1303,13 @@ test('home previews show only the available character thumbnails with one to thr
     const p = project();
     p.assets = Array.from({length: count}, (_, i) => ({
       ...p.assets[0], id: 'character-' + i, kind: 'character',
-      image: {fileId: 'file-' + i, originalUrl: '/api/files/file-' + i + '/original', thumbnailUrl: '/api/files/file-' + i + '/thumbnail'},
+      image: {fileId: 'file-' + i, originalUrl: '/api/projects/project_fictional/files/file-' + i + '/original', thumbnailUrl: '/api/projects/project_fictional/files/file-' + i + '/thumbnail'},
     }));
     await mount('/projects', p);
     const images = [...document.querySelectorAll('.project-list-card img')];
     assert.equal(images.length, Math.min(count, 3));
     assert.deepEqual(images.map(image => image.getAttribute('src')),
-      Array.from({length: Math.min(count, 3)}, (_, i) => '/api/files/file-' + i + '/thumbnail?audience=workspace'));
+      Array.from({length: Math.min(count, 3)}, (_, i) => '/api/projects/project_fictional/files/file-' + i + '/thumbnail?audience=workspace'));
     const grid = document.querySelector('.project-list-card > div > .grid');
     assert.equal(grid.children.length, Math.max(1, Math.min(count, 3)));
     assert.equal(requests.some(r => r.url === '/api/projects/' + p.id), false,
@@ -3255,7 +3275,7 @@ test('project management selects rather than opens, confirms deletion and refres
     },
   ];
   requestInterceptor = (url, options) => {
-    if (url === '/api/projects') return Response.json(copy(rows));
+    if (url === '/api/projects') return Response.json(copy(rows.map(row => ({ ...row, spaceId: 'workspace_fixture', ownerId: 'workspace_fixture', creatorId: 'workspace_fixture', creatorName: '虚构编辑者', sharedToMe: false, effectiveAccess: 2 }))));
     if (options.method === 'POST' && url.endsWith('/delete')) {
       const id = url.split('/')[3],
         body = JSON.parse(options.body as string),
@@ -3333,7 +3353,7 @@ test('project management stops a batch on conflict and requires refreshed select
     ],
     conflict = true;
   requestInterceptor = (url, options) => {
-    if (url === '/api/projects') return Response.json(copy(rows));
+    if (url === '/api/projects') return Response.json(copy(rows.map(row => ({ ...row, spaceId: 'workspace_fixture', ownerId: 'workspace_fixture', creatorId: 'workspace_fixture', creatorName: '虚构编辑者', sharedToMe: false, effectiveAccess: 2 }))));
     if (options.method === 'POST' && url.endsWith('/delete')) {
       const id = url.split('/')[3],
         body = JSON.parse(options.body as string);
@@ -3413,7 +3433,7 @@ test('project management preserves acknowledged deletion when the following list
   requestInterceptor = (url, options) => {
     if (url === '/api/projects') {
       if (refreshFails) throw new TypeError('Fictional list transport failure');
-      return Response.json(copy(rows));
+      return Response.json(copy(rows.map(row => ({ ...row, spaceId: 'workspace_fixture', ownerId: 'workspace_fixture', creatorId: 'workspace_fixture', creatorName: '虚构编辑者', sharedToMe: false, effectiveAccess: 2 }))));
     }
     if (options.method === 'POST' && url.endsWith('/delete')) {
       rows = [];
@@ -4127,8 +4147,8 @@ test('character canvas and Look details keep thumbnail identity until the matchi
   const p = project(),
     image = (char: string) => ({
       fileId: 'file_' + char.repeat(32),
-      thumbnailUrl: '/api/files/file_' + char.repeat(32) + '/thumbnail',
-      originalUrl: '/api/files/file_' + char.repeat(32) + '/original',
+      thumbnailUrl: '/api/projects/project_fictional/files/file_' + char.repeat(32) + '/thumbnail',
+      originalUrl: '/api/projects/project_fictional/files/file_' + char.repeat(32) + '/original',
     });
   p.assets[0].image = image('a');
   p.assets[0].looks = [

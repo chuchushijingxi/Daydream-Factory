@@ -1,0 +1,50 @@
+.team-workspace-page .team-resource-transfer {
+  min-width: 0;
+}
+.team-workspace-page .team-resource-transfer .team-form {
+  max-width: 640px;
+  margin-bottom: 0;
+}
+.team-workspace-page .team-transfer-description {
+  margin: 0 0 16px;
+  max-width: 720px;
+  line-height: 22px;
+}
+.team-transfer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.team-transfer-receipts {
+  margin-top: 24px;
+}
+.team-transfer-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding-block: 10px;
+  border-bottom: 1px solid var(--jm-border);
+  font-size: 13px;
+  line-height: 20px;
+}
+.team-transfer-result:last-child {
+  border-bottom: 0;
+}
+.team-transfer-result > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.team-transfer-result small {
+  display: block;
+  color: var(--jm-muted);
+  font-size: 12px;
+}
+.team-transfer-result .op-inline-error {
+  margin: 0;
+}
+.team-transfer-done {
+  color: var(--jm-text);
+}

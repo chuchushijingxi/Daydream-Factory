@@ -27,7 +27,7 @@ import (
 type TaskResults struct {
 	ReadOnly     bool
 	Thumbnails   ports.ImageThumbnailer
-	Owners       ports.TaskOwners
+	Spaces       ports.TaskSpaces
 	Files        ports.GeneratedFiles
 	Objects      *Store
 	ProbePath    string
@@ -125,17 +125,17 @@ func (s *TaskResults) SaveTaskOutput(ctx context.Context, id, mediaID string, m 
 	out.Blob, err = s.put(ctx, id, mediaID, m.Data, m.ContentType)
 	if err == nil && strings.HasPrefix(m.ContentType, "image/") && s.Files != nil {
 		files := s.Files
-		if s.Owners != nil {
-			owner, e := s.Owners.TaskOwner(ctx, id)
+		if s.Spaces != nil {
+			space, owner, creator, e := s.Spaces.TaskSpace(ctx, id)
 			if e != nil {
 				return out, e
 			}
-			if owner != "" {
-				owned, ok := files.(ports.OwnedGeneratedFiles)
+			if space != "" {
+				owned, ok := files.(ports.ScopedGeneratedFiles)
 				if !ok {
 					return out, fault.ErrInvalid
 				}
-				files = owned.ForGeneratedOwner(owner)
+				files = owned.ForGeneratedResource(space, owner, creator)
 			}
 		}
 		file, e := files.ImportGenerated(ctx, id+":"+mediaID, m)

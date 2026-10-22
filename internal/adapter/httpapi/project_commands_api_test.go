@@ -48,7 +48,7 @@ func TestProjectContentInterfacesWithoutModelExecution(t *testing.T) {
 	s := &app.Service{Store: store, Importer: scriptimport.Importer{}, Styles: styles, Agent: interfaceOnlyAgent{}, Models: &modelregistry.Registry{Models: map[string]ports.Model{"interface-analysis": interfaceOnlyModel{}}, OptionsValue: ports.ModelOptions{Analysis: []ports.ModelOption{{ID: "interface-analysis", Name: "Fictional analysis"}}, Image: []ports.ModelOption{{ID: "interface-image", Name: "Fictional image"}}, Video: []ports.ModelOption{{ID: "interface-video", Name: "Fictional video"}}}}}
 	files := uploadfiles.New()
 	s.Files = files
-	host, handler := httpapi.New(s, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	host.Files = files
 	defer host.Shutdown(context.Background())
@@ -213,7 +213,7 @@ func TestProjectContentInterfaceBrowserWithoutModels(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := &app.Service{Store: store, Importer: scriptimport.Importer{}, Styles: styles}
-	p, err := s.ForActor(legacyHTTPActor).Create(context.Background(), "API-only fictional saved project", "interface.txt", []byte("A fictional person carries a watch into the station.\n"), 0)
+	p, err := fixtureProject(t, s, legacyHTTPActor).Create(context.Background(), "API-only fictional saved project", "interface.txt", []byte("A fictional person carries a watch into the station.\n"), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +243,7 @@ func TestProjectContentInterfaceBrowserWithoutModels(t *testing.T) {
 	if err = store.Commit(context.Background(), p, p.Revision-1); err != nil {
 		t.Fatal(err)
 	}
-	host, handler := httpapi.New(s, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	defer host.Shutdown(context.Background())
 	server := &http.Server{Addr: addr, Handler: handler, ReadHeaderTimeout: 5 * time.Second}

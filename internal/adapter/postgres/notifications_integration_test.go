@@ -35,17 +35,6 @@ func (a *notificationAuth) Authenticate(ctx context.Context, token string) (port
 func TestNotificationsPGHTTPIsolationPublishAndRead(t *testing.T) {
 	s, conn := identityDB(t)
 	ctx := context.Background()
-	// Earlier unreleased test-only migrations may have made an empty table before the digest field.
-	if _, e := conn.Exec(ctx, `ALTER TABLE drama_catalog_v1.notification_messages ADD COLUMN IF NOT EXISTS creation_digest text`); e != nil {
-		t.Fatal(e)
-	}
-	var missing int
-	if e := conn.QueryRow(ctx, `SELECT count(*) FROM drama_catalog_v1.notification_messages WHERE creation_digest IS NULL`).Scan(&missing); e != nil || missing != 0 {
-		t.Fatalf("refuse to invent historical notification hashes: %d %v", missing, e)
-	}
-	if _, e := conn.Exec(ctx, `ALTER TABLE drama_catalog_v1.notification_messages ALTER COLUMN creation_digest SET NOT NULL`); e != nil {
-		t.Fatal(e)
-	}
 	account := &accounts.Service{Store: s, Hasher: passwordhash.Bcrypt{}}
 	seed := func(role string, enabled bool) (ports.Actor, string) {
 		t.Helper()

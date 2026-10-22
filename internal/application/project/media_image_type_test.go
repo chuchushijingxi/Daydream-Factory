@@ -70,7 +70,6 @@ func (s *compositionTasks) CreateTask(_ context.Context, row td.Task) (td.Task, 
 	s.inputs[row.ID] = row.Snapshot
 	return row, nil
 }
-func (s *compositionTasks) ForTaskOwner(string) ports.TaskStore { return s }
 
 type compositionQueue struct{ ports.TaskQueue }
 

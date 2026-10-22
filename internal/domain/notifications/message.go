@@ -9,6 +9,20 @@ import (
 	"drama-agent/internal/domain/fault"
 )
 
+type Kind string
+
+const (
+	Operator Kind = "operator"
+	System   Kind = "system"
+)
+
+// Link 仅记录应用内目标身份，不保存URL或内容权限；打开时由目标模块重新鉴权。
+type Link struct {
+	Type     string `json:"type"`
+	SpaceID  string `json:"spaceId,omitempty"`
+	TargetID string `json:"targetId,omitempty"`
+}
+
 type Draft struct {
 	ImageIDs        []string `json:"-"`
 	CommandID       string   `json:"commandId,omitempty"`
@@ -19,6 +33,8 @@ type Draft struct {
 	Revision        uint64   `json:"revision,omitempty"`
 }
 type Message struct {
+	Kind            Kind       `json:"kind"`
+	Link            *Link      `json:"link,omitempty"`
 	AuthorID        string     `json:"authorId"`
 	AuthorName      string     `json:"authorName"`
 	WithdrawnAt     *time.Time `json:"withdrawnAt"`
@@ -60,6 +76,9 @@ func (v Draft) Normalize() (Draft, error) {
 	return v, nil
 }
 func (m Message) RequireDraft(revision uint64) error {
+	if m.Kind == System {
+		return conflict()
+	}
 	if m.Status != "draft" || m.Revision != revision {
 		return conflict()
 	}
@@ -68,6 +87,9 @@ func (m Message) RequireDraft(revision uint64) error {
 
 // PublicationNeeded 在同一版本重复发布时回读原结果，不再写回执或推送。
 func (m Message) PublicationNeeded(revision uint64) (bool, error) {
+	if m.Kind == System {
+		return false, conflict()
+	}
 	if m.Status == "published" && m.Revision == revision+1 {
 		return false, nil
 	}
@@ -85,6 +107,9 @@ func (m Message) RequirePublishableBody() error {
 }
 
 func (m Message) WithdrawalNeeded(revision uint64) (bool, error) {
+	if m.Kind == System {
+		return false, conflict()
+	}
 	if m.Status == "withdrawn" && m.Revision == revision+1 {
 		return false, nil
 	}

@@ -43,8 +43,8 @@ export function useProjectMedia(
     seq = useRef(0),
     mounted = useRef(true),
     loadedMore = useRef(false),
-    history = useRef<MediaSnapshot>({items: []}),
-    inflight = useRef<{scope: string; promise: Promise<void>} | null>(null),
+    history = useRef<MediaSnapshot>({ items: [] }),
+    inflight = useRef<{ scope: string; promise: Promise<void> } | null>(null),
     dirty = useRef(false);
   useEffect(() => {
     mounted.current = true;
@@ -77,11 +77,26 @@ export function useProjectMedia(
       try {
         const firstRead = history.current.head === undefined;
         const list = await readMediaChanges(
-          p.id, kind, history.current,
-          () => observing.current && mounted.current && scopeRef.current === requestScope && seq.current === ticket && epoch === sessionBoundary.epoch,
-          target, projectRevision.current,
+          p.id,
+          kind,
+          history.current,
+          () =>
+            observing.current &&
+            mounted.current &&
+            scopeRef.current === requestScope &&
+            seq.current === ticket &&
+            epoch === sessionBoundary.epoch,
+          target,
+          projectRevision.current,
         );
-        if (!observing.current || !mounted.current || scopeRef.current !== requestScope || seq.current !== ticket || epoch !== sessionBoundary.epoch) return;
+        if (
+          !observing.current ||
+          !mounted.current ||
+          scopeRef.current !== requestScope ||
+          seq.current !== ticket ||
+          epoch !== sessionBoundary.epoch
+        )
+          return;
         history.current = list;
         if (list.revision !== projectRevision.current) dirty.current = true;
         setItems(list.items);
@@ -99,7 +114,7 @@ export function useProjectMedia(
   }, [p?.id, enabled, status?.capabilities.projectMedia, scope, kind]);
   useEffect(() => {
     loadedMore.current = false;
-    history.current = {items: []};
+    history.current = { items: [] };
     dirty.current = false;
     setItems([]);
     setReading(false);
@@ -122,7 +137,11 @@ export function useProjectMedia(
   }, [read]);
   useEffect(() => {
     // 未确认命令沿原显式核对/幂等重试；改当前模型不触碰其冻结依据。
-    if (!pending && history.current.revision !== undefined && history.current.revision !== p?.revision)
+    if (
+      !pending &&
+      history.current.revision !== undefined &&
+      history.current.revision !== p?.revision
+    )
       void read().catch(() => {});
   }, [p?.revision, pending, read]);
   const targetItems = items.filter((t) => sameMediaTarget(t.target, target));
@@ -179,9 +198,9 @@ export function useProjectMedia(
         const v = await projectMediaApi.start(p.id, command);
         if (!mounted.current || scopeRef.current !== scope) return;
         setItems((old) => {
-          const previous = old.find(task => task.id === v.id);
+          const previous = old.find((task) => task.id === v.id);
           const current = previous && previous.revision > v.revision ? previous : v;
-          const items = [current, ...old.filter(task => task.id !== v.id)];
+          const items = [current, ...old.filter((task) => task.id !== v.id)];
           history.current = { ...history.current, items };
           return items;
         });
@@ -204,7 +223,7 @@ export function useProjectMedia(
     });
   const adopt = async (t: ProjectMedia, output: string) =>
     operation(async () => {
-      if (!p) return;
+      if (!p || status?.readOnly || !enabled) return;
       try {
         const v = await projectMediaApi.adopt(p.id, t, output, p.revision);
         acceptProject(v);
@@ -219,19 +238,29 @@ export function useProjectMedia(
     });
   const cancel = async (t: ProjectMedia) =>
     operation(async () => {
-      if (!p) return;
+      if (!p || status?.readOnly || !enabled) return;
       await projectMediaApi.cancel(p.id, t);
       await read();
     });
   const more = async () =>
     operation(async () => {
       if (!p || !cursor) return;
-      const ticket = seq.current, epoch = sessionBoundary.epoch;
+      const ticket = seq.current,
+        epoch = sessionBoundary.epoch;
       const v = await projectMediaApi.list(p.id, cursor, kind);
-      if (!mounted.current || scopeRef.current !== scope || seq.current !== ticket || epoch !== sessionBoundary.epoch) return;
+      if (
+        !mounted.current ||
+        scopeRef.current !== scope ||
+        seq.current !== ticket ||
+        epoch !== sessionBoundary.epoch
+      )
+        return;
       loadedMore.current = true;
       setItems((old) => {
-        const items = [...old, ...v.items.filter(task => !old.some(existing => existing.id === task.id))];
+        const items = [
+          ...old,
+          ...v.items.filter((task) => !old.some((existing) => existing.id === task.id)),
+        ];
         history.current = { ...history.current, items };
         return items;
       });

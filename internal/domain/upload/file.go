@@ -23,6 +23,8 @@ type Thumbnail struct {
 }
 
 type File struct {
+	SpaceID   string     `json:"spaceId"`
+	CreatorID string     `json:"creatorId"`
 	OwnerID   string     `json:"ownerId,omitempty"`
 	ID        string     `json:"id"`
 	Filename  string     `json:"filename"`

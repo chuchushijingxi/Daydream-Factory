@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const notificationColumns = `id,title,body,audience,coalesce(recipient_user_id,''),status,revision,recipient_count,created_at,published_at,withdrawn_at,author_id,(SELECT username FROM drama_catalog_v1.users u WHERE u.id=author_id),coalesce((SELECT username FROM drama_catalog_v1.users u WHERE u.id=recipient_user_id),''),coalesce((SELECT email FROM drama_catalog_v1.users u WHERE u.id=recipient_user_id),'')`
+const notificationColumns = `id,title,body,audience,coalesce(recipient_user_id,''),status,revision,recipient_count,created_at,published_at,withdrawn_at,coalesce(author_id,''),coalesce((SELECT username FROM drama_catalog_v1.users u WHERE u.id=author_id),''),coalesce((SELECT username FROM drama_catalog_v1.users u WHERE u.id=recipient_user_id),''),coalesce((SELECT email FROM drama_catalog_v1.users u WHERE u.id=recipient_user_id),''),kind,link`
 
 // 全员广播对之后启用的账号同样可见；回执保留每用户已读事实与定向投递，不冻结广播受众。
 // 全部接收人读取面共用这一谓词。
@@ -21,7 +21,7 @@ const notificationRecipientJoin = ` FROM drama_catalog_v1.notification_messages 
 
 func scanNotification(row pgx.Row) (app.Message, error) {
 	var v app.Message
-	e := row.Scan(&v.ID, &v.Title, &v.Body, &v.Audience, &v.RecipientUserID, &v.Status, &v.Revision, &v.RecipientCount, &v.CreatedAt, &v.PublishedAt, &v.WithdrawnAt, &v.AuthorID, &v.AuthorName, &v.RecipientName, &v.RecipientEmail)
+	e := row.Scan(&v.ID, &v.Title, &v.Body, &v.Audience, &v.RecipientUserID, &v.Status, &v.Revision, &v.RecipientCount, &v.CreatedAt, &v.PublishedAt, &v.WithdrawnAt, &v.AuthorID, &v.AuthorName, &v.RecipientName, &v.RecipientEmail, &v.Kind, &v.Link)
 	if errors.Is(e, pgx.ErrNoRows) {
 		e = fault.ErrNotFound
 	}
@@ -52,14 +52,14 @@ func (s *Store) NotificationList(ctx context.Context, user string, q app.Query) 
 	if e != nil {
 		return result, e
 	}
-	rows, e := tx.Query(ctx, `SELECT m.id,m.title,m.published_at,r.read_at,m.body`+notificationRecipientJoin+`WHERE `+notificationVisible+` AND ($2='all' OR ($2='read' AND r.read_at IS NOT NULL) OR ($2='unread' AND r.read_at IS NULL)) ORDER BY m.published_at DESC,m.id DESC LIMIT $3 OFFSET $4`, user, q.Status, q.PageSize, (q.Page-1)*q.PageSize)
+	rows, e := tx.Query(ctx, `SELECT m.id,m.title,m.published_at,r.read_at,m.body,m.kind,m.link`+notificationRecipientJoin+`WHERE `+notificationVisible+` AND ($2='all' OR ($2='read' AND r.read_at IS NOT NULL) OR ($2='unread' AND r.read_at IS NULL)) ORDER BY m.published_at DESC,m.id DESC LIMIT $3 OFFSET $4`, user, q.Status, q.PageSize, (q.Page-1)*q.PageSize)
 	if e != nil {
 		return result, e
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var v app.StoredItem
-		if e = rows.Scan(&v.ID, &v.Title, &v.PublishedAt, &v.ReadAt, &v.Body); e != nil {
+		if e = rows.Scan(&v.ID, &v.Title, &v.PublishedAt, &v.ReadAt, &v.Body, &v.Kind, &v.Link); e != nil {
 			return result, e
 		}
 		result.Items = append(result.Items, v)
@@ -71,7 +71,7 @@ func (s *Store) NotificationList(ctx context.Context, user string, q app.Query) 
 }
 func (s *Store) NotificationDetail(ctx context.Context, user, id string) (app.Detail, error) {
 	var v app.Detail
-	e := s.pool.QueryRow(ctx, `SELECT m.id,m.title,m.published_at,r.read_at,m.body`+notificationRecipientJoin+`WHERE `+notificationVisible+` AND m.id=$2`, user, id).Scan(&v.ID, &v.Title, &v.PublishedAt, &v.ReadAt, &v.Body)
+	e := s.pool.QueryRow(ctx, `SELECT m.id,m.title,m.published_at,r.read_at,m.body,m.kind,m.link`+notificationRecipientJoin+`WHERE `+notificationVisible+` AND m.id=$2`, user, id).Scan(&v.ID, &v.Title, &v.PublishedAt, &v.ReadAt, &v.Body, &v.Kind, &v.Link)
 	if errors.Is(e, pgx.ErrNoRows) {
 		e = fault.ErrNotFound
 	}
@@ -121,10 +121,10 @@ func (s *Store) OperatorNotifications(ctx context.Context, author string, q app.
 		return result, e
 	}
 	defer tx.Rollback(ctx)
-	if e = tx.QueryRow(ctx, `SELECT count(*) FROM drama_catalog_v1.notification_messages WHERE author_id=$1 AND $1<>''`, author).Scan(&result.Total); e != nil {
+	if e = tx.QueryRow(ctx, `SELECT count(*) FROM drama_catalog_v1.notification_messages WHERE kind='operator' AND author_id=$1 AND $1<>''`, author).Scan(&result.Total); e != nil {
 		return result, e
 	}
-	rows, e := tx.Query(ctx, `SELECT `+notificationColumns+` FROM drama_catalog_v1.notification_messages WHERE author_id=$1 AND $1<>'' ORDER BY created_at DESC,id DESC LIMIT $2 OFFSET $3`, author, q.PageSize, (q.Page-1)*q.PageSize)
+	rows, e := tx.Query(ctx, `SELECT `+notificationColumns+` FROM drama_catalog_v1.notification_messages WHERE kind='operator' AND author_id=$1 AND $1<>'' ORDER BY created_at DESC,id DESC LIMIT $2 OFFSET $3`, author, q.PageSize, (q.Page-1)*q.PageSize)
 	if e != nil {
 		return result, e
 	}
@@ -142,7 +142,7 @@ func (s *Store) OperatorNotifications(ctx context.Context, author string, q app.
 	return result, tx.Commit(ctx)
 }
 func (s *Store) OperatorNotification(ctx context.Context, author, id string) (app.Message, error) {
-	return scanNotification(s.pool.QueryRow(ctx, `SELECT `+notificationColumns+` FROM drama_catalog_v1.notification_messages WHERE author_id=$1 AND id=$2 AND $1<>''`, author, id))
+	return scanNotification(s.pool.QueryRow(ctx, `SELECT `+notificationColumns+` FROM drama_catalog_v1.notification_messages WHERE kind='operator' AND author_id=$1 AND id=$2 AND $1<>''`, author, id))
 }
 func (s *Store) CreateNotification(ctx context.Context, author, id string, in app.Input) (app.Message, error) {
 	tx, e := s.pool.Begin(ctx)
@@ -154,10 +154,10 @@ func (s *Store) CreateNotification(ctx context.Context, author, id string, in ap
 	if _, e = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('notification:'||$1||':'||$2,0))`, author, in.CommandID); e != nil {
 		return app.Message{}, e
 	}
-	old, e := scanNotification(tx.QueryRow(ctx, `SELECT `+notificationColumns+` FROM drama_catalog_v1.notification_messages WHERE author_id=$1 AND command_id=$2`, author, in.CommandID))
+	old, e := scanNotification(tx.QueryRow(ctx, `SELECT `+notificationColumns+` FROM drama_catalog_v1.notification_messages WHERE kind='operator' AND author_id=$1 AND command_id=$2`, author, in.CommandID))
 	if e == nil {
 		var digest string
-		if e = tx.QueryRow(ctx, `SELECT creation_digest FROM drama_catalog_v1.notification_messages WHERE author_id=$1 AND command_id=$2`, author, in.CommandID).Scan(&digest); e != nil {
+		if e = tx.QueryRow(ctx, `SELECT creation_digest FROM drama_catalog_v1.notification_messages WHERE kind='operator' AND author_id=$1 AND command_id=$2`, author, in.CommandID).Scan(&digest); e != nil {
 			return app.Message{}, e
 		}
 		if digest != notificationDigest(in) {
@@ -177,7 +177,7 @@ func (s *Store) CreateNotification(ctx context.Context, author, id string, in ap
 			return app.Message{}, fault.New("NOTIFICATION_INVALID", "接收人不是有效启用账号")
 		}
 	}
-	v, e := scanNotification(tx.QueryRow(ctx, `INSERT INTO drama_catalog_v1.notification_messages(id,author_id,command_id,title,body,audience,recipient_user_id,creation_digest) VALUES($1,$2,$3,$4,$5,$6,NULLIF($7,''),$8) RETURNING `+notificationColumns, id, author, in.CommandID, in.Title, in.Body, in.Audience, in.RecipientUserID, notificationDigest(in)))
+	v, e := scanNotification(tx.QueryRow(ctx, `INSERT INTO drama_catalog_v1.notification_messages(id,author_id,command_id,title,body,audience,recipient_user_id,creation_digest,kind) VALUES($1,$2,$3,$4,$5,$6,NULLIF($7,''),$8,'operator') RETURNING `+notificationColumns, id, author, in.CommandID, in.Title, in.Body, in.Audience, in.RecipientUserID, notificationDigest(in)))
 	if e != nil {
 		return app.Message{}, e
 	}
@@ -192,7 +192,7 @@ func (s *Store) UpdateNotification(ctx context.Context, author, id string, in ap
 		return app.Message{}, e
 	}
 	defer tx.Rollback(ctx)
-	old, e := scanNotification(tx.QueryRow(ctx, `SELECT `+notificationColumns+` FROM drama_catalog_v1.notification_messages WHERE id=$1 AND author_id=$2 AND $2<>'' FOR UPDATE`, id, author))
+	old, e := scanNotification(tx.QueryRow(ctx, `SELECT `+notificationColumns+` FROM drama_catalog_v1.notification_messages WHERE kind='operator' AND id=$1 AND author_id=$2 AND $2<>'' FOR UPDATE`, id, author))
 	if e != nil {
 		return app.Message{}, e
 	}
@@ -217,7 +217,7 @@ func (s *Store) UpdateNotification(ctx context.Context, author, id string, in ap
 			return app.Message{}, fault.New("NOTIFICATION_IMAGE_INVALID", "图片不属于本通知")
 		}
 	}
-	v, e := scanNotification(tx.QueryRow(ctx, `UPDATE drama_catalog_v1.notification_messages SET title=$4,body=$5,audience=$6,recipient_user_id=NULLIF($7,''),revision=revision+1 WHERE id=$1 AND author_id=$2 AND revision=$3 AND status='draft' RETURNING `+notificationColumns, id, author, in.Revision, in.Title, in.Body, in.Audience, in.RecipientUserID))
+	v, e := scanNotification(tx.QueryRow(ctx, `UPDATE drama_catalog_v1.notification_messages SET title=$4,body=$5,audience=$6,recipient_user_id=NULLIF($7,''),revision=revision+1 WHERE kind='operator' AND id=$1 AND author_id=$2 AND revision=$3 AND status='draft' RETURNING `+notificationColumns, id, author, in.Revision, in.Title, in.Body, in.Audience, in.RecipientUserID))
 	if e != nil {
 		return app.Message{}, e
 	}
@@ -233,7 +233,7 @@ func (s *Store) PublishNotification(ctx context.Context, author, id string, revi
 		return app.Message{}, e
 	}
 	defer tx.Rollback(ctx)
-	v, e := scanNotification(tx.QueryRow(ctx, `SELECT `+notificationColumns+` FROM drama_catalog_v1.notification_messages WHERE id=$1 AND author_id=$2 AND $2<>'' FOR UPDATE`, id, author))
+	v, e := scanNotification(tx.QueryRow(ctx, `SELECT `+notificationColumns+` FROM drama_catalog_v1.notification_messages WHERE kind='operator' AND id=$1 AND author_id=$2 AND $2<>'' FOR UPDATE`, id, author))
 	if e != nil {
 		return app.Message{}, e
 	}
@@ -251,7 +251,7 @@ func (s *Store) PublishNotification(ctx context.Context, author, id string, revi
 	if v.Audience == "user" && tag.RowsAffected() != 1 {
 		return app.Message{}, fault.New("NOTIFICATION_INVALID", "接收人不是有效启用账号")
 	}
-	v, e = scanNotification(tx.QueryRow(ctx, `UPDATE drama_catalog_v1.notification_messages SET status='published',revision=revision+1,published_at=now(),recipient_count=$4 WHERE id=$1 AND author_id=$2 AND revision=$3 AND status='draft' RETURNING `+notificationColumns, id, author, revision, tag.RowsAffected()))
+	v, e = scanNotification(tx.QueryRow(ctx, `UPDATE drama_catalog_v1.notification_messages SET status='published',revision=revision+1,published_at=now(),recipient_count=$4 WHERE kind='operator' AND id=$1 AND author_id=$2 AND revision=$3 AND status='draft' RETURNING `+notificationColumns, id, author, revision, tag.RowsAffected()))
 	if e != nil {
 		return app.Message{}, e
 	}
@@ -268,5 +268,5 @@ func notificationDigest(in app.Input) string {
 	return hex.EncodeToString(sum[:])
 }
 func (s *Store) NotificationCommand(ctx context.Context, author, command string) (app.Message, error) {
-	return scanNotification(s.pool.QueryRow(ctx, `SELECT `+notificationColumns+` FROM drama_catalog_v1.notification_messages WHERE author_id=$1 AND command_id=$2 AND $1<>''`, author, command))
+	return scanNotification(s.pool.QueryRow(ctx, `SELECT `+notificationColumns+` FROM drama_catalog_v1.notification_messages WHERE kind='operator' AND author_id=$1 AND command_id=$2 AND $1<>''`, author, command))
 }

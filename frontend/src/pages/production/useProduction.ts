@@ -23,9 +23,13 @@ export function useProduction(episodeId: string, accepted?: EpisodeView) {
     storyboardDraftChanged,
     storyboardSaving,
   } = useWorkspace();
-  const initial = accepted?.projectId === p?.id && accepted?.episode.id === episodeId &&
-    accepted?.sourceVersion === p?.source.version && accepted.revision > (p?.revision || 0)
-    ? accepted : null;
+  const initial =
+    accepted?.projectId === p?.id &&
+    accepted?.episode.id === episodeId &&
+    accepted?.sourceVersion === p?.source.version &&
+    accepted.revision > (p?.revision || 0)
+      ? accepted
+      : null;
   const [snapshot, setView] = useState<EpisodeView | null>(null),
     [source, setSource] = useState<EpisodeSourceView | null>(null),
     [error, setError] = useState(''),
@@ -41,7 +45,7 @@ export function useProduction(episodeId: string, accepted?: EpisodeView) {
   const key = (p?.id || '') + ':' + episodeId;
   scope.current = key;
   viewRef.current = view;
-  const material = useRef<{key: string; value: EpisodeSourceView} | null>(null);
+  const material = useRef<{ key: string; value: EpisodeSourceView } | null>(null);
   const available = !!status?.capabilities.storyboard;
   const read = useCallback(async () => {
     if (!p || !episodeId || !available) return;
@@ -50,11 +54,29 @@ export function useProduction(episodeId: string, accepted?: EpisodeView) {
     setLoading(true);
     try {
       const v = await storyboardApi.getEpisode(p.id, episodeId);
-      const materialKey = JSON.stringify([sessionBoundary.epoch, p.id, episodeId, v.sourceVersion, v.episode.sourceRanges, v.index.supportRanges]);
-      const cached = v.index.supportRanges !== undefined && material.current?.key === materialKey ? material.current.value : null;
+      const materialKey = JSON.stringify([
+        sessionBoundary.epoch,
+        p.id,
+        episodeId,
+        v.sourceVersion,
+        v.episode.sourceRanges,
+        v.index.supportRanges,
+      ]);
+      const cached =
+        v.index.supportRanges !== undefined && material.current?.key === materialKey
+          ? material.current.value
+          : null;
       // Fresh episode root facts accompany material cached only for this exact source/range identity.
-      const s = cached ? {...cached, projectId: v.projectId, revision: v.revision, sourceVersion: v.sourceVersion,
-        access: v.access, activeRun: v.activeRun} : await storyboardApi.getSource(p.id, episodeId);
+      const s = cached
+        ? {
+            ...cached,
+            projectId: v.projectId,
+            revision: v.revision,
+            sourceVersion: v.sourceVersion,
+            access: v.access,
+            activeRun: v.activeRun,
+          }
+        : await storyboardApi.getSource(p.id, episodeId);
       if (scope.current !== target || ticket.current !== seq) return;
       if (
         v.revision !== s.revision ||
@@ -76,7 +98,7 @@ export function useProduction(episodeId: string, accepted?: EpisodeView) {
           storyboardDrafts.current.delete(k);
       }
       setView((old) => (old?.episode.id === v.episode.id && old.revision > v.revision ? old : v));
-      material.current = {key: materialKey, value: s};
+      material.current = { key: materialKey, value: s };
       setSource(s);
       setError('');
       return v;
@@ -89,7 +111,9 @@ export function useProduction(episodeId: string, accepted?: EpisodeView) {
   }, [p?.id, p?.source.version, episodeId, available]);
   useEffect(() => {
     // 分集页带来的已受理回执先显示；材料回读失败不能把已启动的任务变成未启动。
-    setView(old => initial && old?.episode.id === episodeId && old.revision > initial.revision ? old : initial);
+    setView((old) =>
+      initial && old?.episode.id === episodeId && old.revision > initial.revision ? old : initial,
+    );
     setSource(null);
     setError('');
     void read().catch(() => {});
@@ -119,6 +143,7 @@ export function useProduction(episodeId: string, accepted?: EpisodeView) {
   };
   const dirty = (s: StoryShot) => Object.keys(shotPatch(draft(s).base, draft(s).value)).length > 0;
   const change = (s: StoryShot, value: ShotInput) => {
+    if (!status || status.readOnly) return;
     storyboardDrafts.current.set(draftKey(s.id), { ...draft(s), value });
     storyboardDraftChanged();
     redraw((n) => n + 1);
@@ -176,6 +201,7 @@ export function useProduction(episodeId: string, accepted?: EpisodeView) {
     redraw((n) => n + 1);
   };
   const rebase = (s: StoryShot) => {
+    if (!status || status.readOnly) return;
     const d = draft(s);
     if (!view || d.sourceVersion !== view.sourceVersion) return;
     const base = shotInput(s),

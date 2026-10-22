@@ -6,6 +6,7 @@ import (
 	"drama-agent/internal/testsupport/redisruntime"
 	"encoding/json"
 	"errors"
+	"github.com/jackc/pgx/v5"
 	"net/http"
 	"net/url"
 	"os"
@@ -111,6 +112,20 @@ func mediaFixture(t *testing.T) (*Service, *taskapp.Runtime, d.Project, appconfi
 	p.ID = identity.New("media_free")
 	p.Title = "免费媒体制作隔离验证"
 	p.OwnerID = "media-isolated-fixture"
+	p.SpaceID, p.CreatorID = p.OwnerID, p.OwnerID
+	connection, err := pgx.Connect(ctx, cfg.Database.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = connection.Exec(ctx, `INSERT INTO drama_catalog_v1.users(id,email,username,role,password_hash) VALUES($1,$2,'媒体隔离夹具','user',$3) ON CONFLICT(id) DO NOTHING`, p.OwnerID, p.OwnerID+"@example.test", []byte("unused-media-fixture")); err != nil {
+		connection.Close(ctx)
+		t.Fatal(err)
+	}
+	if _, err = connection.Exec(ctx, `INSERT INTO drama_catalog_v1.spaces(id,kind) VALUES($1,'personal') ON CONFLICT DO NOTHING`, p.SpaceID); err != nil {
+		connection.Close(ctx)
+		t.Fatal(err)
+	}
+	connection.Close(ctx)
 	p.Style = &d.ProjectStyle{ID: "free-style", Prompts: d.StylePrompts{ZH: "固定测试风格，仅追加一次"}}
 	p.ProjectSettings = &d.ProjectSettings{AspectRatio: "9:16", ImageModel: md.MockImageModelID, VideoModel: md.MockVideoModelID}
 	s.Store = store
@@ -118,6 +133,7 @@ func mediaFixture(t *testing.T) (*Service, *taskapp.Runtime, d.Project, appconfi
 	s.MediaTasks = rt.Service
 	s.Prices = mediaFreePrices{}
 	s.Credits = store
+	s.Resolver, s.Access, s.Discounts = store, store, store
 	rt.Service.Permit = &MediaCreditPermit{Ledger: store, Tasks: rt.Service.Store}
 	if err = store.Create(ctx, p); err != nil {
 		t.Fatal(err)
@@ -126,8 +142,34 @@ func mediaFixture(t *testing.T) (*Service, *taskapp.Runtime, d.Project, appconfi
 	p, _ = p5Change(t, s, p, map[string]any{"op": "createScene", "episodeId": "e1", "value": p5Scene(p.Storyboard.Index.Episodes[0])})
 	sc := p.Storyboard.Scenes[0]
 	p, _ = p5Change(t, s, p, map[string]any{"op": "createShot", "sceneId": sc.ID, "value": p5Shot(p.Storyboard.Index.Episodes[0])})
-	return s, rt, p, cfg
+	s.Editing = redisruntime.ConnectDatabase(t, cfg.Database.URL)
+	s.EditorNames = store
+	scoped := s.ForScope(ports.SpaceScope{SpaceID: p.SpaceID, UserID: p.CreatorID}).WithEditingSession("isolated-media-session:" + p.ID)
+	if view, err := scoped.AcquireEditing(ctx, p.ID); err != nil || !view.Owned {
+		t.Fatal("isolated fixture editing lease", view, err)
+	}
+	t.Cleanup(func() { _ = scoped.ReleaseEditing(context.Background(), p.ID) })
+	return scoped, rt, p, cfg
 }
+
+// 生产用户入口持有scope包装器；恢复用例仍使用原始后台端口，不从测试包装器授予权限。
+func mediaFixtureStore(service *Service) *postgres.Store {
+	store := service.Store
+	if scoped, ok := store.(scopedProjects); ok {
+		store = scoped.ProjectStore
+	}
+	return store.(*postgres.Store)
+}
+func mediaFixtureWorker(service *Service) *Service {
+	copy := *service
+	copy.Store = mediaFixtureStore(service)
+	copy.scope = nil
+	if service.scope != nil {
+		copy.MediaTasks = service.MediaTasks.ForSpace(service.scope.SpaceID)
+	}
+	return &copy
+}
+
 func mediaFinish(t *testing.T, s *Service, v MediaView) MediaView {
 	t.Helper()
 	deadline := time.Now().Add(15 * time.Second)
@@ -165,13 +207,13 @@ func TestProjectMediaAcceptedSampleSurvivesNewDefaultsAndRestart(t *testing.T) {
 			command.Options = &md.MediaOptions{Resolution: "1080p", DurationSeconds: md.MockVideoDurationSeconds}
 			input.Resolution, input.DurationSeconds = "1080p", md.MockVideoDurationSeconds
 		}
-		charge := &c.Charge{ID: mediaChargeID(p.OwnerID, p.ID, command.CommandID), SourceVersion: p.ScriptSource.Version, InputRevision: p.Revision, Unit: "second", ModelID: md.MockVideoModelID, ConnectionID: "mock", Scope: "media-video", ScopeDigest: identity.New("old-basis"), Quantity: md.MockVideoBillingSeconds, PriceVersion: 1, Rule: c.PriceRule{}, AcceptedAt: time.Now().UTC()}
+		charge := &c.Charge{AccountID: p.SpaceID, ActorID: p.CreatorID, DiscountPercent: 100, ID: mediaChargeID(p.CreatorID, p.ID, command.CommandID), SourceVersion: p.ScriptSource.Version, InputRevision: p.Revision, Unit: "second", ModelID: md.MockVideoModelID, ConnectionID: "mock", Scope: "media-video", ScopeDigest: identity.New("old-basis"), Quantity: md.MockVideoBillingSeconds, PriceVersion: 1, Rule: c.PriceRule{}, AcceptedAt: time.Now().UTC()}
 		meta, _ := json.Marshal(MediaContext{Request: command, Credit: charge, SourceVersion: p.ScriptSource.Version, InputDigest: digest})
 		raw, _ := json.Marshal(input)
 		// This guarded fixture represents an already accepted original binding;
 		// public new commands cannot select the retired fractional sample spec.
 		rt.Service.Resolver = acceptedSampleResolver{}
-		accepted, err := rt.Service.ForOwner(p.OwnerID).Submit(ctx, taskapp.Command{RequirePermit: true, ScopeID: mediaScope(p.ID), CommandID: command.CommandID, Operation: "video.generate", ModelID: md.MockVideoModelID, Input: raw, CallerContext: meta, ActiveKey: d.Digest(target)})
+		accepted, err := rt.Service.ForTrustedScope(ports.SpaceScope{SpaceID: p.SpaceID, UserID: p.OwnerID}).Submit(ctx, taskapp.Command{RequirePermit: true, ScopeID: mediaScope(p.ID), CommandID: command.CommandID, Operation: "video.generate", ModelID: md.MockVideoModelID, Input: raw, CallerContext: meta, ActiveKey: d.Digest(target)})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -183,7 +225,7 @@ func TestProjectMediaAcceptedSampleSurvivesNewDefaultsAndRestart(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		restarted, q, err := taskruntime.New(cfg, s.Store.(*postgres.Store), objects, mediaResolver{}, redisruntime.ConnectDatabase(t, cfg.Database.URL), s.Files.(ports.GeneratedFiles))
+		restarted, q, err := taskruntime.New(cfg, mediaFixtureStore(s), objects, mediaResolver{}, redisruntime.ConnectDatabase(t, cfg.Database.URL), s.Files.(ports.GeneratedFiles))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -522,7 +564,7 @@ func TestProjectMediaQueuedTaskRecoveredByNewNSQRuntime(t *testing.T) {
 	}
 	// No worker consumed the original queue. A new runtime reads the same PG intent.
 	objects := old.Service.Results.(*s3objects.TaskResults).Objects
-	restarted, q, e := taskruntime.New(cfg, s.Store.(*postgres.Store), objects, mediaResolver{}, redisruntime.ConnectDatabase(t, cfg.Database.URL), s.Files.(*uploadapp.Service))
+	restarted, q, e := taskruntime.New(cfg, mediaFixtureStore(s), objects, mediaResolver{}, redisruntime.ConnectDatabase(t, cfg.Database.URL), s.Files.(*uploadapp.Service))
 	if e != nil {
 		t.Fatal(e)
 	}

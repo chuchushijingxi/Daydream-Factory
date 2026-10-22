@@ -34,7 +34,7 @@ func (s *Service) StartImageBatch(ctx context.Context, id string, commands []Med
 	if err := s.mediaReady(); err != nil {
 		return nil, err
 	}
-	p, err := s.Project(ctx, id)
+	p, err := s.editingProject(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (s *Service) RecoverImageFills(ctx context.Context) error {
 }
 
 func (s *Service) fillGeneratedImage(ctx context.Context, item ports.MediaImageFill) error {
-	owned := s.forOwner(item.OwnerID)
+	owned := s.forSpace(item.SpaceID)
 	p, err := owned.Project(ctx, item.ProjectID)
 	if errors.Is(err, fault.ErrNotFound) {
 		return nil

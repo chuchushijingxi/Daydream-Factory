@@ -1,3 +1,4 @@
+import { TeamFilter } from './teams/TeamFilter';
 import { Fragment, useState, type FormEvent } from 'react';
 import { ChevronDown, ChevronRight, Search, SlidersHorizontal } from 'lucide-react';
 import { useSession } from '../../state/SessionContext';
@@ -22,6 +23,7 @@ import {
   unitLabel,
 } from '../credits/credit-format';
 const emptyFilters: UsageFilters = {
+  spaceId: '',
   start: '',
   end: '',
   search: '',
@@ -127,8 +129,11 @@ function Detail({ view, row }: { view: UsageView; row: UsageRow }) {
                         <small>{call.connectionLabel}</small>
                       </td>
                       <td>
-                        {call.inputTokens === null ? c('待确认') : formatInteger(call.inputTokens)} /{' '}
-                        {call.outputTokens === null ? c('待确认') : formatInteger(call.outputTokens)}
+                        {call.inputTokens === null ? c('待确认') : formatInteger(call.inputTokens)}{' '}
+                        /{' '}
+                        {call.outputTokens === null
+                          ? c('待确认')
+                          : formatInteger(call.outputTokens)}
                       </td>
                       <td>{call.executionLabel}</td>
                       <td>{formatCost(call.costCny, c)}</td>
@@ -213,9 +218,7 @@ export function UsagePage() {
       >
         {view === 'calls' ? (
           <p className="op-view-explanation">
-            {c(
-              '每次实际模型外发单独记录，包含重试、Token、耗时及平台成本；不会重复收取用户积分。',
-            )}
+            {c('每次实际模型外发单独记录，包含重试、Token、耗时及平台成本；不会重复收取用户积分。')}
           </p>
         ) : null}
         {read.value ? (
@@ -299,6 +302,10 @@ export function UsagePage() {
           </div>
           {advanced ? (
             <div id="usage-advanced" className="op-filters op-advanced">
+              <TeamFilter
+                value={draft.spaceId || ''}
+                onChange={(value) => patch('spaceId', value)}
+              />
               <Field label={c('开始时间（北京时间）')}>
                 <input
                   type="datetime-local"
@@ -349,6 +356,7 @@ export function UsagePage() {
                       ? [
                           c('时间'),
                           c('用户'),
+                          c('空间'),
                           c('任务 / 模型'),
                           c('计费依据'),
                           c('用户积分'),
@@ -359,6 +367,7 @@ export function UsagePage() {
                       : [
                           c('时间'),
                           c('用户'),
+                          c('空间'),
                           c('任务 / 模型 / 连接'),
                           c('实际用量'),
                           c('耗时'),
@@ -381,6 +390,12 @@ export function UsagePage() {
                         <td className="op-usage-user">
                           <span title={r.userLabel}>{r.userLabel}</span>
                           {r.userEmail ? <small title={r.userEmail}>{r.userEmail}</small> : null}
+                        </td>
+                        <td>
+                          <span>{r.spaceName || '—'}</span>
+                          {r.spaceKind && (
+                            <small>{r.spaceKind === 'team' ? c('团队空间') : c('个人空间')}</small>
+                          )}
                         </td>
                         <td>
                           <span title={r.modelLabel}>{r.operation}</span>
@@ -406,7 +421,9 @@ export function UsagePage() {
                               <small>
                                 {r.outputTokens === null
                                   ? c('输出待确认')
-                                  : c('输出 {amount}', { amount: formatInteger(r.outputTokens) })}{' '}
+                                  : c('输出 {amount}', {
+                                      amount: formatInteger(r.outputTokens),
+                                    })}{' '}
                                 Token
                               </small>
                             </>
@@ -451,7 +468,7 @@ export function UsagePage() {
                       </tr>
                       {expanded === r.identity ? (
                         <tr>
-                          <td colSpan={8} id={'usage-detail-' + r.identity}>
+                          <td colSpan={9} id={'usage-detail-' + r.identity}>
                             <Detail view={view} row={r} />
                           </td>
                         </tr>
@@ -463,20 +480,6 @@ export function UsagePage() {
             </div>
             <Feedback busy={false} error="" empty={!read.value.items.length} retry={read.refresh} />
             <div className="op-usage-pagination">
-              <Choice
-                label={c('每页条数')}
-                value={pageSize}
-                options={[
-                  { value: '10', label: c('10 条 / 页') },
-                  { value: '20', label: c('20 条 / 页') },
-                  { value: '50', label: c('50 条 / 页') },
-                ]}
-                onChange={(value) => {
-                  setPageSize(value as UsagePageSize);
-                  setPages({ tasks: '', calls: '' });
-                  setExpanded('');
-                }}
-              />
               <PageNavigation
                 page={read.value}
                 busy={read.busy}
@@ -484,13 +487,23 @@ export function UsagePage() {
                   setPages((old) => ({ ...old, [view]: p }));
                   setExpanded('');
                 }}
-              />
+              >
+                <Choice
+                  label={c('每页条数')}
+                  value={pageSize}
+                  options={[
+                    { value: '10', label: c('10 条 / 页') },
+                    { value: '20', label: c('20 条 / 页') },
+                    { value: '50', label: c('50 条 / 页') },
+                  ]}
+                  onChange={(value) => {
+                    setPageSize(value as UsagePageSize);
+                    setPages({ tasks: '', calls: '' });
+                    setExpanded('');
+                  }}
+                />
+              </PageNavigation>
             </div>
-            <p className="op-muted op-read-time">
-              {c('统计范围与当前视角、筛选一致 · 读取于 {time}', {
-                time: dateTime(read.value.summary.readAt),
-              })}
-            </p>
           </>
         ) : null}
       </div>

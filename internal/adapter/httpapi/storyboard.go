@@ -14,7 +14,7 @@ func (h *Handler) storyboardAccess(v *app.StoryboardBaseView) {
 }
 func (h *Handler) registerStoryboard(mux *routes) {
 	mux.HandleFunc("GET /api/projects/{id}/storyboard", func(w http.ResponseWriter, r *http.Request) {
-		v, e := h.Service.ForActor(actor(r)).ReadStoryboard(r.Context(), r.PathValue("id"))
+		v, e := h.projectService(r).ReadStoryboard(r.Context(), r.PathValue("id"))
 		if e != nil {
 			fail(w, e)
 			return
@@ -23,14 +23,14 @@ func (h *Handler) registerStoryboard(mux *routes) {
 		write(w, 200, v)
 	})
 	mux.HandleFunc("GET /api/projects/{id}/storyboard/episodes/{episodeId}", func(w http.ResponseWriter, r *http.Request) {
-		p, e := h.Service.ForActor(actor(r)).ReadProject(r.Context(), r.PathValue("id"))
+		p, e := h.projectService(r).ReadProject(r.Context(), r.PathValue("id"))
 		if e != nil {
 			fail(w, e)
 			return
 		}
-		v, e := h.Service.ForActor(actor(r)).StoryboardEpisode(p, r.PathValue("episodeId"))
+		v, e := h.projectService(r).StoryboardEpisode(p, r.PathValue("episodeId"))
 		if e == nil {
-			v, e = h.Service.ForActor(actor(r)).EpisodePreviews(r.Context(), p, v)
+			v, e = h.projectService(r).EpisodePreviews(r.Context(), p, v)
 		}
 		if e != nil {
 			fail(w, e)
@@ -40,12 +40,12 @@ func (h *Handler) registerStoryboard(mux *routes) {
 		write(w, 200, v)
 	})
 	mux.HandleFunc("GET /api/projects/{id}/storyboard/episodes/{episodeId}/source", func(w http.ResponseWriter, r *http.Request) {
-		p, e := h.Service.ForActor(actor(r)).ReadProject(r.Context(), r.PathValue("id"))
+		p, e := h.projectService(r).ReadProject(r.Context(), r.PathValue("id"))
 		if e != nil {
 			fail(w, e)
 			return
 		}
-		v, e := h.Service.ForActor(actor(r)).StoryboardSource(p, r.PathValue("episodeId"))
+		v, e := h.projectService(r).StoryboardSource(p, r.PathValue("episodeId"))
 		if e != nil {
 			fail(w, e)
 			return
@@ -59,13 +59,13 @@ func (h *Handler) registerStoryboard(mux *routes) {
 			fail(w, e)
 			return
 		}
-		p, e := h.Service.ForActor(actor(r)).WithBillingBasis(basis).RetryEpisodeIndex(r.Context(), r.PathValue("id"), rev)
+		p, e := h.projectService(r).WithBillingBasis(basis).RetryEpisodeIndex(r.Context(), r.PathValue("id"), rev)
 		if e != nil {
 			fail(w, e)
 			return
 		}
 		h.Launch(p.ID)
-		write(w, 202, h.Service.ForActor(actor(r)).StoryboardIndex(p))
+		write(w, 202, h.projectService(r).StoryboardIndex(p))
 	})
 	mux.HandleFunc("POST /api/projects/{id}/storyboard/episodes/{episodeId}/runs", func(w http.ResponseWriter, r *http.Request) {
 		var raw json.RawMessage
@@ -92,13 +92,13 @@ func (h *Handler) registerStoryboard(mux *routes) {
 			fail(w, e)
 			return
 		}
-		p, e := h.Service.ForActor(actor(r)).WithBillingBasis(basis).StartEpisode(r.Context(), r.PathValue("id"), r.PathValue("episodeId"), in)
+		p, e := h.projectService(r).WithBillingBasis(basis).StartEpisode(r.Context(), r.PathValue("id"), r.PathValue("episodeId"), in)
 		if e != nil {
 			fail(w, e)
 			return
 		}
 		h.Launch(p.ID)
-		v, e := h.Service.ForActor(actor(r)).StoryboardEpisode(p, r.PathValue("episodeId"))
+		v, e := h.projectService(r).StoryboardEpisode(p, r.PathValue("episodeId"))
 		if e != nil {
 			fail(w, e)
 			return
@@ -111,7 +111,7 @@ func (h *Handler) registerStoryboard(mux *routes) {
 			fail(w, e)
 			return
 		}
-		v, e := h.Service.ForActor(actor(r)).ChangeStoryboard(r.Context(), r.PathValue("id"), raw)
+		v, e := h.projectService(r).ChangeStoryboard(r.Context(), r.PathValue("id"), raw)
 		if e != nil {
 			fail(w, e)
 			return

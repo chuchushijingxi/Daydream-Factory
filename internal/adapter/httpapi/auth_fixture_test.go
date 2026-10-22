@@ -6,27 +6,33 @@ import (
 	"drama-agent/internal/application/accounts"
 	"drama-agent/internal/application/ports"
 	"drama-agent/internal/domain/fault"
+	d "drama-agent/internal/domain/project"
 	"net/http"
 )
 
 // Explicit authentication fixture for pre-existing HTTP behavior tests only.
 // Security tests below use real PG users and the real production middleware.
+const authenticatedFixtureToken = "http-fixture.operations.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
 type fixtureAuthenticator struct{}
 
 func (fixtureAuthenticator) Authenticate(_ context.Context, token string) (ports.Actor, error) {
-	if token != "http-fixture.operations.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" {
+	if token != authenticatedFixtureToken {
 		return ports.Actor{}, fault.New("AUTH_REQUIRED", "fixture session required")
 	}
 	return ports.Actor{UserID: "http-fixture", Role: ports.RoleOperator}, nil
 }
 func authenticatedFixture(h *httpapi.Handler, next http.Handler) http.Handler {
 	h.Authenticator = fixtureAuthenticator{}
+	configureFixtureProject(h.Service)
+	configureMemoryFixtureEditing(h.Service)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		addSessionCookie(r, "http-fixture.operations.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+		addSessionCookie(r, authenticatedFixtureToken)
+		acquireLegacyFixtureEditing(next, r)
 		next.ServeHTTP(w, r)
 	})
 }
-func (s *fileProjectStore) ForProjectOwner(owner string) ports.ProjectStore {
+func (s *fileProjectStore) ForProjectSpace(owner string) ports.ProjectStore {
 	return &ownedFixtureProject{fileProjectStore: s, owner: owner}
 }
 
@@ -46,4 +52,27 @@ func addSessionCookie(r *http.Request, token string) {
 	}
 	r.Header.Set("X-Drama-Audience", audience)
 	r.AddCookie(&http.Cookie{Name: name, Value: token})
+}
+
+func (s *ownedFixtureProject) Create(ctx context.Context, p d.Project) error {
+	if s.owner == "" || p.SpaceID != s.owner {
+		return fault.ErrInvalid
+	}
+	return s.fileProjectStore.Create(ctx, p)
+}
+func (s *ownedFixtureProject) Snapshot(ctx context.Context, id string) (d.Project, error) {
+	p, err := s.fileProjectStore.Snapshot(ctx, id)
+	if err == nil && (s.owner == "" || p.SpaceID != s.owner) {
+		return d.Project{}, fault.ErrNotFound
+	}
+	return p, err
+}
+func (s *ownedFixtureProject) Commit(ctx context.Context, p d.Project, revision uint64) error {
+	if _, err := s.Snapshot(ctx, p.ID); err != nil {
+		return err
+	}
+	if p.SpaceID != s.owner {
+		return fault.ErrConflict
+	}
+	return s.fileProjectStore.Commit(ctx, p, revision)
 }

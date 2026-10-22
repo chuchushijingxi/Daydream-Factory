@@ -129,8 +129,8 @@ func TestActualEinoTaskDialogueAndRecovery(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		service := &app.Service{Authorize: freeAuthorization, Store: store, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: model}}
-		p, err := service.Create(ctx, "display-only unrelated title", "x.txt", []byte("祖父留下钥匙。"), 0)
+		service := &app.Service{Credits: store, Prices: &frozenFixturePrices{version: 1}, Authorize: freeAuthorization, Store: store, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: model}}
+		p, err := fixtureProject(t, service, legacyHTTPActor).Create(ctx, "display-only unrelated title", "x.txt", []byte("祖父留下钥匙。"), 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -141,7 +141,7 @@ func TestActualEinoTaskDialogueAndRecovery(t *testing.T) {
 				db.Exec(ctx, "DELETE FROM drama_catalog_v1.projects WHERE id=$1", id)
 			}
 		}(p.ID)
-		p, err = service.Start(ctx, p.ID, p.Revision)
+		p, err = quotedLegacyService(t, service, p.ID, app.QuoteInput{Revision: p.Revision, Operation: "asset-preparation"}).Start(ctx, p.ID, p.Revision)
 		if err != nil {
 			t.Fatal(err)
 		}

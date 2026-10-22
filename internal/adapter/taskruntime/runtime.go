@@ -32,9 +32,10 @@ func New(c appconfig.Config, store *postgres.Store, objects *s3objects.Store, re
 	}
 	t := c.Tasks
 	s := &app.Service{
-		Capacity: capacity,
-		Store:    postgres.NewTaskStore(store), Resolver: resolver, Provider: mockmedia.TaskProvider{Media: c.Media},
-		Results: &s3objects.TaskResults{ReadOnly: c.ReadOnly, Thumbnails: imagethumbnail.FFmpeg{Settings: c.Media}, Owners: postgres.NewTaskStore(store), Files: files, Objects: objects, ProbePath: c.Media.FFprobe, ProbeTimeout: c.Media.ProbeTimeout}, Queue: q, ReadOnly: c.ReadOnly,
+		Capacity:      capacity,
+		SpaceResolver: store, SpaceAccess: store,
+		Store: postgres.NewTaskStore(store), Resolver: resolver, Provider: mockmedia.TaskProvider{Media: c.Media},
+		Results: &s3objects.TaskResults{ReadOnly: c.ReadOnly, Thumbnails: imagethumbnail.FFmpeg{Settings: c.Media}, Spaces: postgres.NewTaskStore(store), Files: files, Objects: objects, ProbePath: c.Media.FFprobe, ProbeTimeout: c.Media.ProbeTimeout}, Queue: q, ReadOnly: c.ReadOnly,
 		Lease: t.Lease, SubmitConcurrency: t.SubmitConcurrency, QueryConcurrency: t.QueryConcurrency, SaveConcurrency: t.SaveConcurrency,
 		ObserveTimeout: t.ObserveTimeout, SaveTimeout: t.SaveTimeout, EvidenceTimeout: t.EvidenceTimeout, CapacityRetry: t.CapacityRetry,
 		Policy: d.Policy{PollMillis: t.PollInterval.Milliseconds(), RetryMillis: t.RetryInterval.Milliseconds(), MaxSubmissions: t.MaxSubmissions},

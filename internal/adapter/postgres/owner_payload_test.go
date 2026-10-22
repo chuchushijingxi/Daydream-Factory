@@ -18,23 +18,26 @@ func TestOwnerColumnRemainsAuthoritativeWithoutPayloadCopy(t *testing.T) {
 	s, conn := identityDB(t)
 	ctx := context.Background()
 	owner := identity.New("payload_owner")
-	p := project.Project{ID: identity.New("payload_project"), OwnerID: owner, Revision: 1, Title: "完整原文", Original: []byte("保留原文")}
-	store := s.ForProjectOwner(owner)
+	if _, err := conn.Exec(ctx, `INSERT INTO drama_catalog_v1.spaces(id,kind) VALUES($1,'personal')`, owner); err != nil {
+		t.Fatal(err)
+	}
+	p := project.Project{ID: identity.New("payload_project"), OwnerID: owner, SpaceID: owner, CreatorID: owner, Revision: 1, Title: "完整原文", Original: []byte("保留原文")}
+	store := s.ForProjectSpace(owner)
 	if err := store.Create(ctx, p); err != nil {
 		t.Fatal(err)
 	}
 	assertPayload := func(table, id string) {
 		t.Helper()
 		var raw []byte
-		var storedOwner string
-		if err := conn.QueryRow(ctx, `SELECT payload,owner_id FROM drama_catalog_v1.`+table+` WHERE id=$1`, id).Scan(&raw, &storedOwner); err != nil {
+		var storedSpace, storedOwner, storedCreator string
+		if err := conn.QueryRow(ctx, `SELECT payload,space_id,owner_id,creator_id FROM drama_catalog_v1.`+table+` WHERE id=$1`, id).Scan(&raw, &storedSpace, &storedOwner, &storedCreator); err != nil {
 			t.Fatal(err)
 		}
 		var payload map[string]json.RawMessage
 		if err := json.Unmarshal(raw, &payload); err != nil {
 			t.Fatal(err)
 		}
-		if _, duplicated := payload["ownerId"]; duplicated || storedOwner != owner {
+		if _, duplicated := payload["ownerId"]; duplicated || payload["spaceId"] != nil || payload["creatorId"] != nil || storedSpace != owner || storedOwner != owner || storedCreator != owner {
 			t.Fatal("owner was duplicated or lost", storedOwner, duplicated)
 		}
 	}
@@ -44,10 +47,10 @@ func TestOwnerColumnRemainsAuthoritativeWithoutPayloadCopy(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, err := store.Snapshot(ctx, p.ID)
-	if err != nil || got.OwnerID != owner || project.Clone(got).OwnerID != owner || string(got.Original) != "保留原文" || got.Revision != 1 {
+	if err != nil || got.OwnerID != owner || got.SpaceID != owner || got.CreatorID != owner || project.Clone(got).OwnerID != owner || string(got.Original) != "保留原文" || got.Revision != 1 {
 		t.Fatal(got, err)
 	}
-	if _, err := s.ForProjectOwner("stale-owner").Snapshot(ctx, p.ID); !errors.Is(err, fault.ErrNotFound) {
+	if _, err := s.ForProjectSpace("stale-owner").Snapshot(ctx, p.ID); !errors.Is(err, fault.ErrNotFound) {
 		t.Fatal("JSON owner authorized another user", err)
 	}
 	got.Revision++
@@ -56,8 +59,8 @@ func TestOwnerColumnRemainsAuthoritativeWithoutPayloadCopy(t *testing.T) {
 	}
 	assertPayload("projects", p.ID)
 	fileID := identity.New("file")
-	file := upload.File{ID: fileID, OwnerID: owner, Filename: "原文.txt", CreatedAt: time.Now().UTC(), Original: upload.Blob{Bucket: "isolated-test", ObjectKey: upload.ObjectKey(fileID, "original"), ContentType: "text/plain", SizeBytes: 6, SHA256: strings.Repeat("a", 64)}}
-	files := s.ForUploadedFileOwner(owner)
+	file := upload.File{ID: fileID, OwnerID: owner, SpaceID: owner, CreatorID: owner, Filename: "原文.txt", CreatedAt: time.Now().UTC(), Original: upload.Blob{Bucket: "isolated-test", ObjectKey: upload.ObjectKey(fileID, "original"), ContentType: "text/plain", SizeBytes: 6, SHA256: strings.Repeat("a", 64)}}
+	files := s.ForUploadedFileSpace(owner)
 	if err := files.CreateUploadedFile(ctx, file); err != nil {
 		t.Fatal(err)
 	}
@@ -66,10 +69,10 @@ func TestOwnerColumnRemainsAuthoritativeWithoutPayloadCopy(t *testing.T) {
 		t.Fatal(err)
 	}
 	read, err := files.UploadedFile(ctx, fileID)
-	if err != nil || read.OwnerID != owner || read.Filename != file.Filename || read.Original != file.Original {
+	if err != nil || read.OwnerID != owner || read.SpaceID != owner || read.CreatorID != owner || read.Filename != file.Filename || read.Original != file.Original {
 		t.Fatal(read, err)
 	}
-	if _, err := s.ForUploadedFileOwner("stale-owner").UploadedFile(ctx, fileID); !errors.Is(err, fault.ErrNotFound) {
+	if _, err := s.ForUploadedFileSpace("stale-owner").UploadedFile(ctx, fileID); !errors.Is(err, fault.ErrNotFound) {
 		t.Fatal("file JSON owner authorized another user", err)
 	}
 }

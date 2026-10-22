@@ -68,7 +68,8 @@ func TestRuntimeOutboxSurvivesFailureAndRebuildsSchedule(t *testing.T) {
 	ctx := context.Background()
 	tasks := NewTaskStore(s)
 	id := identity.New("runtime_task")
-	task, err := tasks.CreateTask(ctx, d.Task{ID: id, ScopeID: "runtime-test", CommandID: id, Status: d.Queued, State: d.State{Operation: "image.generate", Binding: d.Binding{Free: true}}})
+	owner := fixtureSpace(t, s, "")
+	task, err := tasks.CreateTask(ctx, d.Task{ID: id, SpaceID: owner, OwnerID: owner, CreatorID: owner, ScopeID: "runtime-test", CommandID: id, Status: d.Queued, State: d.State{Operation: "image.generate", Binding: d.Binding{Free: true}}})
 	if err != nil {
 		t.Fatal(err)
 	}

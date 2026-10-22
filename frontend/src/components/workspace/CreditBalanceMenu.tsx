@@ -1,4 +1,6 @@
-import { useContext, useState } from 'react';
+import { useOptionalSpace } from '../../state/SpaceContext';
+import { TeamCreditBalanceMenu } from '../../features/credits/TeamCreditBalanceMenu';
+import { useContext, useRef, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { Link } from 'react-router-dom';
 import { CreditStar } from '../ui/credit-star';
@@ -16,12 +18,22 @@ import {
 } from '../../pages/credits/personal-credit-format';
 import { Spinner } from '../ui/spinner';
 import { useCatalogText } from '../../contexts/useCatalogText';
+import { RechargeButton } from '../../features/payments/Recharge';
 
 export function CreditBalanceMenu() {
+  const space = useOptionalSpace();
+  return space?.current?.kind === 'team' ? (
+    <TeamCreditBalanceMenu />
+  ) : (
+    <PersonalCreditBalanceMenu />
+  );
+}
+function PersonalCreditBalanceMenu() {
   const { c } = useCatalogText();
   const session = useContext(SessionOptionalContext),
     balance = usePersonalCredits();
   const [open, setOpen] = useState(false);
+  const openingRecharge = useRef(false);
   const [requestedScope, setRequestedScope] = useState<{
     service: Administration;
     identity: string;
@@ -31,15 +43,21 @@ export function CreditBalanceMenu() {
   const recent = useCreditRead(
     () => session!.service.myRecentLedger(),
     [balance?.revision],
-    !!session?.user && requestedScope?.service === session.service &&
-      requestedScope.identity === session.user.identity && requestedScope.epoch === sessionBoundary.epoch,
+    !!session?.user &&
+      requestedScope?.service === session.service &&
+      requestedScope.identity === session.user.identity &&
+      requestedScope.epoch === sessionBoundary.epoch,
   );
   if (!balance?.enabled) return null;
   const amount = balance.balance === null ? '—' : formatInteger(balance.balance);
   const change = (next: boolean) => {
     setOpen(next);
     if (next && !open && session?.user) {
-      setRequestedScope({ service: session.service, identity: session.user.identity, epoch: sessionBoundary.epoch });
+      setRequestedScope({
+        service: session.service,
+        identity: session.user.identity,
+        epoch: sessionBoundary.epoch,
+      });
       balance.refresh();
     }
   };
@@ -49,7 +67,9 @@ export function CreditBalanceMenu() {
         <button
           type="button"
           className="credit-balance-trigger"
-          aria-label={c('积分余额 {amount}', { amount: balance.error ? c('读取失败') : amount })}
+          aria-label={c('积分余额 {amount}', {
+            amount: balance.error ? c('读取失败') : amount,
+          })}
           onKeyDown={(event) => {
             if (event.key === 'ArrowDown') {
               event.preventDefault();
@@ -70,10 +90,25 @@ export function CreditBalanceMenu() {
           sideOffset={6}
           collisionPadding={12}
           aria-label={c('积分记录')}
+          onCloseAutoFocus={(event) => {
+            if (openingRecharge.current) {
+              event.preventDefault();
+              openingRecharge.current = false;
+            }
+          }}
         >
-          <div className="credit-panel-balance">
-            <span>{c('积分余额')}</span>
-            <strong data-long={amount.length > 14}>{amount}</strong>
+          <div className="credit-panel-balance credit-panel-balance-recharge">
+            <div className="credit-panel-balance-info">
+              <span>{c('积分余额')}</span>
+              <strong data-long={amount.length > 14}>{amount}</strong>
+            </div>
+            <RechargeButton
+              className="credit-panel-recharge"
+              onClick={() => {
+                openingRecharge.current = true;
+                change(false);
+              }}
+            />
           </div>
           {balance.syncError ? (
             <p className="credit-panel-feedback" role="status">
@@ -114,18 +149,18 @@ export function CreditBalanceMenu() {
                 {recent.value.map((entry) => (
                   <li key={entry.identity}>
                     <span>
-                      <strong title={creditRecordTitle(entry, c)}>{creditRecordTitle(entry, c)}</strong>
+                      <strong title={creditRecordTitle(entry, c)}>
+                        {creditRecordTitle(entry, c)}
+                      </strong>
                       <time dateTime={entry.at}>{shortCreditTime(entry.at)}</time>
                     </span>
                     <span
                       className="credit-record-amount"
                       data-direction={entry.direction}
-                      aria-label={
-                        c('{action} {amount} 积分', {
-                          action: c(creditDirectionLabels[entry.direction]),
-                          amount: formatInteger(entry.amount),
-                        })
-                      }
+                      aria-label={c('{action} {amount} 积分', {
+                        action: c(creditDirectionLabels[entry.direction]),
+                        amount: formatInteger(entry.amount),
+                      })}
                     >
                       {creditSignedAmount(entry)}
                     </span>

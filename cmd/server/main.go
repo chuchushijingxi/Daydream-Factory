@@ -35,6 +35,7 @@ import (
 	"drama-agent/internal/application/platform"
 	"drama-agent/internal/application/ports"
 	app "drama-agent/internal/application/project"
+	spaceapp "drama-agent/internal/application/spaces"
 	uploadapp "drama-agent/internal/application/upload"
 	md "drama-agent/internal/domain/modelconfig"
 )
@@ -100,7 +101,7 @@ func main() {
 		}
 		return runtimeState.LimitModel(model, protocol, endpoint, key), nil
 	}}
-	service := &app.Service{Credits: store, Prices: configuration, Store: store, Agent: einoagent.New(), Models: configuration, Importer: scriptimport.Importer{}, Authorize: app.UserInitiatedExecution, ReceiptTimeout: cfg.Project.ReceiptTimeout, TransportRetryInterval: cfg.Project.TransportRetryInterval}
+	service := &app.Service{Resolver: store, Access: store, Credits: store, Prices: configuration, Discounts: store, Editing: runtimeState, EditorNames: store, Store: store, Agent: einoagent.New(), Models: configuration, Importer: scriptimport.Importer{}, Authorize: app.UserInitiatedExecution, ReceiptTimeout: cfg.Project.ReceiptTimeout, TransportRetryInterval: cfg.Project.TransportRetryInterval}
 	if !readOnly {
 		service.Evidence = configuredEvidence(cfg.Evidence)
 	}
@@ -119,7 +120,7 @@ func main() {
 		}
 	}
 	service.OriginalScripts = objectStore
-	files := &uploadapp.Service{Store: store, Objects: objectStore, Thumbnails: imagethumbnail.FFmpeg{Settings: cfg.Media}, CommitCheckTimeout: cfg.Uploads.CommitCheckTimeout, CleanupTimeout: cfg.Uploads.CleanupTimeout}
+	files := &uploadapp.Service{Resolver: store, Access: store, Store: store, Objects: objectStore, Thumbnails: imagethumbnail.FFmpeg{Settings: cfg.Media}, CommitCheckTimeout: cfg.Uploads.CommitCheckTimeout, CleanupTimeout: cfg.Uploads.CleanupTimeout}
 	service.Files = files
 	taskRuntime, taskQueue, err := taskruntime.New(cfg, store, objectStore, configuration, runtimeState, files)
 	if err != nil {
@@ -134,6 +135,10 @@ func main() {
 	service.Styles, err = stylecatalog.LoadStyles(demo)
 	if err != nil {
 		log.Fatal("cannot load complete style catalog")
+	}
+	payments, err := configuredPayments(cfg, store, runtimeState)
+	if err != nil {
+		log.Fatal(err)
 	}
 	host, handler := httpapi.New(service, configuration, demo, 0)
 	host.StreamHeartbeat = appconfig.StreamHeartbeat
@@ -154,8 +159,13 @@ func main() {
 	host.Notifications = &notifications.Service{Store: store, Updates: store, Markdown: notificationmarkdown.Parser{}}
 	host.Platform = &platform.Service{Store: store, ReadOnly: readOnly}
 	host.Usage = &modelusage.Service{Queries: store}
-	host.MediaLibrary = &medialibrary.Service{Store: store}
+	host.MediaLibrary = &medialibrary.Service{Store: store, Resolver: store, Access: store, Tasks: taskRuntime.Service, Files: files}
+	host.Spaces = &spaceapp.Service{Store: store, Resolver: store, Limiter: runtimeState, Credits: store, CreditQueries: store, AllocationQueries: store, CreditUpdates: store, TeamUpdates: store}
+	payments.Targets = host.Spaces.RechargeTargets()
 	host.ReadOnly = readOnly
+	if err = host.InstallPayments(payments, appconfig.PaymentNotifyMaxBytes); err != nil {
+		log.Fatal("cannot install payment routes")
+	}
 	address := cfg.HTTP.Address
 	if !readOnly {
 		if err = host.Recover(context.Background()); err != nil {
@@ -168,6 +178,7 @@ func main() {
 	server.BaseContext = func(net.Listener) context.Context { return signalCtx }
 	workerCtx, stopWorker := context.WithCancel(signalCtx)
 	defer stopWorker()
+	paymentDone := startPaymentLoops(workerCtx, readOnly, len(payments.Channels) > 0, payments)
 	if !readOnly {
 		go store.RunRuntimeEvents(workerCtx)
 	}
@@ -177,6 +188,7 @@ func main() {
 	}
 	if !readOnly {
 		go runDailyGiftExpiration(workerCtx, store.ExpireDailyCredits)
+		go runTeamSchedule(workerCtx, host.Spaces.Schedule)
 	}
 	workerDone := make(chan struct{})
 	go func() { defer close(workerDone); taskruntime.Run(workerCtx, taskRuntime, cfg.Tasks.RestartInterval) }()
@@ -200,6 +212,11 @@ func main() {
 	case <-workerDone:
 	case <-shutdown.Done():
 		log.Print("task worker shutdown deadline; PG evidence retained for recovery")
+	}
+	select {
+	case <-paymentDone:
+	case <-shutdown.Done():
+		log.Print("payment shutdown deadline; pending PG evidence retained for recovery")
 	}
 	if err = server.Shutdown(shutdown); err != nil {
 		log.Print("HTTP shutdown deadline reached")

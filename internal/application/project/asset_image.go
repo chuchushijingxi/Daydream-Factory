@@ -6,6 +6,7 @@ import (
 
 	"drama-agent/internal/domain/fault"
 	d "drama-agent/internal/domain/project"
+	"drama-agent/internal/domain/spaces"
 	u "drama-agent/internal/domain/upload"
 )
 
@@ -13,35 +14,50 @@ func (s *Service) SaveImage(ctx context.Context, id string, revision uint64, tar
 	if err := ctx.Err(); err != nil {
 		return d.Project{}, err
 	}
-	p, err := s.Project(ctx, id)
+	p, err := s.editingProject(ctx, id)
 	if err != nil {
 		return p, err
 	}
 	if p.Revision != revision {
 		return p, fault.ErrConflict
 	}
-	change := func(p *d.Project) error {
-		if err := p.ValidateImageTarget(target); err != nil {
-			return err
-		}
-		if s.Files == nil {
-			return fault.New("FILE_STORAGE_UNAVAILABLE", "文件存储不可用")
-		}
-		file, err := s.Files.File(ctx, fileID)
-		if err != nil {
-			return err
-		}
-		// 上传元数据经真实 S3 字节与缩略图核对后才发布且不可变；
-		// 缺少真实缩略图的声明图片直接失败。
-		if !publishedUploadImage(fileID, file) {
-			return fault.New("INVALID_ASSET_IMAGE", "请上传带缩略图的图片文件")
-		}
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		return p.SetImage(target, fileID)
+	if err := p.ValidateImageTarget(target); err != nil {
+		return p, err
 	}
-	if err = change(&p); err != nil {
+	if s.Files == nil {
+		return p, fault.New("FILE_STORAGE_UNAVAILABLE", "文件存储不可用")
+	}
+	file, err := s.Files.File(ctx, fileID)
+	if err != nil {
+		return p, err
+	}
+	return s.saveKnownImage(ctx, p, revision, target, fileID, file)
+}
+
+// file已由正常选择器读取，或由同项目持久task输出验证；此函数不授予任意文件读取权。
+func (s *Service) saveKnownImage(ctx context.Context, p d.Project, revision uint64, target d.VisualTarget, fileID string, file u.File) (d.Project, error) {
+	if err := s.requireProject(ctx, p, spaces.Edit); err != nil {
+		return p, err
+	}
+	if err := s.requireEditing(ctx, p); err != nil {
+		return p, err
+	}
+	if p.Revision != revision {
+		return p, fault.ErrConflict
+	}
+	if err := p.ValidateImageTarget(target); err != nil {
+		return p, err
+	}
+	if file.SpaceID != p.SpaceID {
+		return p, fault.ErrNotFound
+	}
+	if !publishedUploadImage(fileID, file) {
+		return p, fault.New("INVALID_ASSET_IMAGE", "请上传带缩略图的图片文件")
+	}
+	if err := ctx.Err(); err != nil {
+		return p, err
+	}
+	if err := p.SetImage(target, fileID); err != nil {
 		return p, err
 	}
 	return s.commit(ctx, p, revision)

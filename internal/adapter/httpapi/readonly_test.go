@@ -17,6 +17,10 @@ func TestReadOnlyServiceRejectsWritesBeforeAccessingStoreOrModel(t *testing.T) {
 	host, handler := httpapi.New(&app.Service{}, nil, "../../../demo", 0)
 	handler = authenticatedFixture(host, handler)
 	host.ReadOnly = true
+	routeProbe := http.NewServeMux()
+	for _, route := range host.Routes() {
+		routeProbe.HandleFunc(route.Pattern, func(http.ResponseWriter, *http.Request) {})
+	}
 	if err := host.Recover(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -34,6 +38,15 @@ func TestReadOnlyServiceRejectsWritesBeforeAccessingStoreOrModel(t *testing.T) {
 			w := httptest.NewRecorder()
 			handler.ServeHTTP(w, r)
 			var result map[string]string
+			_, pattern := routeProbe.Handler(r)
+			if pattern == "" {
+				fallback := httptest.NewRecorder()
+				routeProbe.ServeHTTP(fallback, r)
+				if w.Code != fallback.Code {
+					t.Fatalf("unmatched method changed mux result: %s %s: %d want %d", method, path, w.Code, fallback.Code)
+				}
+				continue
+			}
 			if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || w.Code != 403 || result["code"] != "SERVICE_READ_ONLY" {
 				t.Fatalf("%s %s: %d %s", method, path, w.Code, w.Body.String())
 			}

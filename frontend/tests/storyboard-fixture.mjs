@@ -3,7 +3,7 @@ export function createStoryboardFixture() {
   const copy = (v) => structuredClone(v),
     requests = [],
     mediaTasks = [];
-  let mediaCounter = 0;
+  let mediaCounter = 0, editorOwned = false;
   const mediaModels = {
     image: [
       {
@@ -124,6 +124,7 @@ export function createStoryboardFixture() {
   });
   let project = {
     id: 'p5_free',
+    spaceId: 'fixture_operator', ownerId: 'fixture_operator', creatorId: 'fixture_operator',
     title: '免费隔离夹具 · 重逢与归途',
     revision: 8,
     source: { filename: 'fiction.txt', version: 1, sha256: 'fixture', spanCount: 2 },
@@ -442,6 +443,14 @@ export function createStoryboardFixture() {
         options.body && typeof options.body === 'string' ? JSON.parse(options.body) : options.body,
       method = options.method || 'GET';
     requests.push({ path, method, body: copy(body) });
+    if (path === '/api/projects/p5_free/permissions' && method === 'GET')
+      return Response.json({spaceId: project.spaceId, ownerId: project.ownerId, creatorId: project.creatorId, access: readOnly ? 1 : 2, canShare: false});
+    if (path === '/api/projects/p5_free/editing') {
+      if (method === 'DELETE') { editorOwned = false; return Response.json({released: true}); }
+      if (readOnly) return fail('SERVICE_READ_ONLY', '免费夹具当前只读', 403);
+      if (method === 'POST') editorOwned = true;
+      return Response.json({userId: editorOwned ? project.ownerId : '', username: editorOwned ? '虚构编辑者' : '', expiresAt: editorOwned ? new Date(Date.now()+90000).toISOString() : null, owned: editorOwned});
+    }
     if (path === '/api/status')
       return Response.json({
         readOnly,
@@ -467,6 +476,7 @@ export function createStoryboardFixture() {
       return Response.json([
         {
           id: project.id,
+          spaceId: project.spaceId, ownerId: project.ownerId, creatorId: project.creatorId, creatorName: '虚构编辑者', sharedWithMe: false, effectiveAccess: readOnly ? 1 : 2,
           title: project.title,
           filename: 'fiction.txt',
           revision: project.revision,
@@ -562,8 +572,8 @@ export function createStoryboardFixture() {
           const target = t.target.lookId ? a.looks.find((l) => l.id === t.target.lookId) : a;
           target.image = {
             fileId: 'file_' + t.id,
-            thumbnailUrl: '/api/files/file_' + t.id + '/thumbnail',
-            originalUrl: '/api/files/file_' + t.id + '/original',
+            thumbnailUrl: '/api/projects/p5_free/files/file_' + t.id + '/thumbnail',
+            originalUrl: '/api/projects/p5_free/files/file_' + t.id + '/original',
           };
         }
         project.revision++;
@@ -742,7 +752,7 @@ export function createStoryboardFixture() {
                   '/outputs/output_' +
                   t.id +
                   '/thumbnail'
-                : '/api/files/file_' + t.id + '/thumbnail',
+                : '/api/projects/p5_free/media-tasks/' + t.id + '/outputs/output_' + t.id + '/thumbnail',
               sizeBytes: 1024,
               sha256: 'a'.repeat(64),
               width: video ? 1920 : 720,

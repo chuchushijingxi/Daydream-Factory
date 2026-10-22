@@ -38,8 +38,8 @@ type pausedProjectStore struct {
 	id, boundary, gate string
 }
 
-func (s pausedProjectStore) ForProjectOwner(owner string) ports.ProjectStore {
-	s.ProjectStore = s.ProjectStore.(ports.OwnedProjects).ForProjectOwner(owner)
+func (s pausedProjectStore) ForProjectSpace(owner string) ports.ProjectStore {
+	s.ProjectStore = s.ProjectStore.(ports.ScopedProjects).ForProjectSpace(owner)
 	return s
 }
 
@@ -84,8 +84,8 @@ func TestFaultWorkerProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	scoped := pausedProjectStore{ProjectStore: store, id: os.Getenv("DRAMA_P3_TEST_PROJECT"), boundary: os.Getenv("DRAMA_P3_PAUSE"), gate: os.Getenv("DRAMA_P3_GATE")}
-	service := &app.Service{Credits: store, Prices: &frozenFixturePrices{version: 1}, Authorize: freeAuthorization, Store: scoped, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: model}}
-	host, handler := httpapi.New(service, nil, "../../../demo", 0)
+	service := &app.Service{Resolver: store, Access: store, EditorNames: store, Credits: store, Prices: &frozenFixturePrices{version: 1}, Authorize: freeAuthorization, Store: scoped, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: model}}
+	host, handler := httpapi.New(configuredFixture(service), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -188,8 +188,8 @@ func TestRealProcessKillAndTCPFailureRecovery(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer store.Close()
-			service := &app.Service{Credits: store, Prices: &frozenFixturePrices{version: 1}, Authorize: freeAuthorization, Store: store, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: &protocolModel{}}}
-			p, err := service.ForActor(legacyHTTPActor).Create(ctx, "P3本地故障验证:"+scenario, "fault.txt", []byte("祖父把铜钥匙交给小雨。\n另一把铜钥匙放在门边。"), 0)
+			service := &app.Service{Resolver: store, Access: store, EditorNames: store, Credits: store, Prices: &frozenFixturePrices{version: 1}, Authorize: freeAuthorization, Store: store, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: &protocolModel{}}}
+			p, err := fixtureProject(t, service, legacyHTTPActor).Create(ctx, "P3本地故障验证:"+scenario, "fault.txt", []byte("祖父把铜钥匙交给小雨。\n另一把铜钥匙放在门边。"), 0)
 			if err != nil {
 				t.Fatal(err)
 			}

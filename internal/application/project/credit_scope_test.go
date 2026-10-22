@@ -46,12 +46,14 @@ func TestCreditTargetScopesExcludeSupportProtocolAndOutput(t *testing.T) {
 
 type absentMediaTasks struct{ ports.TaskStore }
 
+func (s absentMediaTasks) ForTaskScope(ports.SpaceScope) ports.TaskStore { return s }
+
 func (absentMediaTasks) TaskByCommand(context.Context, string, string) (td.Task, error) {
 	return td.Task{}, fault.ErrNotFound
 }
 func TestOwnedMediaCannotStartWithoutBillingResources(t *testing.T) {
 	s, _, p := p5Prepared(t)
-	p.OwnerID = "fixture-owner"
+	p.SpaceID, p.OwnerID, p.CreatorID = "fixture-owner", "fixture-owner", "fixture-owner"
 	var e error
 	p, e = s.commit(context.Background(), p, p.Revision)
 	if e != nil {

@@ -8,6 +8,7 @@ import { useSession } from '../../state/SessionContext';
 import { useRead, Field } from '../operations/controls';
 import type { AuthForm } from '../../api/administration';
 import { sessionBoundary } from '../../api/session-boundary';
+import { safeReturnTo } from '../../api/space-selection';
 import { PlatformLogo } from '../../components/workspace/PlatformLogo';
 import { usePlatform } from '../../state/PlatformContext';
 import { AuthScene } from './AuthScene';
@@ -28,7 +29,7 @@ export function OperationsAuthPage() {
 function AuthenticationForm({ operations }: { operations: boolean }) {
   const { c } = useCatalogText();
   const { settings: brand } = usePlatform();
-  const { pathname } = useLocation(),
+  const { pathname, search } = useLocation(),
     session = useSession(),
     { theme, toggleTheme } = useWorkspace();
   const mode =
@@ -37,7 +38,10 @@ function AuthenticationForm({ operations }: { operations: boolean }) {
       : pathname === (operations ? '/operations/forgot-password' : '/forgot-password')
         ? 'reset'
         : 'login';
-  const loginPath = operations ? '/operations-login' : '/login';
+  const returnTo = operations ? '' : safeReturnTo(new URLSearchParams(search).get('returnTo'));
+  const carry = (path: string) =>
+    path + (returnTo ? '?returnTo=' + encodeURIComponent(returnTo) : '');
+  const loginPath = carry(operations ? '/operations-login' : '/login');
   const [method, setMethod] = useState<'password' | 'email'>('password'),
     [form, setForm] = useState(emptyForm),
     [error, setError] = useState(''),
@@ -284,7 +288,9 @@ function AuthenticationForm({ operations }: { operations: boolean }) {
                   options.busy ||
                   !options.value ||
                   (mode === 'login' &&
-                    !(method === 'password' ? options.value.passwordLogin : options.value.emailLogin))
+                    !(method === 'password'
+                      ? options.value.passwordLogin
+                      : options.value.emailLogin))
                 }
               >
                 {mode === 'register' ? c('注册') : mode === 'reset' ? c('重置密码') : c('登录')}
@@ -293,8 +299,8 @@ function AuthenticationForm({ operations }: { operations: boolean }) {
             <div className="account-links">
               {mode === 'login' ? (
                 <>
-                  {!operations ? <Link to="/register">{c('注册账号')}</Link> : null}
-                  <Link to={operations ? '/operations/forgot-password' : '/forgot-password'}>
+                  {!operations ? <Link to={carry('/register')}>{c('注册账号')}</Link> : null}
+                  <Link to={carry(operations ? '/operations/forgot-password' : '/forgot-password')}>
                     {c('忘记密码')}
                   </Link>
                 </>

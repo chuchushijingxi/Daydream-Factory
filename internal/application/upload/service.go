@@ -14,11 +14,16 @@ import (
 	"drama-agent/internal/application/ports"
 	"drama-agent/internal/domain/fault"
 	"drama-agent/internal/domain/identity"
+	"drama-agent/internal/domain/spaces"
 	d "drama-agent/internal/domain/upload"
 )
 
 type Service struct {
-	owner              *string
+	scope              *ports.SpaceScope
+	trusted            *ports.SpaceScope
+	creator            string
+	Resolver           ports.SpaceResolver
+	Access             ports.SpaceAccess
 	Store              ports.UploadedFileStore
 	Objects            ports.FileObjects
 	Thumbnails         ports.ImageThumbnailer
@@ -41,6 +46,9 @@ func (s *Service) ImportGenerated(ctx context.Context, key string, m ports.Media
 	id := "file_" + hex.EncodeToString(sum[:16])
 	existing, err := s.File(ctx, id)
 	if err == nil {
+		if s.trusted != nil && (existing.SpaceID != s.trusted.SpaceID || existing.OwnerID != s.trusted.UserID || existing.CreatorID != s.creator) {
+			return d.File{}, fault.ErrConflict
+		}
 		hash := sha256.Sum256(m.Data)
 		if existing.Original.SHA256 != hex.EncodeToString(hash[:]) || existing.Thumbnail == nil {
 			return d.File{}, fault.ErrConflict
@@ -55,8 +63,21 @@ func (s *Service) ImportGenerated(ctx context.Context, key string, m ports.Media
 
 func (s *Service) save(ctx context.Context, id string, in Input, deterministic bool) (d.File, error) {
 	var file d.File
-	if s.owner != nil && *s.owner == "" {
-		return file, fault.New("AUTH_REQUIRED", "缺少可信归属")
+	scope := ports.SpaceScope{}
+	if s.scope != nil {
+		var err error
+		scope, err = ports.ResolveSpace(ctx, s.Resolver, *s.scope)
+		if err != nil {
+			return file, err
+		}
+		if scope.ReadOnly {
+			return file, fault.New("TEAM_READ_ONLY", "团队已只读")
+		}
+	} else if s.trusted != nil {
+		scope = *s.trusted
+		if scope.SpaceID == "" || scope.UserID == "" {
+			return file, fault.New("AUTH_REQUIRED", "缺少可信空间归属")
+		}
 	}
 	if err := ctx.Err(); err != nil {
 		return file, err
@@ -102,9 +123,9 @@ func (s *Service) save(ctx context.Context, id string, in Input, deterministic b
 			return file, fault.New("THUMBNAIL_FAILED", "缩略图输出核对失败")
 		}
 	}
-	file = d.File{ID: id, Filename: filename, CreatedAt: time.Now().UTC()}
-	if s.owner != nil {
-		file.OwnerID = *s.owner
+	file = d.File{SpaceID: scope.SpaceID, OwnerID: scope.UserID, CreatorID: scope.UserID, ID: id, Filename: filename, CreatedAt: time.Now().UTC()}
+	if s.trusted != nil {
+		file.CreatorID = s.creator
 	}
 	var err error
 	file.Original, err = s.Objects.PutFile(ctx, file.ID, "original", kind, in.Data)
@@ -130,10 +151,18 @@ func (s *Service) save(ctx context.Context, id string, in Input, deterministic b
 		}
 		return file, s.rollback(ctx, file, err)
 	}
-	if err = s.Store.CreateUploadedFile(ctx, file); err != nil {
+	store := s.Store
+	if s.scope != nil || s.trusted != nil {
+		if stores, ok := store.(ports.ScopedFiles); ok {
+			store = stores.ForUploadedFileSpace(scope.SpaceID)
+		} else {
+			store = deniedFiles{}
+		}
+	}
+	if err = store.CreateUploadedFile(ctx, file); err != nil {
 		if deterministic {
 			existing, checkErr := s.File(ctx, id)
-			if checkErr == nil && existing.Original.SHA256 == file.Original.SHA256 && existing.Thumbnail != nil {
+			if checkErr == nil && existing.SpaceID == file.SpaceID && existing.OwnerID == file.OwnerID && existing.CreatorID == file.CreatorID && existing.Original.SHA256 == file.Original.SHA256 && existing.Thumbnail != nil {
 				return existing, nil
 			}
 			return file, err
@@ -142,7 +171,7 @@ func (s *Service) save(ctx context.Context, id string, in Input, deterministic b
 		// 只补偿确认缺失的记录。
 		check, cancel := s.afterCancel(ctx, s.CommitCheckTimeout)
 		defer cancel()
-		_, readErr := s.Store.UploadedFile(check, file.ID)
+		_, readErr := store.UploadedFile(check, file.ID)
 		if errors.Is(readErr, fault.ErrNotFound) {
 			if deterministic {
 				return file, err
@@ -185,7 +214,17 @@ func (s *Service) File(ctx context.Context, id string) (d.File, error) {
 	if s == nil || s.Store == nil {
 		return d.File{}, fault.New("FILE_STORAGE_UNAVAILABLE", "文件存储不可用")
 	}
-	return s.Store.UploadedFile(ctx, id)
+	file, err := s.Store.UploadedFile(ctx, id)
+	if err != nil {
+		return d.File{}, err
+	}
+	if s.scope != nil {
+		_, err = ports.RequireSpaceAccess(ctx, s.Access, *s.scope, spaces.Resource{SpaceID: file.SpaceID, OwnerID: file.OwnerID, Kind: "upload", ID: file.ID}, spaces.Read)
+		if err != nil {
+			return d.File{}, err
+		}
+	}
+	return file, nil
 }
 
 func (s *Service) ReadOriginal(ctx context.Context, id string) (d.File, []byte, error) {
@@ -197,6 +236,9 @@ func (s *Service) Read(ctx context.Context, id string, thumbnail bool) (d.File, 
 	if err != nil {
 		return file, nil, err
 	}
+	return s.readFile(ctx, file, thumbnail)
+}
+func (s *Service) readFile(ctx context.Context, file d.File, thumbnail bool) (d.File, []byte, error) {
 	blob := file.Original
 	if thumbnail {
 		if file.Thumbnail == nil {
@@ -207,7 +249,7 @@ func (s *Service) Read(ctx context.Context, id string, thumbnail bool) (d.File, 
 	if s.Objects == nil {
 		return file, nil, fault.New("FILE_STORAGE_UNAVAILABLE", "文件存储不可用")
 	}
-	raw, err := s.Objects.ReadFile(ctx, id, blob)
+	raw, err := s.Objects.ReadFile(ctx, file.ID, blob)
 	return file, raw, err
 }
 
@@ -218,24 +260,40 @@ func (s *Service) afterCancel(ctx context.Context, timeout time.Duration) (conte
 	return context.WithCancel(context.WithoutCancel(ctx))
 }
 
-func (s *Service) ForActor(a ports.Actor) *Service {
-	owner := ""
-	if a.Require() == nil {
-		owner = a.UserID
-	}
-	return s.owned(owner)
-}
-func (s *Service) ForFileOwner(owner string) ports.FileReader { return s.owned(owner) }
-func (s *Service) owned(owner string) *Service {
+// ForScope 是用户请求入口，按 ID 读取以文件自身空间鉴权。
+func (s *Service) ForScope(scope ports.SpaceScope) *Service {
 	if s == nil {
 		s = &Service{}
 	}
 	copy := *s
-	copy.owner = &owner
-	if store, ok := s.Store.(ports.OwnedFiles); ok {
-		copy.Store = store.ForUploadedFileOwner(owner)
+	copy.scope = &scope
+	copy.trusted = nil
+	return &copy
+}
+func (s *Service) ForFileScope(scope ports.SpaceScope) ports.FileReader { return s.ForScope(scope) }
+
+// ForFileSpace 仅供后台按已持久化空间读取。
+func (s *Service) ForFileSpace(space string) ports.FileReader {
+	copy := *s
+	copy.scope = nil
+	copy.trusted = nil
+	if stores, ok := s.Store.(ports.ScopedFiles); ok {
+		copy.Store = stores.ForUploadedFileSpace(space)
 	} else {
 		copy.Store = deniedFiles{}
+	}
+	return &copy
+}
+
+// ForGeneratedResource 只消费任务持久归属，不做浏览器成员权限复核。
+// 已预扣任务在成员离开后仍须完成原产物保存。
+func (s *Service) ForGeneratedResource(space, owner, creator string) ports.GeneratedFiles {
+	copy := *s
+	copy.scope = nil
+	copy.trusted = &ports.SpaceScope{SpaceID: space, UserID: owner}
+	copy.creator = creator
+	if creator == "" {
+		copy.trusted.UserID = ""
 	}
 	return &copy
 }
@@ -243,10 +301,8 @@ func (s *Service) owned(owner string) *Service {
 type deniedFiles struct{}
 
 func (deniedFiles) CreateUploadedFile(context.Context, d.File) error {
-	return fault.New("AUTH_REQUIRED", "文件归属存储不可用")
+	return fault.New("AUTH_REQUIRED", "文件空间存储不可用")
 }
 func (deniedFiles) UploadedFile(context.Context, string) (d.File, error) {
-	return d.File{}, fault.New("AUTH_REQUIRED", "文件归属存储不可用")
+	return d.File{}, fault.New("AUTH_REQUIRED", "文件空间存储不可用")
 }
-
-func (s *Service) ForGeneratedOwner(owner string) ports.GeneratedFiles { return s.owned(owner) }

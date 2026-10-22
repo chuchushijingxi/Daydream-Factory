@@ -195,13 +195,13 @@ func TestMockBehaviorRealPGHTTPFrozenDelayProbabilityAndRecovery(t *testing.T) {
 	if _, err = conn.Exec(ctx, "UPDATE drama_catalog_v1.users SET role='operator' WHERE id=$1", owner.ID); err != nil {
 		t.Fatal(err)
 	}
-	p := d.Project{ID: identity.New("mock_behavior"), OwnerID: owner.ID, Revision: 1, Title: "Mock图片视频免费隔离验证", ScriptSource: d.ScriptSource{Version: 1}, Assets: []d.Asset{{ID: "asset", Kind: "prop", Name: "铜钥匙"}}, Runs: []d.Run{{ID: "catalog", Contract: d.CatalogExtractionContract, SourceVersion: 1, Status: d.RunCompleted}}, VisualPrompts: []d.VisualPrompt{{VisualPromptInput: d.VisualPromptInput{Target: d.VisualTarget{AssetID: "asset"}, Text: "铜制钥匙，完整免费夹具外观"}, SourceVersion: 1, Origin: "user"}}}
+	p := d.Project{ID: identity.New("mock_behavior"), SpaceID: owner.ID, CreatorID: owner.ID, OwnerID: owner.ID, Revision: 1, Title: "Mock图片视频免费隔离验证", ScriptSource: d.ScriptSource{Version: 1}, Assets: []d.Asset{{ID: "asset", Kind: "prop", Name: "铜钥匙"}}, Runs: []d.Run{{ID: "catalog", Contract: d.CatalogExtractionContract, SourceVersion: 1, Status: d.RunCompleted}}, VisualPrompts: []d.VisualPrompt{{VisualPromptInput: d.VisualPromptInput{Target: d.VisualTarget{AssetID: "asset"}, Text: "铜制钥匙，完整免费夹具外观"}, SourceVersion: 1, Origin: "user"}}}
 	seedMediaHTTPStoryboard(&p)
 	if err = store.Create(ctx, p); err != nil {
 		t.Fatal(err)
 	}
 	service := &project.Service{Credits: store, Store: store, Models: configuration, Prices: configuration, Files: files, MediaTasks: runtime.Service}
-	h, handler := httpapi.New(service, configuration, "../../../demo", 0)
+	h, handler := httpapi.New(configuredFixture(service), configuration, "../../../demo", 0)
 	h.Accounts = accountService
 	h.Authenticator = accountService
 	h.Files = files
@@ -712,7 +712,7 @@ func TestMockBehaviorRealPGHTTPFrozenDelayProbabilityAndRecovery(t *testing.T) {
 	// then permits the same local model with zero entries, retaining original price.
 	otherProject := d.Clone(p)
 	otherProject.ID = identity.New("zero_balance_media")
-	otherProject.OwnerID = other.ID
+	otherProject.SpaceID, otherProject.CreatorID, otherProject.OwnerID = other.ID, other.ID, other.ID
 	if e = store.Create(ctx, otherProject); e != nil {
 		t.Fatal(e)
 	}

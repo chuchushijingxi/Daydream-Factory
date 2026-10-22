@@ -1,0 +1,49 @@
+/* Standalone legal documents: no workspace shell, only the document itself. */
+.legal-page {
+  min-height: 100dvh;
+  overflow: auto;
+  background: var(--jm-workspace);
+  color: var(--jm-text);
+  padding: 64px 24px 80px;
+}
+.legal-document {
+  max-width: 720px;
+  margin: 0 auto;
+  font-size: 14px;
+  line-height: 26px;
+}
+.legal-document h1 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 34px;
+  font-weight: var(--font-weight-semibold);
+}
+.legal-document-note,
+.legal-document-version {
+  margin: 8px 0 0;
+  color: var(--jm-muted);
+  font-size: 12px;
+  line-height: 20px;
+}
+.legal-document section {
+  margin-top: 28px;
+}
+.legal-document h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  line-height: 24px;
+  font-weight: var(--font-weight-medium);
+}
+.legal-document p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .legal-page {
+    padding: 40px 20px 56px;
+  }
+  .legal-document h1 {
+    font-size: 20px;
+    line-height: 28px;
+  }
+}

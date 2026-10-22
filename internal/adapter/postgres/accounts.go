@@ -178,6 +178,9 @@ func (r *registrationTx) CreateUser(ctx context.Context, in a.Registration) (a.U
 	if err != nil {
 		return user, err
 	}
+	if _, err = r.tx.Exec(ctx, `INSERT INTO drama_catalog_v1.spaces(id,kind) VALUES($1,'personal')`, user.ID); err != nil {
+		return user, err
+	}
 	if r.requiresCode {
 		_, err = r.tx.Exec(ctx, `UPDATE drama_catalog_v1.authorization_codes SET used_by=$2,used_at=now() WHERE id=$1`, authorization.ID, user.ID)
 	}
@@ -314,6 +317,9 @@ func (s *Store) InitializeOperator(ctx context.Context, id string, hash []byte) 
 	}
 	u, e = scanUser(tx.QueryRow(ctx, `INSERT INTO drama_catalog_v1.users(id,email,username,role,password_hash) VALUES($1,$2,$4,'operator',$3) RETURNING `+userColumns, id, a.InitialOperatorEmail, hash, a.InitialOperatorUsername))
 	if e != nil {
+		return u, false, e
+	}
+	if _, e = tx.Exec(ctx, `INSERT INTO drama_catalog_v1.spaces(id,kind) VALUES($1,'personal')`, u.ID); e != nil {
 		return u, false, e
 	}
 	e = tx.Commit(ctx)

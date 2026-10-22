@@ -32,6 +32,7 @@ func TestProjectReadKeepsMeteringAndRecoverySnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := d.Project{ID: identity.New("read_view"), OwnerID: identity.New("owner"), Revision: 1, Original: []byte("原件"), ScriptSource: d.ScriptSource{Version: 3, Spans: []d.SourceSpan{{ID: "a", Text: "完整原文🙂"}}}, Runs: []d.Run{{ID: "run", Status: d.RunRunning, Calls: []d.Call{{ID: "known", Request: json.RawMessage(`{"private":"request"}`), Response: strings.Repeat("原答", 50000), ProviderState: "signed state", Actions: []d.Action{{ID: "action", Name: "save"}}, Usage: billing.Usage{Known: true, Input: 123, Output: 99}, CostMicroCNY: 77}, {ID: "unknown", Status: "pending", ReservedMicroCNY: 300}}}}}
+	p = fixtureProject(t, store, p)
 	if err = store.Create(ctx, p); err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +41,7 @@ func TestProjectReadKeepsMeteringAndRecoverySnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	owned := store.ForProjectOwner(p.OwnerID)
+	owned := store.ForProjectSpace(p.OwnerID)
 	read, err := owned.(ports.ProjectReader).ReadProject(ctx, p.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -74,7 +75,7 @@ func TestProjectReadKeepsMeteringAndRecoverySnapshot(t *testing.T) {
 		t.Fatal("projection changed recovery evidence", err)
 	}
 	for _, owner := range []string{"other", ""} {
-		if _, err = store.ForProjectOwner(owner).(ports.ProjectReader).ReadProject(ctx, p.ID); err == nil {
+		if _, err = store.ForProjectSpace(owner).(ports.ProjectReader).ReadProject(ctx, p.ID); err == nil {
 			t.Fatal("owner boundary", owner)
 		}
 	}

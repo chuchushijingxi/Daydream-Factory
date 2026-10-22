@@ -74,6 +74,32 @@ func (w Wallet) Deduct(amount int64) (Wallet, Allocation, error) {
 	return w, a, nil
 }
 
+// Reclaim 定向扣回非每日的原发放分类，不沿消费扣款顺序分配。
+func (w Wallet) Reclaim(category string, amount int64) (Wallet, Allocation, error) {
+	a, err := Funding(amount, category)
+	if err != nil {
+		return Wallet{}, Allocation{}, err
+	}
+	// 即使输入钱包损坏，也不能让减法溢出或把每日赠送归入可退余额。
+	if w.Balance < 0 || w.Balance > MaxAmount || w.RechargeBalance < 0 || w.RechargeBalance > w.Balance ||
+		w.GiftBalance < 0 || w.GiftBalance > w.Balance-w.RechargeBalance ||
+		w.LegacyBalance != w.Balance-w.RechargeBalance-w.GiftBalance ||
+		w.DailyBalance < 0 || w.DailyBalance > w.GiftBalance || (w.DailyBalance == 0) != (w.DailyExpiresAt == nil) {
+		return Wallet{}, Allocation{}, fault.ErrInvalid
+	}
+	available := w.RechargeBalance
+	if category == Gift {
+		available = w.GiftBalance - w.DailyBalance
+	}
+	if amount > available {
+		return Wallet{}, Allocation{}, fault.New("CREDIT_INSUFFICIENT", "积分余额不足")
+	}
+	w.Balance -= amount
+	w.RechargeBalance -= a.Recharge
+	w.GiftBalance -= a.Gift
+	return w, a, nil
+}
+
 func (w Wallet) Credit(a Allocation) (Wallet, error) {
 	if a.Daily < 0 || a.Daily > a.Gift || (a.Daily == 0) != (a.DailyExpiresAt == nil) {
 		return Wallet{}, fault.ErrInvalid

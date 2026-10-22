@@ -14,22 +14,23 @@ import (
 )
 
 type TaskStore struct {
-	store *Store
-	owner *string
+	store        *Store
+	space        *string
+	commandActor *string
 }
 
 func NewTaskStore(s *Store) *TaskStore { return &TaskStore{store: s} }
 
 var _ ports.TaskStore = (*TaskStore)(nil)
 
-const taskColumns = `id,scope_id,command_id,status,revision,next_run_at,lease_token,lease_until,payload,created_at,updated_at,coalesce(owner_id,'')`
+const taskColumns = `id,scope_id,command_id,status,revision,next_run_at,lease_token,lease_until,payload,created_at,updated_at,space_id,owner_id,creator_id`
 
 type rowScanner interface{ Scan(...any) error }
 
 func scanTask(row rowScanner) (d.Task, error) {
 	var t d.Task
 	var raw []byte
-	err := row.Scan(&t.ID, &t.ScopeID, &t.CommandID, &t.Status, &t.Revision, &t.NextRunAt, &t.LeaseToken, &t.LeaseUntil, &raw, &t.CreatedAt, &t.UpdatedAt, &t.OwnerID)
+	err := row.Scan(&t.ID, &t.ScopeID, &t.CommandID, &t.Status, &t.Revision, &t.NextRunAt, &t.LeaseToken, &t.LeaseUntil, &raw, &t.CreatedAt, &t.UpdatedAt, &t.SpaceID, &t.OwnerID, &t.CreatorID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return t, fault.ErrNotFound
 	}
@@ -40,8 +41,11 @@ func scanTask(row rowScanner) (d.Task, error) {
 	return t, err
 }
 func (s *TaskStore) CreateTask(ctx context.Context, t d.Task) (d.Task, error) {
-	if s.owner != nil && (*s.owner == "" || t.OwnerID != *s.owner) {
+	if s.space != nil && (*s.space == "" || t.SpaceID != *s.space) {
 		return t, fault.New("AUTH_REQUIRED", "缺少可信归属")
+	}
+	if t.SpaceID == "" || t.OwnerID == "" || t.CreatorID == "" {
+		return t, fault.ErrInvalid
 	}
 	input, err := json.Marshal(t.Snapshot)
 	if err != nil {
@@ -51,27 +55,27 @@ func (s *TaskStore) CreateTask(ctx context.Context, t d.Task) (d.Task, error) {
 	if err != nil {
 		return t, err
 	}
-	got, err := scanTask(s.store.pool.QueryRow(ctx, `INSERT INTO drama_catalog_v1.tasks(id,scope_id,command_id,status,revision,next_run_at,lease_token,input_snapshot,payload,owner_id) VALUES($1,$2,$3,$4,1,now(),'',$5,$6,NULLIF($7,'')) ON CONFLICT ((coalesce(owner_id,'')),scope_id,command_id) DO NOTHING RETURNING `+taskColumns, t.ID, t.ScopeID, t.CommandID, t.Status, input, body, t.OwnerID))
+	got, err := scanTask(s.store.pool.QueryRow(ctx, `INSERT INTO drama_catalog_v1.tasks(id,scope_id,command_id,status,revision,next_run_at,lease_token,input_snapshot,payload,space_id,owner_id,creator_id) VALUES($1,$2,$3,$4,1,now(),'',$5,$6,$7,$8,$9) ON CONFLICT (space_id,owner_id,scope_id,command_id) DO NOTHING RETURNING `+taskColumns, t.ID, t.ScopeID, t.CommandID, t.Status, input, body, t.SpaceID, t.OwnerID, t.CreatorID))
 	if errors.Is(err, fault.ErrNotFound) {
-		got, err = s.TaskByCommand(ctx, t.ScopeID, t.CommandID)
+		got, err = scanTask(s.store.pool.QueryRow(ctx, `SELECT `+taskColumns+` FROM drama_catalog_v1.tasks WHERE space_id=$1 AND owner_id=$2 AND scope_id=$3 AND command_id=$4`, t.SpaceID, t.OwnerID, t.ScopeID, t.CommandID))
 		if err == nil && got.State.CommandDigest != t.State.CommandDigest {
 			return got, fault.New("COMMAND_ID_CONFLICT", "同一命令对应不同请求")
 		}
 		return got, err
 	}
 	var e *pgconn.PgError
-	if errors.As(err, &e) && e.Code == "23505" && (e.ConstraintName == "tasks_active_uidx" || e.ConstraintName == "tasks_owner_active_uidx") {
+	if errors.As(err, &e) && e.Code == "23505" && e.ConstraintName == "tasks_space_active_uidx" {
 		return d.Task{}, fault.New("TASK_ACTIVE", "该目标已有活动任务")
 	}
 	return got, err
 }
 func (s *TaskStore) Task(ctx context.Context, id string) (d.Task, error) {
-	return scanTask(s.store.pool.QueryRow(ctx, `SELECT `+taskColumns+` FROM drama_catalog_v1.tasks WHERE id=$1 AND ($2::text IS NULL OR (owner_id=$2 AND $2<>''))`, id, s.owner))
+	return scanTask(s.store.pool.QueryRow(ctx, `SELECT `+taskColumns+` FROM drama_catalog_v1.tasks WHERE id=$1 AND ($2::text IS NULL OR (space_id=$2 AND $2<>''))`, id, s.space))
 }
 func (s *TaskStore) TaskInput(ctx context.Context, id string) (d.Snapshot, error) {
 	var raw []byte
 	var out d.Snapshot
-	err := s.store.pool.QueryRow(ctx, `SELECT input_snapshot FROM drama_catalog_v1.tasks WHERE id=$1 AND ($2::text IS NULL OR (owner_id=$2 AND $2<>''))`, id, s.owner).Scan(&raw)
+	err := s.store.pool.QueryRow(ctx, `SELECT input_snapshot FROM drama_catalog_v1.tasks WHERE id=$1 AND ($2::text IS NULL OR (space_id=$2 AND $2<>''))`, id, s.space).Scan(&raw)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return out, fault.ErrNotFound
 	}
@@ -88,7 +92,7 @@ func (s *TaskStore) TaskInputs(ctx context.Context, scope string, ids []string) 
 	if scope == "" || len(ids) == 0 {
 		return out, nil
 	}
-	rows, err := s.store.pool.Query(ctx, `SELECT id,input_snapshot FROM drama_catalog_v1.tasks WHERE scope_id=$1 AND id=ANY($2) AND ($3::text IS NULL OR (owner_id=$3 AND $3<>''))`, scope, ids, s.owner)
+	rows, err := s.store.pool.Query(ctx, `SELECT id,input_snapshot FROM drama_catalog_v1.tasks WHERE scope_id=$1 AND id=ANY($2) AND ($3::text IS NULL OR (space_id=$3 AND $3<>''))`, scope, ids, s.space)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +112,10 @@ func (s *TaskStore) TaskInputs(ctx context.Context, scope string, ids []string) 
 	return out, rows.Err()
 }
 func (s *TaskStore) TaskByCommand(ctx context.Context, scope, command string) (d.Task, error) {
-	return scanTask(s.store.pool.QueryRow(ctx, `SELECT `+taskColumns+` FROM drama_catalog_v1.tasks WHERE scope_id=$1 AND command_id=$2 AND ($3::text IS NULL OR (owner_id=$3 AND $3<>''))`, scope, command, s.owner))
+	if s.space == nil || *s.space == "" || s.commandActor == nil || *s.commandActor == "" {
+		return d.Task{}, fault.New("AUTH_REQUIRED", "缺少可信空间与操作者")
+	}
+	return scanTask(s.store.pool.QueryRow(ctx, `SELECT `+taskColumns+` FROM drama_catalog_v1.tasks WHERE space_id=$1 AND owner_id=$2 AND scope_id=$3 AND command_id=$4`, *s.space, *s.commandActor, scope, command))
 }
 func (s *TaskStore) ListTasks(ctx context.Context, scope, operation string, c *ports.TaskCursor, limit int) ([]d.Task, error) {
 	var at *time.Time
@@ -117,7 +124,7 @@ func (s *TaskStore) ListTasks(ctx context.Context, scope, operation string, c *p
 		at = &c.At
 		id = c.ID
 	}
-	rows, err := s.store.pool.Query(ctx, `SELECT `+taskColumns+` FROM drama_catalog_v1.tasks WHERE scope_id=$1 AND ($2='' OR payload->>'operation'=$2) AND ($3::timestamptz IS NULL OR (created_at,id)<($3,$4)) AND ($6::text IS NULL OR (owner_id=$6 AND $6<>'')) ORDER BY created_at DESC,id DESC LIMIT $5`, scope, operation, at, id, limit, s.owner)
+	rows, err := s.store.pool.Query(ctx, `SELECT `+taskColumns+` FROM drama_catalog_v1.tasks WHERE scope_id=$1 AND ($2='' OR payload->>'operation'=$2) AND ($3::timestamptz IS NULL OR (created_at,id)<($3,$4)) AND ($6::text IS NULL OR (space_id=$6 AND $6<>'')) ORDER BY created_at DESC,id DESC LIMIT $5`, scope, operation, at, id, limit, s.space)
 	if err != nil {
 		return nil, err
 	}
@@ -136,28 +143,28 @@ func (s *TaskStore) ClaimTask(ctx context.Context, id, token string, lease time.
 	if token == "" || lease <= 0 {
 		return d.Task{}, false, fault.ErrInvalid
 	}
-	t, err := scanTask(s.store.pool.QueryRow(ctx, `UPDATE drama_catalog_v1.tasks SET lease_token=$2,lease_until=now()+($3*interval '1 millisecond'),revision=revision+1,updated_at=now() WHERE id=$1 AND next_run_at<=now() AND (lease_until IS NULL OR lease_until<=now()) AND ($4::text IS NULL OR(owner_id=$4 AND $4<>'')) RETURNING `+taskColumns, id, token, lease.Milliseconds(), s.owner))
+	t, err := scanTask(s.store.pool.QueryRow(ctx, `UPDATE drama_catalog_v1.tasks SET lease_token=$2,lease_until=now()+($3*interval '1 millisecond'),revision=revision+1,updated_at=now() WHERE id=$1 AND next_run_at<=now() AND (lease_until IS NULL OR lease_until<=now()) AND ($4::text IS NULL OR(space_id=$4 AND $4<>'')) RETURNING `+taskColumns, id, token, lease.Milliseconds(), s.space))
 	if errors.Is(err, fault.ErrNotFound) {
 		return d.Task{}, false, nil
 	}
 	return t, err == nil, err
 }
 func (s *TaskStore) CommitTask(ctx context.Context, t d.Task, expected uint64, token string, release bool) (d.Task, error) {
-	if s.owner != nil && (*s.owner == "" || t.OwnerID != *s.owner) {
+	if s.space != nil && (*s.space == "" || t.SpaceID != *s.space) {
 		return d.Task{}, fault.New("AUTH_REQUIRED", "缺少可信归属")
 	}
 	raw, err := json.Marshal(t.State)
 	if err != nil {
 		return t, err
 	}
-	got, err := scanTask(s.store.pool.QueryRow(ctx, `UPDATE drama_catalog_v1.tasks SET status=$4,payload=$5,next_run_at=$6,revision=revision+1,updated_at=now(),lease_token=CASE WHEN $7 THEN '' ELSE lease_token END,lease_until=CASE WHEN $7 THEN NULL ELSE lease_until END WHERE id=$1 AND revision=$2 AND lease_token=$3 AND lease_until>now() AND owner_id IS NOT DISTINCT FROM NULLIF($8,'') RETURNING `+taskColumns, t.ID, expected, token, t.Status, raw, t.NextRunAt, release, t.OwnerID))
+	got, err := scanTask(s.store.pool.QueryRow(ctx, `UPDATE drama_catalog_v1.tasks SET status=$4,payload=$5,next_run_at=$6,revision=revision+1,updated_at=now(),lease_token=CASE WHEN $7 THEN '' ELSE lease_token END,lease_until=CASE WHEN $7 THEN NULL ELSE lease_until END WHERE id=$1 AND revision=$2 AND lease_token=$3 AND lease_until>now() AND space_id=$8 AND owner_id=$9 AND creator_id=$10 RETURNING `+taskColumns, t.ID, expected, token, t.Status, raw, t.NextRunAt, release, t.SpaceID, t.OwnerID, t.CreatorID))
 	if errors.Is(err, fault.ErrNotFound) {
 		return got, fault.ErrConflict
 	}
 	return got, err
 }
 func (s *TaskStore) RenewTask(ctx context.Context, id, token string, lease time.Duration) error {
-	r, err := s.store.pool.Exec(ctx, `UPDATE drama_catalog_v1.tasks SET lease_until=now()+($3*interval '1 millisecond') WHERE id=$1 AND lease_token=$2 AND lease_until>now()`, id, token, lease.Milliseconds())
+	r, err := s.store.pool.Exec(ctx, `UPDATE drama_catalog_v1.tasks SET lease_until=now()+($3*interval '1 millisecond') WHERE id=$1 AND lease_token=$2 AND lease_until>now() AND ($4::text IS NULL OR (space_id=$4 AND $4<>''))`, id, token, lease.Milliseconds(), s.space)
 	if err == nil && r.RowsAffected() != 1 {
 		return fault.ErrConflict
 	}
@@ -169,7 +176,7 @@ func (s *TaskStore) CancelTask(ctx context.Context, scope, id string, revision u
 		return d.Task{}, err
 	}
 	defer tx.Rollback(context.WithoutCancel(ctx))
-	t, err := scanTask(tx.QueryRow(ctx, `SELECT `+taskColumns+` FROM drama_catalog_v1.tasks WHERE id=$1 AND scope_id=$2 AND ($3::text IS NULL OR (owner_id=$3 AND $3<>'')) FOR UPDATE`, id, scope, s.owner))
+	t, err := scanTask(tx.QueryRow(ctx, `SELECT `+taskColumns+` FROM drama_catalog_v1.tasks WHERE id=$1 AND scope_id=$2 AND ($3::text IS NULL OR (space_id=$3 AND $3<>'')) FOR UPDATE`, id, scope, s.space))
 	if err != nil {
 		return t, err
 	}
@@ -195,7 +202,7 @@ func (s *TaskStore) CancelTask(ctx context.Context, scope, id string, revision u
 	if err != nil {
 		return t, err
 	}
-	t, err = scanTask(tx.QueryRow(ctx, `UPDATE drama_catalog_v1.tasks SET status=$2,payload=$3,next_run_at=$4,lease_token='',lease_until=NULL,revision=revision+1,updated_at=now() WHERE id=$1 AND owner_id IS NOT DISTINCT FROM NULLIF($5,'') AND revision=$6 RETURNING `+taskColumns, id, t.Status, raw, t.NextRunAt, t.OwnerID, t.Revision))
+	t, err = scanTask(tx.QueryRow(ctx, `UPDATE drama_catalog_v1.tasks SET status=$2,payload=$3,next_run_at=$4,lease_token='',lease_until=NULL,revision=revision+1,updated_at=now() WHERE id=$1 AND space_id=$5 AND revision=$6 RETURNING `+taskColumns, id, t.Status, raw, t.NextRunAt, t.SpaceID, t.Revision))
 	if err == nil {
 		err = tx.Commit(ctx)
 	}
@@ -207,7 +214,7 @@ func (s *TaskStore) AppendTaskEvidence(ctx context.Context, id string, e ports.T
 		return d.Task{}, err
 	}
 	defer tx.Rollback(context.WithoutCancel(ctx))
-	t, err := scanTask(tx.QueryRow(ctx, `SELECT `+taskColumns+` FROM drama_catalog_v1.tasks WHERE id=$1 AND ($2::text IS NULL OR(owner_id=$2 AND $2<>'')) FOR UPDATE`, id, s.owner))
+	t, err := scanTask(tx.QueryRow(ctx, `SELECT `+taskColumns+` FROM drama_catalog_v1.tasks WHERE id=$1 AND ($2::text IS NULL OR(space_id=$2 AND $2<>'')) FOR UPDATE`, id, s.space))
 	if err != nil {
 		return t, err
 	}
@@ -269,7 +276,7 @@ func (s *TaskStore) AppendTaskEvidence(ctx context.Context, id string, e ports.T
 	if err != nil {
 		return t, err
 	}
-	t, err = scanTask(tx.QueryRow(ctx, `UPDATE drama_catalog_v1.tasks SET payload=$2,next_run_at=$3,revision=revision+1,updated_at=now() WHERE id=$1 RETURNING `+taskColumns, id, raw, t.NextRunAt))
+	t, err = scanTask(tx.QueryRow(ctx, `UPDATE drama_catalog_v1.tasks SET payload=$2,next_run_at=$3,revision=revision+1,updated_at=now() WHERE id=$1 AND space_id=$4 AND revision=$5 RETURNING `+taskColumns, id, raw, t.NextRunAt, t.SpaceID, t.Revision))
 	if err == nil {
 		err = tx.Commit(ctx)
 	}
@@ -293,11 +300,17 @@ func (s *TaskStore) DueTasks(ctx context.Context, cursor *ports.TaskCursor, limi
 	return s.store.runtime.ScheduledTasks(ctx, cursor, limit)
 }
 
-func (s *TaskStore) ForTaskOwner(owner string) ports.TaskStore {
-	return &TaskStore{store: s.store, owner: &owner}
+func (s *TaskStore) ForTaskSpace(space string) ports.TaskStore {
+	return &TaskStore{store: s.store, space: &space}
 }
-func (s *TaskStore) TaskOwner(ctx context.Context, id string) (string, error) {
-	var owner string
-	e := s.store.pool.QueryRow(ctx, `SELECT coalesce(owner_id,'') FROM drama_catalog_v1.tasks WHERE id=$1`, id).Scan(&owner)
-	return owner, e
+func (s *TaskStore) ForTaskScope(scope ports.SpaceScope) ports.TaskStore {
+	return &TaskStore{store: s.store, space: &scope.SpaceID, commandActor: &scope.UserID}
+}
+func (s *TaskStore) TaskSpace(ctx context.Context, id string) (string, string, string, error) {
+	var space, owner, creator string
+	err := s.store.pool.QueryRow(ctx, `SELECT space_id,owner_id,creator_id FROM drama_catalog_v1.tasks WHERE id=$1`, id).Scan(&space, &owner, &creator)
+	if errors.Is(err, pgx.ErrNoRows) {
+		err = fault.ErrNotFound
+	}
+	return space, owner, creator, err
 }

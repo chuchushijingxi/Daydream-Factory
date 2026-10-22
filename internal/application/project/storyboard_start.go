@@ -40,7 +40,7 @@ func (s *Service) initialEpisodeIndex(ctx context.Context, p *d.Project) {
 	p.Runs = append(p.Runs, r)
 }
 func (s *Service) RetryEpisodeIndex(ctx context.Context, id string, revision uint64) (d.Project, error) {
-	p, e := s.Project(ctx, id)
+	p, e := s.editingProject(ctx, id)
 	if e != nil {
 		return p, e
 	}
@@ -61,7 +61,7 @@ func (s *Service) RetryEpisodeIndex(ctx context.Context, id string, revision uin
 	defer release.Release()
 	ctx = release.Context
 	s.initialEpisodeIndex(ctx, &p)
-	if p.OwnerID != "" && (p.LatestRun().ErrorCode == "BILLING_BASIS_CHANGED" || p.LatestRun().ErrorCode == "MODEL_PRICE_UNAVAILABLE") {
+	if p.LatestRun().ErrorCode == "BILLING_BASIS_CHANGED" || p.LatestRun().ErrorCode == "MODEL_PRICE_UNAVAILABLE" {
 		return p, fault.New(p.LatestRun().ErrorCode, p.LatestRun().Error)
 	}
 	p.LatestRun().ContinueAssetPreparation = old.ContinueAssetPreparation
@@ -118,7 +118,7 @@ func (s *Service) StartEpisode(ctx context.Context, id, episodeID string, in Epi
 	}
 	defer release.Release()
 	ctx = release.Context
-	p, e := s.Project(ctx, id)
+	p, e := s.editingProject(ctx, id)
 	if e != nil {
 		return p, e
 	}
@@ -160,7 +160,7 @@ func (s *Service) ChangeStoryboard(ctx context.Context, id string, raw []byte) (
 	if e := DecodeStoryboard(raw, "ChangeInput", &in); e != nil {
 		return d.StoryboardReceipt{}, e
 	}
-	p, e := s.Project(ctx, id)
+	p, e := s.editingProject(ctx, id)
 	if e != nil {
 		return d.StoryboardReceipt{}, e
 	}

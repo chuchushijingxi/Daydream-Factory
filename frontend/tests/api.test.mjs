@@ -7,8 +7,8 @@ test('image association routes use parent IDs, revision and file ID with abort s
   const fileId = 'file_' + 'b'.repeat(32),
     image = {
       fileId,
-      originalUrl: '/api/files/' + fileId + '/original',
-      thumbnailUrl: '/api/files/' + fileId + '/thumbnail',
+      originalUrl: '/api/projects/project%20%2F/files/' + fileId + '/original',
+      thumbnailUrl: '/api/projects/project%20%2F/files/' + fileId + '/thumbnail',
     };
   for (const target of [{ assetId: 'asset /' }, { assetId: 'asset /', lookId: 'look /' }]) {
     let call;

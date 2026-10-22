@@ -16,7 +16,7 @@ func (s *Service) Start(ctx context.Context, id string, revision uint64) (d.Proj
 	}
 	defer release.Release()
 	ctx = release.Context
-	p, err := s.Project(ctx, id)
+	p, err := s.editingProject(ctx, id)
 	if err != nil {
 		return p, err
 	}

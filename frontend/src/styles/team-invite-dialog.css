@@ -1,0 +1,112 @@
+/* One action dialog; history stays in its own secondary navigation. */
+.team-invite-history > .view-tabs[data-variant='pill'] {
+  margin: 0 0 4px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.team-invite-history > [role='tabpanel'] > [hidden] {
+  display: none;
+}
+.team-invite-history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.team-invite-dialog .team-form {
+  display: grid;
+  gap: 16px;
+  margin: 20px 0 0;
+}
+.team-invite-dialog .op-field {
+  gap: 8px;
+}
+.team-invite-dialog .op-field > .op-choice {
+  width: 100%;
+  height: 40px;
+  flex: 0 0 auto;
+  min-width: 0;
+  text-align: start;
+}
+.team-invite-dialog .team-form input {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  background: var(--jm-inset);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--jm-text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+}
+.team-invite-dialog .team-form input:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: var(--jm-muted);
+}
+.team-invite-dialog .op-muted {
+  margin: 0;
+  font-size: 13px;
+  line-height: 22px;
+}
+.team-invite-dialog .team-callout {
+  margin: 0;
+}
+.team-invite-dialog .jm-dialog-actions {
+  margin-top: 8px;
+}
+.team-invite-copy-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.team-invite-copy-row > input {
+  flex: 1;
+  width: 0;
+}
+.team-invite-copy-row > .jm-button {
+  flex-shrink: 0;
+  height: 36px;
+}
+.team-invite-dialog-receipt {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.team-invite-dialog-receipt > small {
+  color: var(--jm-muted);
+  font-size: 12px;
+  line-height: 20px;
+}
+@media (max-width: 480px) {
+  .team-invite-copy-row {
+    flex-wrap: wrap;
+  }
+  .team-invite-copy-row > input {
+    flex-basis: 100%;
+    width: 100%;
+  }
+}
+
+.team-invitation-records .team-invite-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px 96px;
+}
+.team-invitation-records .team-invite-row > :nth-child(2) {
+  justify-self: start;
+}
+.team-invitation-records .team-invite-row > .jm-button {
+  justify-self: end;
+}
+@media (max-width: 640px) {
+  .team-invitation-records .team-invite-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
+  }
+  .team-invitation-records .team-invite-row > .jm-button {
+    grid-column: 1 / -1;
+  }
+}

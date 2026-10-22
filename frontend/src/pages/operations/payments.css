@@ -1,0 +1,483 @@
+.jm-dialog-content[data-dialog-kind].op-payment-detail {
+  display: flex;
+  flex-direction: column;
+  width: min(1040px, calc(100vw - 32px));
+  height: min(860px, calc(100dvh - 48px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  overflow: hidden;
+}
+.op-payment-detail-head {
+  flex: none;
+  padding: 20px 64px 16px 24px;
+  border-bottom: 1px solid var(--jm-border);
+}
+.op-payment-detail-head .jm-dialog-title {
+  margin: 0;
+  font-size: 17px;
+  line-height: 26px;
+}
+.op-payment-detail-head .jm-dialog-description {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--jm-muted);
+}
+.op-payment-detail-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 24px 24px;
+  background: var(--jm-workspace, var(--jm-inset));
+}
+.op-payment-detail-id {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.op-payment-detail-id code {
+  font-size: 13px;
+  font-weight: var(--font-weight-medium);
+  user-select: all;
+}
+.op-payment-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 16px;
+}
+.op-payment-stats > div {
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--jm-panel);
+}
+.op-payment-stats dt {
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--jm-muted);
+}
+.op-payment-stats dd {
+  margin: 6px 0 0;
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.op-payment-stats dd .payment-price strong {
+  font-size: 18px;
+}
+.op-payment-card {
+  margin: 0 0 16px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: var(--jm-panel);
+}
+.op-payment-card > h3 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: var(--font-weight-medium);
+}
+.op-payment-info {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 24px;
+  margin: 0;
+}
+.op-payment-info dt {
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--jm-muted);
+}
+.op-payment-info dd {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.op-payment-info dd small,
+.op-payment-subtable small {
+  display: block;
+  color: var(--jm-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.op-payment-timeline {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.op-payment-timeline li {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding: 18px 8px 0 0;
+  font-size: 13px;
+  line-height: 20px;
+}
+.op-payment-timeline li::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--jm-border);
+}
+.op-payment-timeline li::after {
+  content: '';
+  position: absolute;
+  top: 7px;
+  left: 14px;
+  right: 6px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--jm-border);
+}
+.op-payment-timeline li:last-child::after {
+  content: none;
+}
+.op-payment-timeline li[data-done='true']::before {
+  background: var(--jm-text);
+}
+.op-payment-timeline li time {
+  font-size: 12px;
+  color: var(--jm-muted);
+  font-variant-numeric: tabular-nums;
+}
+.op-payment-timeline li[data-done='false'] span {
+  color: var(--jm-muted);
+}
+.op-table.op-payment-subtable {
+  min-width: 100%;
+  width: max-content;
+}
+.op-payment-subtable th,
+.op-payment-subtable td {
+  white-space: nowrap;
+  max-width: none;
+}
+.op-payment-subtable .op-payment-reason-cell {
+  white-space: pre-wrap;
+  min-width: 160px;
+  max-width: 320px;
+}
+.op-payment-facts-toggle summary {
+  cursor: pointer;
+  color: var(--jm-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 12px;
+}
+.op-payment-facts-toggle .op-payment-facts {
+  margin: 8px 0 0;
+  min-width: 240px;
+  white-space: pre;
+}
+.op-payment-detail-foot {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--jm-border);
+  background: var(--jm-panel);
+}
+.op-payment-buttons-end {
+  justify-content: flex-end;
+}
+.op-payment-section {
+  margin: 24px 0;
+}
+.op-payment-section h3 {
+  font-size: 14px;
+  font-weight: var(--font-weight-medium);
+  margin: 0 0 12px;
+}
+.op-payment-facts {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--jm-inset);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 12px;
+  line-height: 20px;
+  max-height: 260px;
+  overflow: auto;
+}
+.op-payment-events {
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+.op-payment-events li,
+.op-payment-refund {
+  border: 1px solid var(--jm-border);
+  border-radius: 12px;
+  padding: 16px;
+  overflow-wrap: anywhere;
+}
+.op-payment-events li > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.op-payment-events strong {
+  font-weight: var(--font-weight-medium);
+}
+.op-payment-events small {
+  color: var(--jm-muted);
+}
+.op-payment-events p,
+.op-payment-refund p {
+  margin: 8px 0;
+  white-space: pre-wrap;
+}
+.op-payment-refund {
+  margin: 12px 0;
+}
+.op-payment-action {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+.op-payment-action .op-field {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+.op-payment-action textarea,
+.op-payment-form textarea {
+  min-height: 80px;
+  height: 80px;
+  resize: none;
+}
+.op-payment-form {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.op-payment-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.op-payment-dialog code,
+.op-payment-detail code {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.op-payment-reason {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.op-payment-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+  min-height: 24px;
+}
+.op-payment-switch .mc-switch[aria-checked='true'] {
+  background: var(--jm-text);
+}
+.op-payment-switch .mc-switch > span {
+  background: var(--jm-panel);
+}
+@media (max-width: 760px) {
+  .op-payment-stats,
+  .op-payment-info {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .op-payment-timeline {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .op-payment-timeline li {
+    padding: 0 0 0 18px;
+  }
+  .op-payment-timeline li::after {
+    content: none;
+  }
+}
+@media (max-width: 600px) {
+  .jm-dialog-content[data-dialog-kind].op-payment-detail {
+    width: calc(100vw - 24px);
+    height: calc(100dvh - 24px);
+    max-height: calc(100dvh - 24px);
+  }
+  .op-payment-action > .jm-button {
+    width: 100%;
+  }
+  .op-payment-buttons > .jm-button {
+    flex: 1 1 auto;
+  }
+  .op-payment-page .op-filters .op-field {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+.op-payment-page .op-table td:is(.op-payment-money, .op-numeric) {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.op-payment-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.op-payment-page > .view-tabs {
+  margin-bottom: 24px;
+}
+.op-payment-page .op-filters .op-field {
+  flex: 0 1 216px;
+  min-width: min(180px, 100%);
+  max-width: 240px;
+}
+.op-payment-page .op-table td.op-payment-empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--jm-muted);
+}
+.jm-dialog-content[data-dialog-kind].op-payment-package-dialog {
+  width: min(760px, calc(100vw - 32px));
+}
+.op-payment-package-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+.op-payment-form-wide {
+  grid-column: 1 / -1;
+}
+.op-payment-package-checks {
+  display: grid;
+  align-content: center;
+  gap: 12px;
+  min-height: 68px;
+}
+.op-payment-package-form > .op-payment-buttons {
+  justify-content: flex-end;
+  margin-bottom: 0;
+}
+@media (max-width: 600px) {
+  .op-payment-page .op-filters .op-field {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  .op-payment-package-form {
+    grid-template-columns: 1fr;
+  }
+  .op-payment-package-checks {
+    min-height: 0;
+  }
+  .jm-dialog-content[data-dialog-kind].op-payment-package-dialog {
+    padding: 24px 20px;
+  }
+}
+
+/* Reuse the same inputs as operations settings; only layout remains payment-specific. */
+:is(.op-payment-page, .op-payment-dialog, .op-payment-detail)
+  .op-field
+  :is(input.jm-field-input, textarea.jm-field-textarea) {
+  border: 1px solid transparent;
+  font-size: 13px;
+}
+:is(.op-payment-page, .op-payment-dialog, .op-payment-detail)
+  .op-field
+  :is(input.jm-field-input, textarea.jm-field-textarea):focus {
+  border-color: var(--jm-muted);
+}
+.op-payment-page .op-filters .op-field .payment-choice,
+.op-payment-page .op-filters .op-field .jm-date-time-trigger {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  font-size: 13px;
+}
+
+:is(.op-payment-dialog, .op-payment-detail) .op-field textarea.jm-field-textarea {
+  padding: 8px 12px;
+  line-height: 22px;
+}
+
+/* 支付订单列表：单元格不折行，表格按内容撑开并在容器内横向滑动。 */
+.op-table.op-payment-orders {
+  width: max-content;
+  min-width: 100%;
+}
+.op-payment-orders th,
+.op-payment-orders td {
+  white-space: nowrap;
+  max-width: none;
+  overflow-wrap: normal;
+}
+.op-payment-orders .op-payment-mono {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+.op-payment-orders .op-payment-id,
+.op-payment-orders .op-payment-target small {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.op-payment-orders .op-payment-target small {
+  display: block;
+}
+.op-payment-status {
+  display: inline-block;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--jm-inset);
+  color: var(--jm-muted);
+  font-size: 12px;
+  line-height: 22px;
+}
+.op-payment-status[data-status='credited'] {
+  background: rgba(26, 160, 90, 0.12);
+  color: #11804a;
+}
+.dark .op-payment-status[data-status='credited'] {
+  color: #5fd39a;
+}
+.op-payment-status[data-status='pending'] {
+  background: #fff1c2;
+  color: #7a5200;
+}
+.dark .op-payment-status[data-status='pending'] {
+  background: #3a2f12;
+  color: #f5c86a;
+}
+.op-payment-status[data-status='refunded'] {
+  background: rgba(218, 52, 75, 0.1);
+  color: var(--jm-danger);
+}
+/* 操作列固定在右侧，横向滑动时仍可点“查看详情”。 */
+.op-payment-orders th:last-child,
+.op-payment-orders td.op-payment-actions-cell {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: var(--jm-panel);
+  box-shadow: -8px 0 12px -10px rgba(0, 0, 0, 0.18);
+}
+.op-payment-orders thead th:last-child {
+  background: var(--jm-panel);
+  background-image: linear-gradient(var(--jm-hover), var(--jm-hover));
+}

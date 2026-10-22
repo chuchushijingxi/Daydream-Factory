@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	creditsapp "drama-agent/internal/application/credits"
+	"drama-agent/internal/application/ports"
 	d "drama-agent/internal/domain/credits"
 	"drama-agent/internal/domain/fault"
 	"net/http"
@@ -18,6 +19,15 @@ func (h *Handler) registerCredits(mux *routes) {
 	}
 	balance := func(w http.ResponseWriter, r *http.Request) {
 		if !ready(w) {
+			return
+		}
+		if usesSpaceCredits(r) {
+			if h.Spaces == nil {
+				fail(w, fault.New("SPACE_UNAVAILABLE", "空间积分服务尚未配置"))
+				return
+			}
+			v, e := h.Spaces.CreditWallet(r.Context(), actor(r))
+			spaceResult(w, 200, v, e)
 			return
 		}
 		v, e := h.Credits.Wallet(r.Context(), actor(r), r.PathValue("userId"))
@@ -59,6 +69,21 @@ func (h *Handler) registerCredits(mux *routes) {
 				*target = &parsed
 			}
 		}
+		if usesSpaceCredits(r) {
+			if h.Spaces == nil {
+				fail(w, fault.New("SPACE_UNAVAILABLE", "空间积分服务尚未配置"))
+				return
+			}
+			// scope=holder 读本人名下流水（管理员的本人积分明细）；缺省为团队页使用的空间流水。
+			scope := r.URL.Query().Get("scope")
+			if scope != "" && scope != "holder" {
+				fail(w, fault.ErrInvalid)
+				return
+			}
+			v, e := h.Spaces.CreditHistory(r.Context(), actor(r), filter, scope == "holder")
+			spaceResult(w, 200, v, e)
+			return
+		}
 		v, e := h.Credits.History(r.Context(), actor(r), r.PathValue("userId"), filter)
 		if e != nil {
 			fail(w, e)
@@ -74,6 +99,15 @@ func (h *Handler) registerCredits(mux *routes) {
 		}
 		if r.URL.RawQuery != "" {
 			fail(w, fault.ErrInvalid)
+			return
+		}
+		if usesSpaceCredits(r) {
+			if h.Spaces == nil {
+				fail(w, fault.New("SPACE_UNAVAILABLE", "空间积分服务尚未配置"))
+				return
+			}
+			v, err := h.Spaces.RecentCreditEntries(r.Context(), actor(r))
+			spaceResult(w, 200, v, err)
 			return
 		}
 		items, err := h.Credits.RecentEntries(r.Context(), actor(r))
@@ -141,6 +175,16 @@ func (h *Handler) registerCreditGifts(mux *routes) {
 			fail(w, err)
 			return
 		}
+		if usesSpaceCredits(r) {
+			if h.Spaces == nil {
+				fail(w, fault.New("SPACE_UNAVAILABLE", "空间积分服务尚未配置"))
+				return
+			}
+			if err := h.Spaces.RequirePersonalCredits(r.Context(), actor(r)); err != nil {
+				fail(w, err)
+				return
+			}
+		}
 		v, err := h.Gifts.Daily(r.Context(), actor(r))
 		if err != nil {
 			fail(w, err)
@@ -184,4 +228,11 @@ func (h *Handler) registerCreditGifts(mux *routes) {
 		}
 		write(w, 200, v)
 	})
+}
+
+// 这里只选择应用入口；团队成员身份及金额可见范围由空间用例核验。
+// 运营按用户查询始终使用明确的路径目标，不能被工作台空间选择改变。
+func usesSpaceCredits(r *http.Request) bool {
+	selected := ports.RequestedSpace(r.Context())
+	return r.PathValue("userId") == "" && selected != "" && selected != actor(r).UserID
 }

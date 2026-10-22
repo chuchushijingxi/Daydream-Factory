@@ -31,13 +31,27 @@ export function useRead<T>(load: (signal: AbortSignal) => Promise<T>, dependenci
     error: string;
     busy: boolean;
   }>(() => ({ dependencies, retry, enabled, value: null, error: '', busy: enabled }));
-  const sequence = useRef(0);
+  // 实时失效提示用 reload 静默重读：保留当前内容直到新结果返回，避免列表闪回读取态。
+  const [silent, setSilent] = useState(0);
+  const sequence = useRef(0),
+    lastSilent = useRef(silent);
   useEffect(() => {
     const ticket = ++sequence.current,
       epoch = sessionBoundary.epoch,
       controller = new AbortController();
-    const base = { dependencies, retry, enabled };
-    setSnapshot({ ...base, value: null, error: '', busy: enabled });
+    const base = { dependencies, retry, enabled },
+      quiet = lastSilent.current !== silent;
+    lastSilent.current = silent;
+    setSnapshot((old) =>
+      quiet &&
+      old.value !== null &&
+      old.retry === retry &&
+      old.enabled === enabled &&
+      old.dependencies.length === dependencies.length &&
+      old.dependencies.every((value, index) => Object.is(value, dependencies[index]))
+        ? old
+        : { ...base, value: null, error: '', busy: enabled },
+    );
     if (enabled)
       void load(controller.signal)
         .then((value) => {
@@ -52,7 +66,7 @@ export function useRead<T>(load: (signal: AbortSignal) => Promise<T>, dependenci
       controller.abort();
       ++sequence.current;
     };
-  }, [...dependencies, retry, enabled]);
+  }, [...dependencies, retry, enabled, silent]);
   // Hide the previous scope synchronously, before effects start the next request.
   const current =
     snapshot.retry === retry &&
@@ -64,6 +78,7 @@ export function useRead<T>(load: (signal: AbortSignal) => Promise<T>, dependenci
     error: current ? snapshot.error : '',
     busy: enabled && (!current || snapshot.busy),
     refresh: () => setRetry((x) => x + 1),
+    reload: () => setSilent((x) => x + 1),
   };
 }
 export function Feedback({
@@ -103,10 +118,12 @@ export function Feedback({
   return null;
 }
 export function PageNavigation({
+  children,
   page,
   busy,
   onPage,
 }: {
+  children?: ReactNode;
   page: PageView<unknown>;
   busy: boolean;
   onPage: (page: string) => void;
@@ -114,6 +131,7 @@ export function PageNavigation({
   const { c } = useCatalogText();
   return (
     <nav className="op-pagination" aria-label={c('分页')}>
+      {children}
       <span>{page.caption}</span>
       <Button
         size="icon"
@@ -143,6 +161,7 @@ export function Choice({
   onChange,
   disabled = false,
   className = '',
+  menuClassName = '',
 }: {
   label: string;
   value: string;
@@ -150,12 +169,18 @@ export function Choice({
   onChange: (v: string) => void;
   disabled?: boolean;
   className?: string;
+  menuClassName?: string;
 }) {
   const selectedLabel = options.find((x) => x.value === value)?.label || label;
   return (
     <Menu.Root>
       <Menu.Trigger asChild>
-        <button className={'op-choice ' + className} disabled={disabled} aria-label={label}>
+        <button
+          type="button"
+          className={'op-choice ' + className}
+          disabled={disabled}
+          aria-label={label}
+        >
           <span className="op-choice-label" title={selectedLabel}>
             {selectedLabel}
           </span>
@@ -164,7 +189,7 @@ export function Choice({
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Content
-          className="jm-select-content op-choice-menu"
+          className={'jm-select-content op-choice-menu ' + menuClassName}
           align="start"
           sideOffset={6}
           collisionPadding={12}

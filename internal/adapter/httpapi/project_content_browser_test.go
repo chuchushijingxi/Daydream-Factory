@@ -126,7 +126,7 @@ func TestProjectContentBrowserIntegrationFixture(t *testing.T) {
 	fixtures := map[string]string{}
 	// A naturally executed local fixture provides real persisted P3/visual
 	// call receipts for the project process page. No external provider is used.
-	processProject, err := s.ForActor(legacyHTTPActor).Create(context.Background(), "免费联调 · 提取过程", "process.txt", []byte("林岚，32岁修理师，黑发低马尾，左眉尾浅疤。\n她在修理间用铜钥匙开门。\n晚宴上穿黑礼服。"), 0)
+	processProject, err := fixtureProject(t, s, legacyHTTPActor).Create(context.Background(), "免费联调 · 提取过程", "process.txt", []byte("林岚，32岁修理师，黑发低马尾，左眉尾浅疤。\n她在修理间用铜钥匙开门。\n晚宴上穿黑礼服。"), 0)
 	if err == nil {
 		processProject, err = quotedLegacyService(t, s, processProject.ID, app.QuoteInput{Revision: processProject.Revision, Operation: "asset-preparation"}).Start(context.Background(), processProject.ID, processProject.Revision)
 	}
@@ -169,7 +169,7 @@ func TestProjectContentBrowserIntegrationFixture(t *testing.T) {
 		}
 		fixtures[kind] = p.ID
 	}
-	owner, handler := httpapi.New(s, nil, "../../../demo", 100000000)
+	owner, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 100000000)
 	server := &http.Server{Addr: addr, Handler: handler, ReadHeaderTimeout: 5 * time.Second}
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {

@@ -41,6 +41,7 @@ type Entry struct {
 	ID                  string     `json:"id"`
 	OperationID         string     `json:"operationId"`
 	AccountID           string     `json:"accountId"`
+	HolderID            string     `json:"holderId,omitempty"`
 	Kind                string     `json:"kind"`
 	Amount              int64      `json:"amount"`
 	Balance             int64      `json:"balance"`
@@ -52,24 +53,29 @@ type Entry struct {
 	Subject             string     `json:"subject"`
 	Reason              string     `json:"reason"`
 	OriginalDeductionID string     `json:"originalDeductionId,omitempty"`
+	OriginalAdditionID  string     `json:"originalAdditionId,omitempty"`
 	CreatedAt           time.Time  `json:"createdAt"`
 	DailyAmount         int64      `json:"-"`
 	DailyExpiresAt      *time.Time `json:"-"`
 }
 type Change struct {
-	AccountID                            string
+	AccountID, HolderID                  string
 	Amount                               int64
 	OperationID, Source, Subject, Reason string
 	OriginalDeductionID                  string
+	OriginalAdditionID                   string
 	Category                             string
 	DailyExpiresAt                       *time.Time
 }
 
 func (c Change) Validate(kind string) error {
-	if kind != "add" && kind != "deduct" && kind != "refund" {
+	if kind != "add" && kind != "deduct" && kind != "refund" && kind != "reclaim" {
 		return fault.ErrInvalid
 	}
 	if c.DailyExpiresAt != nil && (kind != "add" || c.Category != Gift || c.DailyExpiresAt.IsZero()) {
+		return fault.ErrInvalid
+	}
+	if len(c.HolderID) > 128 || (kind == "add" && c.HolderID != "") {
 		return fault.ErrInvalid
 	}
 	if kind == "add" {
@@ -77,7 +83,7 @@ func (c Change) Validate(kind string) error {
 			return fault.New("CREDIT_INVALID_CATEGORY", "发放积分须指定充值或赠送分类")
 		}
 	} else if c.Category != "" {
-		return fault.New("CREDIT_INVALID_CATEGORY", "扣减及返还分类由原账务事实确定")
+		return fault.New("CREDIT_INVALID_CATEGORY", "扣减、返还及扣回分类由原账务事实确定")
 	}
 	if e := ValidAmount(c.Amount); e != nil {
 		return e
@@ -87,7 +93,13 @@ func (c Change) Validate(kind string) error {
 			return fault.ErrInvalid
 		}
 	}
-	if kind == "refund" {
+	if kind == "reclaim" {
+		if c.OriginalAdditionID == "" || c.OriginalDeductionID != "" || c.AccountID != "" || c.Source != "" {
+			return fault.ErrInvalid
+		}
+	} else if c.OriginalAdditionID != "" {
+		return fault.ErrInvalid
+	} else if kind == "refund" {
 		if c.OriginalDeductionID == "" || c.AccountID != "" || c.Source != "" {
 			return fault.ErrInvalid
 		}
@@ -98,13 +110,13 @@ func (c Change) Validate(kind string) error {
 }
 
 // Same 判定既有账目条目与本次变更完全一致，用于幂等写入的回执核对；
-// 返还不比对归属与分类（由原扣款事实确定），发放必须带分类。
+// 返还及扣回不比对归属与分类（由原账务事实确定），发放必须带分类。
 func (e Entry) Same(kind string, c Change) bool {
-	if e.Kind != kind || e.Amount != c.Amount || e.OperationID != c.OperationID || e.Subject != c.Subject || e.Reason != c.Reason || e.OriginalDeductionID != c.OriginalDeductionID {
+	if e.Kind != kind || e.Amount != c.Amount || e.OperationID != c.OperationID || e.Subject != c.Subject || e.Reason != c.Reason || e.OriginalDeductionID != c.OriginalDeductionID || e.OriginalAdditionID != c.OriginalAdditionID {
 		return false
 	}
-	if kind == "refund" {
-		return true
+	if kind == "refund" || kind == "reclaim" {
+		return e.HolderID == c.HolderID
 	}
 	if kind == "add" && e.Category != c.Category {
 		return false
@@ -112,7 +124,7 @@ func (e Entry) Same(kind string, c Change) bool {
 	if kind == "add" && !sameExpiry(e.DailyExpiresAt, c.DailyExpiresAt) {
 		return false
 	}
-	return e.AccountID == c.AccountID && e.Source == c.Source
+	return e.AccountID == c.AccountID && e.HolderID == c.HolderID && e.Source == c.Source
 }
 func Count(text string) int64 {
 	var n int64
@@ -187,19 +199,23 @@ func (r PriceRule) Free(at time.Time) bool {
 
 // Charge 是一次业务启动的不可变计费依据，由其内部多个 Run 共用。
 type Charge struct {
-	SourceVersion  uint64    `json:"sourceVersion"`
-	InputRevision  uint64    `json:"inputRevision"`
-	Unit           string    `json:"unit"`
-	ID             string    `json:"id"`
-	ModelID        string    `json:"modelId"`
-	ConnectionID   string    `json:"connectionId"`
-	Scope          string    `json:"scope"`
-	ScopeDigest    string    `json:"scopeDigest"`
-	Quantity       int64     `json:"quantity"`
-	PriceVersion   uint64    `json:"priceVersion"`
-	Rule           PriceRule `json:"rule"`
-	AcceptedAt     time.Time `json:"acceptedAt"`
-	OriginalAmount int64     `json:"originalAmount"`
-	Amount         int64     `json:"amount"`
-	Free           bool      `json:"free"`
+	AccountID       string    `json:"accountId"`
+	HolderID        string    `json:"holderId,omitempty"`
+	ActorID         string    `json:"actorId"`
+	DiscountPercent int       `json:"discountPercent"`
+	SourceVersion   uint64    `json:"sourceVersion"`
+	InputRevision   uint64    `json:"inputRevision"`
+	Unit            string    `json:"unit"`
+	ID              string    `json:"id"`
+	ModelID         string    `json:"modelId"`
+	ConnectionID    string    `json:"connectionId"`
+	Scope           string    `json:"scope"`
+	ScopeDigest     string    `json:"scopeDigest"`
+	Quantity        int64     `json:"quantity"`
+	PriceVersion    uint64    `json:"priceVersion"`
+	Rule            PriceRule `json:"rule"`
+	AcceptedAt      time.Time `json:"acceptedAt"`
+	OriginalAmount  int64     `json:"originalAmount"`
+	Amount          int64     `json:"amount"`
+	Free            bool      `json:"free"`
 }

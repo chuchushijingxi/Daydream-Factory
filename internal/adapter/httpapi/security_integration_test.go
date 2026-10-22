@@ -116,7 +116,7 @@ func TestIdentityOwnerBillingAndUsageRealPGHTTP(t *testing.T) {
 	model := &protocolModel{}
 	prices := &frozenFixturePrices{rule: c.PriceRule{UnitPrice: 2}, version: 1}
 	service := &app.Service{Store: store, Files: files, Credits: store, Prices: prices, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: model}, Authorize: freeAuthorization}
-	host, handler := httpapi.New(service, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(service), nil, "../../../demo", 0)
 	host.Files = files
 	host.Accounts = accountService
 	host.Authenticator = accountService

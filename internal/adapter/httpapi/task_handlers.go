@@ -12,7 +12,7 @@ func (h *Handler) start(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	p, err := h.Service.ForActor(actor(r)).WithBillingBasis(basis).Start(r.Context(), r.PathValue("id"), rev)
+	p, err := h.projectService(r).WithBillingBasis(basis).Start(r.Context(), r.PathValue("id"), rev)
 	if err != nil {
 		fail(w, err)
 		return
@@ -27,10 +27,10 @@ func (h *Handler) cancel(w http.ResponseWriter, r *http.Request) {
 		fail(w, err)
 		return
 	}
-	p, err := h.Service.ForActor(actor(r)).Cancel(r.Context(), r.PathValue("id"), rev)
+	p, err := h.projectService(r).Cancel(r.Context(), r.PathValue("id"), rev)
 	if err != nil {
 		if p.ID != "" {
-			current, readErr := h.Service.ForActor(actor(r)).Project(r.Context(), p.ID)
+			current, readErr := h.projectService(r).Project(r.Context(), p.ID)
 			if readErr == nil && current.LatestRun() != nil && current.LatestRun().Status == d.RunCancelled {
 				h.CancelWorker(p.ID)
 			}

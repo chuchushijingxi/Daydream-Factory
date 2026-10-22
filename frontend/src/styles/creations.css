@@ -3,7 +3,7 @@
   flex-direction: column;
   min-height: 0;
   flex: 1;
-  padding: 56px 36px 0;
+  padding: var(--xy-page-top) 36px 0;
   color: var(--jm-text);
 }
 .creations-page > h1 {

@@ -20,7 +20,7 @@ func (h *Handler) registerModelUsage(mux *routes) {
 			return
 		}
 		q := r.URL.Query()
-		filter := u.Filter{View: q.Get("view"), Search: strings.TrimSpace(q.Get("q")), UserID: q.Get("userId"), TaskID: q.Get("taskId"), RequestID: q.Get("requestId"), ModelID: q.Get("modelId"), ConnectionID: q.Get("connectionId"), Operation: q.Get("operation"), Status: q.Get("status"), Sort: q.Get("sort"), Page: p, PageSize: n}
+		filter := u.Filter{View: q.Get("view"), Search: strings.TrimSpace(q.Get("q")), UserID: q.Get("userId"), SpaceID: q.Get("spaceId"), TaskID: q.Get("taskId"), RequestID: q.Get("requestId"), ModelID: q.Get("modelId"), ConnectionID: q.Get("connectionId"), Operation: q.Get("operation"), Status: q.Get("status"), Sort: q.Get("sort"), Page: p, PageSize: n}
 		if filter.View == "" {
 			filter.View = "tasks"
 		}

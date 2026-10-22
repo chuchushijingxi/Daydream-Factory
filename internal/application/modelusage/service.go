@@ -10,14 +10,17 @@ import (
 )
 
 type Filter struct {
-	View                                                                string
-	Search                                                              string
-	UserID, TaskID, RequestID, ModelID, ConnectionID, Operation, Status string
-	From, Until                                                         *time.Time
-	Page, PageSize                                                      int
-	Sort                                                                string
+	View                                                                         string
+	Search                                                                       string
+	UserID, SpaceID, TaskID, RequestID, ModelID, ConnectionID, Operation, Status string
+	From, Until                                                                  *time.Time
+	Page, PageSize                                                               int
+	Sort                                                                         string
 }
 type Record struct {
+	SpaceID           string          `json:"spaceId"`
+	SpaceName         string          `json:"spaceName"`
+	SpaceKind         string          `json:"spaceKind"`
 	ID                string          `json:"id"`
 	TaskID            string          `json:"taskId"`
 	UserID            string          `json:"userId"`

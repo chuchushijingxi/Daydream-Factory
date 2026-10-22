@@ -90,7 +90,18 @@ func (s *Service) mediaQuote(ctx context.Context, p d.Project, model string, tar
 	if e != nil {
 		return ChargeQuote{}, "", e
 	}
-	q := ChargeQuote{MediaOptions: &options, SourceVersion: p.ScriptSource.Version, InputRevision: p.Revision, ModelID: model, ConnectionID: connection, Scope: "media-" + kind, Quantity: quantity, Unit: unit, PriceVersion: version, Rule: rule, OriginalAmount: original, Amount: original, Free: rule.Free(at)}
+	targetAccount, percent, e := s.chargePricing(ctx, p, model, rule.Free(at))
+	if e != nil {
+		return ChargeQuote{}, "", e
+	}
+	charged := int64(0)
+	if !rule.Free(at) {
+		charged, e = c.PriceDiscount(quantity, rule.UnitPrice, 1, percent)
+		if e != nil {
+			return ChargeQuote{}, "", e
+		}
+	}
+	q := ChargeQuote{AccountID: targetAccount.AccountID, HolderID: targetAccount.HolderID, ActorID: targetAccount.ActorID, DiscountPercent: percent, MediaOptions: &options, SourceVersion: p.ScriptSource.Version, InputRevision: p.Revision, ModelID: model, ConnectionID: connection, Scope: "media-" + kind, Quantity: quantity, Unit: unit, PriceVersion: version, Rule: rule, OriginalAmount: original, Amount: charged, Free: rule.Free(at)}
 	if q.Free {
 		q.Amount = 0
 	}
@@ -103,9 +114,10 @@ func (s *Service) mediaQuote(ctx context.Context, p d.Project, model string, tar
 }
 
 func (s *Service) freezeMediaCredit(ctx context.Context, p d.Project, in MediaCommand) (*c.Charge, *md.MediaOptions, error) {
-	if p.OwnerID == "" {
+	// 无持久空间的纯内存应用夹具不具备记账身份；正式仓储拒绝这类资源。
+	if s.Credits == nil && s.scope == nil && p.SpaceID == "" {
 		return nil, nil, nil
-	} // 仅有无归属的内部保留夹具；正式用户存储会拒绝无归属项目。
+	}
 	if s.Credits == nil {
 		return nil, nil, fault.New("MODEL_PRICE_UNAVAILABLE", "积分账本不可用")
 	}
@@ -117,11 +129,7 @@ func (s *Service) freezeMediaCredit(ctx context.Context, p d.Project, in MediaCo
 	if in.BillingBasis == "" || in.BillingBasis != q.Basis {
 		return nil, nil, fault.New("BILLING_BASIS_CHANGED", "计费依据已变化，请回读当前报价")
 	}
-	return &c.Charge{ID: mediaChargeID(p.OwnerID, p.ID, in.CommandID), SourceVersion: q.SourceVersion, InputRevision: q.InputRevision, Unit: q.Unit, ModelID: q.ModelID, ConnectionID: q.ConnectionID, Scope: q.Scope, ScopeDigest: digest, Quantity: q.Quantity, PriceVersion: q.PriceVersion, Rule: q.Rule, AcceptedAt: at, OriginalAmount: q.OriginalAmount, Amount: q.Amount, Free: q.Free}, q.MediaOptions, nil
-}
-
-func mediaDebit(owner, project string, charge *c.Charge) c.Change {
-	return c.Change{AccountID: owner, Amount: charge.Amount, OperationID: creditDeductionID(charge.ID), Source: project, Subject: owner, Reason: "generation"}
+	return &c.Charge{AccountID: q.AccountID, HolderID: q.HolderID, ActorID: q.ActorID, DiscountPercent: q.DiscountPercent, ID: mediaChargeID(q.ActorID, p.ID, in.CommandID), SourceVersion: q.SourceVersion, InputRevision: q.InputRevision, Unit: q.Unit, ModelID: q.ModelID, ConnectionID: q.ConnectionID, Scope: q.Scope, ScopeDigest: digest, Quantity: q.Quantity, PriceVersion: q.PriceVersion, Rule: q.Rule, AcceptedAt: at, OriginalAmount: q.OriginalAmount, Amount: q.Amount, Free: q.Free}, q.MediaOptions, nil
 }
 
 // MediaCreditPermit 是媒体外发的业务前置，独立注入 API 与独立任务 worker：
@@ -137,7 +145,7 @@ func (g *MediaCreditPermit) ConfirmTaskSubmission(ctx context.Context, t td.Task
 		return nil, fault.New("MODEL_PRICE_UNAVAILABLE", "积分账本不可用")
 	}
 	invalid := &ports.TaskRejection{Code: "BILLING_BASIS_INVALID", Message: "任务缺少有效的已保存计费依据"}
-	if json.Unmarshal(snapshot.CallerContext, &meta) != nil || meta.Credit == nil || t.OwnerID == "" || !strings.HasPrefix(t.ScopeID, "project:") {
+	if json.Unmarshal(snapshot.CallerContext, &meta) != nil || meta.Credit == nil || t.SpaceID == "" || t.OwnerID == "" || t.CreatorID == "" || !strings.HasPrefix(t.ScopeID, "project:") {
 		return invalid, nil
 	}
 	charge := meta.Credit
@@ -158,14 +166,15 @@ func (g *MediaCreditPermit) ConfirmTaskSubmission(ctx context.Context, t td.Task
 	if charge.Amount == 0 {
 		return nil, nil
 	}
-	change := mediaDebit(t.OwnerID, project, charge)
+	change := generationDebit(project, charge)
 	entry, e := g.Ledger.CreditOperation(ctx, change.OperationID)
 	if errors.Is(e, fault.ErrNotFound) {
 		entry, e = g.Ledger.Deduct(ctx, change)
 	}
 	if e != nil {
 		var f *fault.Error
-		if errors.As(e, &f) && f.Code == "CREDIT_INSUFFICIENT" {
+		e = generationCreditError(e, charge)
+		if errors.As(e, &f) && creditInsufficient(f.Code) {
 			return &ports.TaskRejection{Code: f.Code, Message: f.Message}, nil
 		}
 		return nil, e
@@ -178,7 +187,7 @@ func (g *MediaCreditPermit) ConfirmTaskSubmission(ctx context.Context, t td.Task
 
 // frozenMediaCharge 逐项核对已保存的计费依据未被拼装错误或篡改：规则有效、
 // 冻结时刻的免费标记与规则一致、按冻结规则重算的原价一致，且任务绑定与命令编号互相吻合。
-// 免费金额必须为 0；非免费金额必须等于重算原价。调用方保证 charge 非 nil。
+// 免费不记折扣且金额为0；付费按冻结百分比对整次计量重算。调用方保证 charge 非 nil。
 func frozenMediaCharge(charge *c.Charge, t td.Task, project string) bool {
 	if !charge.Rule.Valid() || charge.AcceptedAt.IsZero() || charge.ScopeDigest == "" {
 		return false
@@ -190,10 +199,20 @@ func frozenMediaCharge(charge *c.Charge, t td.Task, project string) bool {
 	if charge.Free != charge.Rule.Free(charge.AcceptedAt) {
 		return false
 	}
-	if charge.Free && charge.Amount != 0 || !charge.Free && charge.Amount != original {
+	if charge.Free {
+		if charge.Amount != 0 || charge.DiscountPercent != 0 {
+			return false
+		}
+	} else {
+		amount, e := c.PriceDiscount(charge.Quantity, charge.Rule.UnitPrice, 1, charge.DiscountPercent)
+		if e != nil || amount != charge.Amount {
+			return false
+		}
+	}
+	if charge.ActorID != t.CreatorID || charge.HolderID != "" && charge.HolderID != charge.ActorID {
 		return false
 	}
-	return charge.ID == mediaChargeID(t.OwnerID, project, t.CommandID) &&
+	return charge.AccountID == t.SpaceID && charge.ID == mediaChargeID(t.CreatorID, project, t.CommandID) &&
 		charge.ModelID == t.State.ModelID &&
 		charge.ConnectionID == t.State.Binding.ConnectionID
 }
@@ -251,13 +270,13 @@ func (s *Service) mediaLedgerEntries(ctx context.Context, snapshots map[string]t
 	return s.Credits.CreditOperations(ctx, ids)
 }
 
-func mediaCredit(owner, project string, charge *c.Charge, status td.Status, entries map[string]c.Entry) (*MediaCreditView, error) {
+func mediaCredit(project string, charge *c.Charge, status td.Status, entries map[string]c.Entry) (*MediaCreditView, error) {
 	if charge == nil {
 		return nil, nil
 	}
 	out := &MediaCreditView{Basis: *charge, Settlement: "pending"}
 	if charge.Amount > 0 {
-		change := mediaDebit(owner, project, charge)
+		change := generationDebit(project, charge)
 		debit, exists := entries[change.OperationID]
 		if exists {
 			if !debit.Same("deduct", change) {
@@ -267,7 +286,7 @@ func mediaCredit(owner, project string, charge *c.Charge, status td.Status, entr
 			out.DeductionID = &debit.ID
 			refund, exists := entries[creditRefundID(charge.ID)]
 			if exists {
-				if !refund.Same("refund", mediaRefund(owner, charge.ID, debit)) {
+				if !refund.Same("refund", generationRefund(charge.ID, debit)) {
 					return nil, fault.ErrConflict
 				}
 				out.Refunded = refund.Amount
@@ -293,10 +312,6 @@ func mediaCredit(owner, project string, charge *c.Charge, status td.Status, entr
 	return out, nil
 }
 
-func mediaRefund(owner, chargeID string, debit c.Entry) c.Change {
-	return c.Change{OriginalDeductionID: debit.ID, Amount: debit.Amount, OperationID: creditRefundID(chargeID), Subject: owner, Reason: "generation-incomplete"}
-}
-
 // RecoverMediaCredits 只结算终态且预扣未返还的任务；适配器只返回原任务与账本的窄事实。
 func (s *Service) RecoverMediaCredits(ctx context.Context) error {
 	if s.Credits == nil {
@@ -311,7 +326,7 @@ func (s *Service) RecoverMediaCredits(ctx context.Context) error {
 		return e
 	}
 	for _, item := range items {
-		change := mediaDebit(item.OwnerID, item.ProjectID, &c.Charge{ID: item.ChargeID, Amount: item.Amount})
+		change := generationDebit(item.ProjectID, &c.Charge{AccountID: item.AccountID, HolderID: item.HolderID, ActorID: item.ActorID, ID: item.ChargeID, Amount: item.Amount})
 		debit, e := s.Credits.CreditOperation(ctx, change.OperationID)
 		if e != nil {
 			return e
@@ -319,7 +334,7 @@ func (s *Service) RecoverMediaCredits(ctx context.Context) error {
 		if !debit.Same("deduct", change) {
 			return fault.ErrConflict
 		}
-		if _, e = s.Credits.Refund(ctx, mediaRefund(item.OwnerID, item.ChargeID, debit)); e != nil {
+		if _, e = s.Credits.Refund(ctx, generationRefund(item.ChargeID, debit)); e != nil {
 			return e
 		}
 	}

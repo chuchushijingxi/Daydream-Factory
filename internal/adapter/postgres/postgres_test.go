@@ -29,6 +29,7 @@ func TestPostgresAtomicIsolationConflictAndProcessLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := d.Project{ID: identity.New("store_contract"), Revision: 1, Title: "原始", Assets: []d.Asset{{ID: "a", Kind: "character", Name: "祖父", SourceIDs: []string{"s"}}}, Runs: []d.Run{}, ScriptSource: d.ScriptSource{Version: 1, Spans: []d.SourceSpan{{ID: "s", Text: "原文"}}}, Original: []byte("原文")}
+	p = fixtureProject(t, s, p)
 	if err = s.Create(ctx, p); err != nil {
 		t.Fatal(err)
 	}

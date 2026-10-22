@@ -1,20 +1,20 @@
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import type { LucideIcon } from 'lucide-react';
 import {
   Users,
-  KeyRound,
   Coins,
   Settings2,
-  ScrollText,
   PanelLeft,
-  Mail,
-  Gift,
   Bell,
   Palette,
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { ModelConfigurationPage } from '../model-config/ModelConfigurationPage';
 import { UsersPage } from './UsersPage';
+import { OperationsPaymentsPage } from './OperationsPaymentsPage';
+import { OperationsPaymentPackagesPage } from './OperationsPaymentPackagesPage';
 import { GrantsPage } from './GrantsPage';
 import { OperationsCreditsPage } from '../credits/OperationsCreditsPage';
 import { UsagePage } from './UsagePage';
@@ -26,25 +26,81 @@ import { PlatformSettingsPage } from './PlatformSettingsPage';
 import { PlatformLogo } from '../../components/workspace/PlatformLogo';
 import { usePlatform } from '../../state/PlatformContext';
 import { useCatalogText, type CatalogText } from '../../contexts/useCatalogText';
-const items = (c: CatalogText) =>
-  [
-    { path: 'users', label: c('用户管理'), Icon: Users },
-    { path: 'grants', label: c('注册授权码'), Icon: KeyRound },
-    { path: 'credits', label: c('积分管理'), Icon: Coins },
-    { path: 'credit-policy', label: c('积分赠送设置'), Icon: Gift },
-    { path: 'notifications', label: c('站内信'), Icon: Bell },
-    { path: 'models', label: c('模型配置'), Icon: Settings2 },
-    { path: 'usage', label: c('模型使用记录'), Icon: ScrollText },
-    { path: 'mail', label: c('邮件设置'), Icon: Mail },
-    { path: 'platform', label: c('平台设置'), Icon: Palette },
-  ] as const;
+import { TeamsPage } from './teams/TeamsPage';
+import { TeamDetailPage } from './teams/TeamDetailPage';
+type NavLeaf = {
+  path: string;
+  label: string;
+  match?: (pathname: string) => boolean;
+};
+type NavEntry =
+  | ({ kind: 'group' } & NavLeaf & { Icon: LucideIcon; links: NavLeaf[] })
+  | ({ kind: 'link' } & NavLeaf & { Icon: LucideIcon });
+const paymentsOrders: NavLeaf['match'] = (pathname) =>
+  ['/operations/payments/orders', '/operations/payments/anomalies'].includes(pathname);
+const navEntries = (c: CatalogText): NavEntry[] => [
+  {
+    kind: 'group',
+    path: 'people',
+    label: c('用户与组织'),
+    Icon: Users,
+    links: [
+      { path: 'users', label: c('用户管理') },
+      { path: 'teams', label: c('团队管理'), match: (p) => p.startsWith('/operations/teams') },
+      { path: 'grants', label: c('注册授权码') },
+    ],
+  },
+  {
+    kind: 'group',
+    path: 'billing',
+    label: c('积分与支付'),
+    Icon: Coins,
+    links: [
+      { path: 'credits', label: c('积分管理') },
+      { path: 'credit-policy', label: c('积分赠送设置') },
+      { path: 'payments/orders', label: c('支付管理'), match: paymentsOrders },
+      { path: 'payments/packages', label: c('充值档位与限额') },
+    ],
+  },
+  {
+    kind: 'group',
+    path: 'modeling',
+    label: c('模型'),
+    Icon: Settings2,
+    links: [
+      { path: 'models', label: c('模型配置') },
+      { path: 'usage', label: c('模型使用记录') },
+    ],
+  },
+  {
+    kind: 'group',
+    path: 'messaging',
+    label: c('消息'),
+    Icon: Bell,
+    links: [
+      { path: 'notifications', label: c('站内信') },
+      { path: 'mail', label: c('邮件设置') },
+    ],
+  },
+  { kind: 'link', path: 'platform', label: c('平台设置'), Icon: Palette },
+];
+const leafActive = (leaf: NavLeaf, pathname: string) =>
+  leaf.match ? leaf.match(pathname) : pathname === '/operations/' + leaf.path;
 export function OperationsLayout() {
   const { settings: brand } = usePlatform();
   const { c } = useCatalogText();
-  const nav = items(c);
+  const nav = navEntries(c);
   const { pathname } = useLocation(),
     [collapsed, setCollapsed] = useState(false);
+  const activeGroupPath = nav.find(
+    (entry) => entry.kind === 'group' && entry.links.some((leaf) => leafActive(leaf, pathname)),
+  )?.path;
+  const [openGroup, setOpenGroup] = useState<string | null>(activeGroupPath ?? null);
+  useEffect(() => {
+    if (activeGroupPath) setOpenGroup(activeGroupPath);
+  }, [activeGroupPath]);
   const toggle = useRef<HTMLButtonElement>(null);
+  const toggleGroup = (path: string) => setOpenGroup((prev) => (prev === path ? null : path));
   return (
     <div
       className="op-shell"
@@ -64,7 +120,10 @@ export function OperationsLayout() {
         <header className="jm-sidebar-head">
           {!collapsed ? (
             <Link className="account-brand" to="/operations/users">
-              <PlatformLogo /><span className="account-brand-name" title={brand?.name}>{brand?.name}</span>
+              <PlatformLogo />
+              <span className="account-brand-name" title={brand?.name}>
+                {brand?.name}
+              </span>
             </Link>
           ) : null}
           <Button
@@ -80,22 +139,73 @@ export function OperationsLayout() {
         </header>
         {!collapsed ? <p className="op-sidebar-caption">{c('运营后台')}</p> : null}
         <nav aria-label={c('运营导航')} className="jm-sidebar-links">
-          {nav.map(({ path, label, Icon }) => (
-            <Link
-              key={path}
-              className="jm-sidebar-nav"
-              onClick={() => {
-                if (matchMedia('(max-width:800px)').matches) setCollapsed(true);
-              }}
-              to={'/operations/' + path}
-              aria-label={label}
-              title={collapsed ? label : undefined}
-              aria-current={pathname === '/operations/' + path ? 'page' : undefined}
-            >
-              <Icon />
-              {!collapsed ? <span>{label}</span> : null}
-            </Link>
-          ))}
+          {nav.map((entry) => {
+            const active = leafActive(entry, pathname);
+            if (entry.kind === 'link')
+              return (
+                <Link
+                  key={entry.path}
+                  className="jm-sidebar-nav"
+                  onClick={() => {
+                    if (matchMedia('(max-width:800px)').matches) setCollapsed(true);
+                  }}
+                  to={'/operations/' + entry.path}
+                  aria-label={entry.label}
+                  title={collapsed ? entry.label : undefined}
+                  aria-current={active ? 'page' : undefined}
+                >
+                  <entry.Icon />
+                  {!collapsed ? <span>{entry.label}</span> : null}
+                </Link>
+              );
+            const open = !collapsed && openGroup === entry.path;
+            return (
+              <div
+                key={entry.path}
+                className="op-nav-group"
+                data-open={open}
+                data-current={entry.links.some((leaf) => leafActive(leaf, pathname))}
+              >
+                <button
+                  type="button"
+                  className="jm-sidebar-nav op-nav-toggle"
+                  aria-label={entry.label}
+                  aria-expanded={collapsed ? undefined : open}
+                  title={collapsed ? entry.label : undefined}
+                  onClick={() => {
+                    if (collapsed) {
+                      setCollapsed(false);
+                      setOpenGroup(entry.path);
+                      return;
+                    }
+                    toggleGroup(entry.path);
+                  }}
+                >
+                  <entry.Icon />
+                  {!collapsed ? <span>{entry.label}</span> : null}
+                  {!collapsed ? <ChevronDown className="op-nav-caret" /> : null}
+                </button>
+                <div className="op-nav-sub-wrap">
+                  <div className="op-nav-sub">
+                    {entry.links.map((leaf) => (
+                      <Link
+                        key={leaf.path}
+                        className="jm-sidebar-nav"
+                        onClick={() => {
+                          if (matchMedia('(max-width:800px)').matches) setCollapsed(true);
+                        }}
+                        to={'/operations/' + leaf.path}
+                        aria-label={leaf.label}
+                        aria-current={leafActive(leaf, pathname) ? 'page' : undefined}
+                      >
+                        <span>{leaf.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </nav>
         <footer className="op-sidebar-footer">
           <OperationsAccountMenu compact={collapsed} />
@@ -113,7 +223,12 @@ export function OperationsLayout() {
       ) : null}
       <main className="op-main">
         <Routes>
+          <Route path="/operations/teams" element={<TeamsPage />} />
+          <Route path="/operations/teams/:id" element={<TeamDetailPage />} />
           <Route path="/operations/users" element={<UsersPage />} />
+          <Route path="/operations/payments/orders" element={<OperationsPaymentsPage />} />
+          <Route path="/operations/payments/anomalies" element={<OperationsPaymentsPage />} />
+          <Route path="/operations/payments/packages" element={<OperationsPaymentPackagesPage />} />
           <Route path="/operations/grants" element={<GrantsPage />} />
           <Route path="/operations/credits" element={<OperationsCreditsPage />} />
           <Route path="/operations/models" element={<ModelConfigurationPage />} />

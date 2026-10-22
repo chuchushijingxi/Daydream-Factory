@@ -33,3 +33,25 @@ tasks:
   pollInterval: 1s
 
 # SMTP 在运营平台动态配置，并加密保存在 PG。
+
+# 缺省按正式环境处理。演示渠道仅在 development/staging 且明确开启时可用。
+environment: production
+payment:
+  notifyBaseUrl: "" # 启用微信或支付宝时填写本服务对外 HTTPS 地址。
+  demo:
+    enabled: false
+  wechatpay:
+    enabled: false
+    mchId: ""
+    appId: ""
+    mchSerialNo: ""
+    mchPrivateKeyFile: /run/secrets/wechatpay/apiclient_key.pem
+    apiV3Key: ""
+    verifyKeys: [] # 第一项用于主动请求，其余用于轮换验签；元素含 id 和 file。
+  alipay:
+    enabled: false
+    gateway: production # sandbox 仅允许非正式环境，即使未启用渠道也不能用于正式环境。
+    appId: ""
+    sellerId: "" # 商家 PID；启用时必填。第一期仅公钥模式。
+    appPrivateKeyFile: /run/secrets/alipay/app_private_key.pem
+    alipayPublicKeyFile: /run/secrets/alipay/alipay_public_key.pem

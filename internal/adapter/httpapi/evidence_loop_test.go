@@ -195,7 +195,7 @@ func TestActualEvidenceToolsAgentLoopAndRecovery(t *testing.T) {
 					t.Fatal(err)
 				}
 			} else {
-				host, handler := httpapi.New(s, nil, "../../../demo", 0)
+				host, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 				server := httptest.NewServer(handler)
 				code, body := postProjectContent(t, server.URL, "/api/projects/"+p.ID+"/assets/c/visual-prompt-runs", map[string]any{"revision": p.Revision})
 				if code != 202 {

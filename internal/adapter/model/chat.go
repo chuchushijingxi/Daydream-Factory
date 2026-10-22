@@ -6,10 +6,12 @@ import (
 	"drama-agent/internal/adapter/appconfig"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"syscall"
 
 	"drama-agent/internal/adapter/transport"
@@ -76,6 +78,9 @@ func (m *chatModel) Generate(ctx context.Context, req ports.Request, observe fun
 		}
 	}
 	msg, err := m.component.Generate(ctx, messages, options...)
+	// 固定 SDK 在解析出一个 JSON 后即可成功，且忽略 defer Body.Close 的错误。
+	// 必须把 HTTP framing 的尾部错误纳入结果，不能采用完整外观的截断响应。
+	err = errors.Join(err, capture.bodyErr)
 	if err != nil {
 		var unsent interface{ RequestNotSent() bool }
 		safe := errors.New(strings.ReplaceAll(err.Error(), m.key, "[redacted]"))
@@ -154,13 +159,16 @@ type callerContextTransport struct{ base http.RoundTripper }
 type responseCaptureKey struct{}
 
 type responseCapture struct {
-	raw    bytes.Buffer
-	status int
+	raw     bytes.Buffer
+	status  int
+	bodyErr error
 }
 
 type capturedBody struct {
 	io.ReadCloser
-	capture *responseCapture
+	capture   *responseCapture
+	closeOnce sync.Once
+	closeErr  error
 }
 
 func (b *capturedBody) Read(p []byte) (int, error) {
@@ -168,7 +176,31 @@ func (b *capturedBody) Read(p []byte) (int, error) {
 	if n > 0 {
 		_, _ = b.capture.raw.Write(p[:n])
 	}
+	if err != nil && !errors.Is(err, io.EOF) && b.capture.bodyErr == nil {
+		b.capture.bodyErr = err
+	}
 	return n, err
+}
+
+// 固定 SDK 可能在 JSON 结束时停读；只核对有限尾部，仍由原请求 ctx 控制取消与期限。
+// 正文已由 SDK 读取，正常尾部只有空白；异常大尾部按协议失败，不无界读尽。
+func (b *capturedBody) Close() error {
+	b.closeOnce.Do(func() {
+		const maxRemainderBytes = 64 << 10
+		_, readErr := io.CopyN(io.Discard, b, maxRemainderBytes+1)
+		if readErr == nil {
+			readErr = fmt.Errorf("provider response trailing body exceeds %d bytes", maxRemainderBytes)
+			if b.capture.bodyErr == nil {
+				b.capture.bodyErr = readErr
+			}
+		} else if errors.Is(readErr, io.EOF) {
+			readErr = nil
+		}
+		closeErr := b.ReadCloser.Close()
+		b.capture.bodyErr = errors.Join(b.capture.bodyErr, closeErr)
+		b.closeErr = errors.Join(readErr, closeErr)
+	})
+	return b.closeErr
 }
 
 // 保留调用者的取消语义；SDK 的默认超时不得截断

@@ -1,3 +1,4 @@
+import { CreditShortageNotice } from '../credits/CreditShortageNotice';
 import { protectedResourceUrl } from '../../api/client';
 import { useCatalogText } from '../../contexts/useCatalogText';
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
@@ -123,7 +124,15 @@ export function MediaGenerator({
     />
   );
   const quoteKey = JSON.stringify([
-    p?.id, p?.revision, chosen, target, selected, imageType, aspectRatio, open, media.billingSequence,
+    p?.id,
+    p?.revision,
+    chosen,
+    target,
+    selected,
+    imageType,
+    aspectRatio,
+    open,
+    media.billingSequence,
   ]);
   const quote = useChargeQuote(
     () =>
@@ -161,29 +170,25 @@ export function MediaGenerator({
   const targetImage = asset && 'lookId' in target && target.lookId ? look?.image : asset?.image;
   const imageAction = targetImage ? '重新生成' : '生成图片';
   const selectedModel = options.find((m) => m.id === chosen);
-  const entryAmount =
-    kind === 'image'
-      ? mediaCreditEstimate(selectedModel, selected)
-      : undefined;
+  const entryAmount = kind === 'image' ? mediaCreditEstimate(selectedModel, selected) : undefined;
   const entryPriceId = useId();
   // 限免模型或限免报价都不显示 0 积分，改展示“限免”活动标签。
   const entryFree =
     entryAmount !== undefined && (selectedModel?.free === true || !!quote.value?.free);
-  const entryPrice =
-    entryFree ? (
-      <span id={entryPriceId} className="button-credit-amount" aria-label={c('限免')}>
-        <FreeBadge />
-      </span>
-    ) : entryAmount !== undefined ? (
-      <span
-        id={entryPriceId}
-        className="button-credit-amount"
-        aria-label={c('预计消耗 {amount} 积分', { amount: entryAmount })}
-      >
-        <CreditStar />
-        {formatInteger(String(entryAmount))}
-      </span>
-    ) : null;
+  const entryPrice = entryFree ? (
+    <span id={entryPriceId} className="button-credit-amount" aria-label={c('限免')}>
+      <FreeBadge />
+    </span>
+  ) : entryAmount !== undefined ? (
+    <span
+      id={entryPriceId}
+      className="button-credit-amount"
+      aria-label={c('预计消耗 {amount} 积分', { amount: entryAmount })}
+    >
+      <CreditStar />
+      {formatInteger(String(entryAmount))}
+    </span>
+  ) : null;
   const imageTitle = asset
     ? look
       ? asset.name + ' · ' + look.name
@@ -195,31 +200,43 @@ export function MediaGenerator({
     versionIndex = versions.findIndex((v) => v.file.id === output?.id);
   const priceId = useId();
   const videoFailureTitleId = useId();
-  const failedTask = inlineVideo && !media.active && latestTask?.status === 'failed' ? latestTask : null;
+  const failedTask =
+    inlineVideo && !media.active && latestTask?.status === 'failed' ? latestTask : null;
   const retryVideo = inlineVideo && !!media.pending;
-  const videoAction = retryVideo && !media.busy
-    ? '重试'
-    : hasVideo || !!output
-      ? '重新生成'
-      : '生成视频';
+  const videoAction =
+    retryVideo && !media.busy ? '重试' : hasVideo || !!output ? '重新生成' : '生成视频';
   // 核价中立即显示当前模型/档位/秒数的预计金额；提交只使用本次服务端basis。
   // 不复用上一镜头金额，也不把禁用或未确认当成零价。
-  const generationAmount = quote.value?.amount ?? (kind === 'image'
-    ? entryAmount
-    : selected?.durationSeconds !== undefined
-      ? mediaCreditEstimate(options.find((m) => m.id === chosen), selected, selected.durationSeconds)
-      : undefined);
-  const buttonAmount = generationAmount === undefined ? '…' : formatInteger(String(generationAmount));
+  const generationAmount =
+    quote.value?.amount ??
+    (kind === 'image'
+      ? entryAmount
+      : selected?.durationSeconds !== undefined
+        ? mediaCreditEstimate(
+            options.find((m) => m.id === chosen),
+            selected,
+            selected.durationSeconds,
+          )
+        : undefined);
+  const buttonAmount =
+    generationAmount === undefined ? '…' : formatInteger(String(generationAmount));
   const buttonFree = !!quote.value?.free || selectedModel?.free === true;
-  const [startIntent, setStartIntent] = useState<{ key: string; epoch: number; amount: number } | null>(null),
+  const [startIntent, setStartIntent] = useState<{
+      key: string;
+      epoch: number;
+      amount: number;
+    } | null>(null),
     [priceReview, setPriceReview] = useState('');
   const intentGuard = useRef(false);
   const epoch = sessionBoundary.epoch;
-  const unavailable = !media.available || media.busy || !!media.active ||
+  const unavailable =
+    !media.available ||
+    media.busy ||
+    !!media.active ||
     (!retryVideo && (disabled || !supported || !!media.pending));
   const canAwaitQuote = quote.required && quote.busy && generationAmount !== undefined;
-  const generationDisabled = unavailable || !!startIntent ||
-    (!retryVideo && quote.blocked && !canAwaitQuote);
+  const generationDisabled =
+    unavailable || !!startIntent || (!retryVideo && quote.blocked && !canAwaitQuote);
   useEffect(() => {
     if (!startIntent) return;
     const current = startIntent.key === quoteKey && startIntent.epoch === epoch && !unavailable;
@@ -245,9 +262,12 @@ export function MediaGenerator({
     // 未明请求只核对已保存的原命令，不能重新报价后创建另一笔扣费。
     void media.submit(chosen, quote.basis, retryVideo, selected, imageType, aspectRatio);
   };
-  const priceReviewNotice = priceReview === quoteKey ? (
-    <p className="media-muted" role="status">{c('积分价格已更新，请确认后再次生成。')}</p>
-  ) : null;
+  const priceReviewNotice =
+    priceReview === quoteKey ? (
+      <p className="media-muted" role="status">
+        {c('积分价格已更新，请确认后再次生成。')}
+      </p>
+    ) : null;
   const buttonPrice =
     (inlineVideo || kind === 'image') && quote.required && !media.active && !media.pending ? (
       <span
@@ -382,9 +402,7 @@ export function MediaGenerator({
           aria-label={c('选择视频')}
           aria-haspopup="dialog"
           title={
-            media.items[0]?.status === 'failed'
-              ? c('上次生成失败，点击查看视频')
-              : c('选择视频')
+            media.items[0]?.status === 'failed' ? c('上次生成失败，点击查看视频') : c('选择视频')
           }
           onClick={() => setVersionsOpen(true)}
         >
@@ -436,10 +454,9 @@ export function MediaGenerator({
               {profile?.durations?.length &&
               estimatedDurationSeconds != null &&
               estimatedDurationSeconds > Math.max(...profile.durations)
-                ? c(
-                    '分镜时长 {seconds} 秒超过当前模型支持范围，请调整分镜或更换视频模型。',
-                    { seconds: Math.ceil(estimatedDurationSeconds) },
-                  )
+                ? c('分镜时长 {seconds} 秒超过当前模型支持范围，请调整分镜或更换视频模型。', {
+                    seconds: Math.ceil(estimatedDurationSeconds),
+                  })
                 : preferred
                   ? c('当前视频模型尚未接入生成，请在右上角选择可用的 Mock 视频模型。')
                   : c('请在右上角选择视频模型。')}
@@ -524,6 +541,10 @@ export function MediaGenerator({
           </Button>
         </p>
       ) : null}
+      <CreditShortageNotice
+        code={latestTask?.errorCode}
+        needed={latestTask?.credit?.basis.amount ?? quote.value?.amount}
+      />
       {kind === 'image' && media.items[0]?.status === 'failed' ? (
         <p role="alert" className="jm-inline-error">
           {media.items[0].error || c('生成失败')}

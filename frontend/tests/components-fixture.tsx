@@ -60,6 +60,7 @@ const targets = assets.flatMap((a) => [
 ]);
 const project: any = {
   id: 'project_component_fixture',
+  spaceId: 'component_fixture', ownerId: 'component_fixture', creatorId: 'component_fixture',
   title: '虚构组件测试 · 无外发',
   revision: 4,
   source: { version: 1, filename: 'fiction.txt', sha256: 'fiction', spanCount: 1 },
@@ -102,9 +103,16 @@ const project: any = {
   limitMicroCny: 0,
 };
 const copy = () => JSON.parse(JSON.stringify(project));
+let editorOwned = false;
 window.fetch = async (input, options = {}) => {
-  const url = String(input),
+  const url = new URL(String(input), 'http://fixture.invalid').pathname,
     method = options.method || 'GET';
+  if (url === '/api/projects/' + project.id + '/permissions') return Response.json({spaceId: project.spaceId, ownerId: project.ownerId, creatorId: project.creatorId, access: 2, canShare: false});
+  if (url === '/api/projects/' + project.id + '/editing') {
+    if (method === 'DELETE') { editorOwned = false; return Response.json({released: true}); }
+    if (method === 'POST') editorOwned = true;
+    return Response.json({userId: editorOwned ? project.ownerId : '', username: editorOwned ? '组件测试编辑者' : '', expiresAt: editorOwned ? new Date(Date.now()+90000).toISOString() : null, owned: editorOwned});
+  }
   if (method === 'GET') {
     if (url === '/api/status')
       return Response.json({ readOnly: false, configured: false, capabilities: {} });

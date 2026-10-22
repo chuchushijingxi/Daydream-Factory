@@ -105,7 +105,7 @@ func testModelConfigurationHTTPPG(t *testing.T, modelID string) {
 		return modeladapter.NewConfigured(ctx, key, url, protocol, profile)
 	}}
 	service := &app.Service{Credits: store, Prices: &frozenFixturePrices{version: 1}, Store: store, Agent: einoagent.New(), Models: config}
-	host, handler := httpapi.New(service, config, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(service), config, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "operations")
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -217,7 +217,7 @@ func testModelConfigurationHTTPPG(t *testing.T, modelID string) {
 	if status != 400 {
 		t.Fatal("unknown field accepted")
 	}
-	p := d.Project{OwnerID: legacyHTTPActor.UserID, ID: identity.New("config_http_test"), Revision: 1, ScriptSource: d.ScriptSource{Version: 1, Spans: []d.SourceSpan{{ID: "fiction", Text: "虚构模型配置运输测试文本。"}}}, Assets: []d.Asset{}, Runs: []d.Run{}, ProjectSettings: &d.ProjectSettings{LLMModel: selectedID}}
+	p := d.Project{SpaceID: legacyHTTPActor.UserID, CreatorID: legacyHTTPActor.UserID, OwnerID: legacyHTTPActor.UserID, ID: identity.New("config_http_test"), Revision: 1, ScriptSource: d.ScriptSource{Version: 1, Spans: []d.SourceSpan{{ID: "fiction", Text: "虚构模型配置运输测试文本。"}}}, Assets: []d.Asset{}, Runs: []d.Run{}, ProjectSettings: &d.ProjectSettings{LLMModel: selectedID}}
 	if e = store.Create(ctx, p); e != nil {
 		t.Fatal(e)
 	}

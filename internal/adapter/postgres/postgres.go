@@ -21,7 +21,8 @@ import (
 var schemaSQL string
 
 type Store struct {
-	owner   *string
+	space   *string
+	scope   *ports.SpaceScope
 	pool    *pgxpool.Pool
 	runtime ports.RuntimeState
 }
@@ -76,43 +77,45 @@ func (s *Store) Migrate(ctx context.Context) error {
 	return tx.Commit(ctx)
 }
 
-// 归属列独立参与查询与 CAS；领域快照保留 OwnerID，payload 不重复存储。
+// 空间、负责人和原创建人是独立列的权威事实，payload 不重复存储。
 func marshalProjectPayload(p d.Project) ([]byte, error) {
 	return json.Marshal(struct {
 		d.Project
-		OwnerID string `json:"ownerId,omitempty"`
+		OwnerID   string `json:"ownerId,omitempty"`
+		SpaceID   string `json:"spaceId,omitempty"`
+		CreatorID string `json:"creatorId,omitempty"`
 	}{Project: p})
 }
 
 func (s *Store) Create(ctx context.Context, p d.Project) error {
-	if s.owner != nil && (*s.owner == "" || p.OwnerID != *s.owner) {
+	if s.space != nil && (*s.space == "" || p.SpaceID != *s.space) {
 		return fault.New("AUTH_REQUIRED", "缺少可信归属")
 	}
-	if p.ID == "" || p.Revision != 1 {
+	if p.ID == "" || p.SpaceID == "" || p.OwnerID == "" || p.CreatorID == "" || p.Revision != 1 {
 		return fault.ErrInvalid
 	}
 	raw, err := marshalProjectPayload(p)
 	if err != nil {
 		return err
 	}
-	_, err = s.pool.Exec(ctx, `INSERT INTO drama_catalog_v1.projects(id,revision,payload,owner_id) VALUES($1,$2,$3,NULLIF($4,''))`, p.ID, p.Revision, raw, p.OwnerID)
+	_, err = s.pool.Exec(ctx, `INSERT INTO drama_catalog_v1.projects(id,revision,payload,space_id,owner_id,creator_id) VALUES($1,$2,$3,$4,$5,$6)`, p.ID, p.Revision, raw, p.SpaceID, p.OwnerID, p.CreatorID)
 	var pgError *pgconn.PgError
 	if errors.As(err, &pgError) && pgError.Code == "23505" {
 		return fault.ErrConflict
 	}
 	if err == nil {
-		s.invalidateAfterCommit(ctx, "projects:"+p.OwnerID, "projects:system", "progress:"+p.OwnerID+":"+p.ID)
+		s.invalidateAfterCommit(ctx, "projects:"+p.SpaceID, "projects:system", "progress:"+p.SpaceID+":"+p.ID)
 	}
 	return err
 }
 
 func (s *Store) Snapshot(ctx context.Context, id string) (d.Project, error) {
-	if s.owner != nil && *s.owner == "" {
+	if s.space != nil && *s.space == "" {
 		return d.Project{}, fault.New("AUTH_REQUIRED", "缺少可信归属")
 	}
 	var raw []byte
-	var owner string
-	err := s.pool.QueryRow(ctx, `SELECT payload,coalesce(owner_id,'') FROM drama_catalog_v1.projects WHERE id=$1 AND ($2::text IS NULL OR (owner_id=$2 AND $2<>''))`, id, s.owner).Scan(&raw, &owner)
+	var space, owner, creator string
+	err := s.pool.QueryRow(ctx, `SELECT payload,space_id,owner_id,creator_id FROM drama_catalog_v1.projects WHERE id=$1 AND ($2::text IS NULL OR (space_id=$2 AND $2<>''))`, id, s.space).Scan(&raw, &space, &owner, &creator)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return d.Project{}, fault.ErrNotFound
 	}
@@ -121,15 +124,15 @@ func (s *Store) Snapshot(ctx context.Context, id string) (d.Project, error) {
 	}
 	var p d.Project
 	err = json.Unmarshal(raw, &p)
-	p.OwnerID = owner
+	p.SpaceID, p.OwnerID, p.CreatorID = space, owner, creator
 	return p, err
 }
 
 func (s *Store) Commit(ctx context.Context, p d.Project, expected uint64) error {
-	if s.owner != nil && (*s.owner == "" || p.OwnerID != *s.owner) {
+	if s.space != nil && (*s.space == "" || p.SpaceID != *s.space) {
 		return fault.New("AUTH_REQUIRED", "缺少可信归属")
 	}
-	if p.ID == "" || p.Revision != expected+1 {
+	if p.ID == "" || p.SpaceID == "" || p.OwnerID == "" || p.CreatorID == "" || p.Revision != expected+1 {
 		return fault.ErrInvalid
 	}
 	raw, err := marshalProjectPayload(p)
@@ -137,14 +140,14 @@ func (s *Store) Commit(ctx context.Context, p d.Project, expected uint64) error 
 		return err
 	}
 	// revision 与完整 payload 同一 SQL 更新；并发冲突不部分写入、不自动覆盖。
-	result, err := s.pool.Exec(ctx, `UPDATE drama_catalog_v1.projects SET payload=$3,revision=$2,updated_at=now() WHERE id=$1 AND revision=$4 AND owner_id IS NOT DISTINCT FROM NULLIF($5,'')`, p.ID, p.Revision, raw, expected, p.OwnerID)
+	result, err := s.pool.Exec(ctx, `UPDATE drama_catalog_v1.projects SET payload=$3,revision=$2,updated_at=now() WHERE id=$1 AND revision=$4 AND space_id=$5 AND creator_id=$6 AND owner_id=$7`, p.ID, p.Revision, raw, expected, p.SpaceID, p.CreatorID, p.OwnerID)
 	if err != nil {
 		return err
 	}
 	if result.RowsAffected() != 1 {
 		return fault.ErrConflict
 	}
-	s.invalidateAfterCommit(ctx, "projects:"+p.OwnerID, "projects:system", "progress:"+p.OwnerID+":"+p.ID)
+	s.invalidateAfterCommit(ctx, "projects:"+p.SpaceID, "projects:system", "progress:"+p.SpaceID+":"+p.ID)
 	return nil
 }
 
@@ -156,9 +159,13 @@ func (s *Store) Acquire(ctx context.Context, id string) (ports.Lease, bool, erro
 	return r.Lock(ctx, "project:"+id, false)
 }
 
-func (s *Store) ForProjectOwner(owner string) ports.ProjectStore {
-	return &Store{pool: s.pool, owner: &owner, runtime: s.runtime}
+func (s *Store) ForSpace(space string) *Store {
+	return &Store{pool: s.pool, space: &space, runtime: s.runtime}
 }
-func (s *Store) ForUploadedFileOwner(owner string) ports.UploadedFileStore {
-	return &Store{pool: s.pool, owner: &owner, runtime: s.runtime}
+func (s *Store) ForProjectSpace(space string) ports.ProjectStore           { return s.ForSpace(space) }
+func (s *Store) ForUploadedFileSpace(space string) ports.UploadedFileStore { return s.ForSpace(space) }
+func (s *Store) ForProjectScope(scope ports.SpaceScope) ports.ProjectStore {
+	scoped := s.ForSpace(scope.SpaceID)
+	scoped.scope = &scope
+	return scoped
 }

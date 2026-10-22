@@ -19,7 +19,7 @@ func (s *Service) OriginalScript(ctx context.Context, id string) (d.Project, []b
 		if s.Files == nil {
 			return p, nil, fault.New("FILE_STORAGE_UNAVAILABLE", "文件存储不可用")
 		}
-		_, raw, err = s.Files.ReadOriginal(ctx, p.SourceFileID)
+		_, raw, err = s.ReferencedFileBytes(ctx, id, p.SourceFileID, false)
 		if err != nil {
 			return p, nil, err
 		}

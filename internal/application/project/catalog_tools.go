@@ -47,6 +47,10 @@ func (s *Service) executeTool(ctx context.Context, id, actionID string) (ports.T
 	if err != nil {
 		return ports.ToolResult{}, err
 	}
+	if err = s.checkAgentAccess(ctx, p); err != nil {
+		return ports.ToolResult{}, s.stopAgentForPermission(ctx, id, err)
+	}
+	tools := s.agentTools()
 	var result ports.ToolResult
 	r := p.LatestRun()
 	if r != nil && len(r.Calls) > 0 {
@@ -56,14 +60,14 @@ func (s *Service) executeTool(ctx context.Context, id, actionID string) (ports.T
 		}
 	}
 	if r != nil && isStoryboard(r.Contract) {
-		result, err = s.executeStoryboardTool(ctx, id, actionID)
+		result, err = tools.executeStoryboardTool(ctx, id, actionID)
 	} else if r != nil && r.ExecutionContract() != d.CatalogExtractionContract {
-		result, err = s.executeContentTool(ctx, id, actionID)
+		result, err = tools.executeContentTool(ctx, id, actionID)
 	} else {
-		result, err = s.executeCatalogTool(ctx, id, actionID)
+		result, err = tools.executeCatalogTool(ctx, id, actionID)
 	}
 	if err != nil || result.Text == "" {
-		return result, err
+		return result, s.stopAgentForPermission(ctx, id, err)
 	}
 	// 存储保持真实内部 ID；仅给模型的同一回执视图采用原 Call 的表示。
 	if r != nil && len(r.Calls) > 0 {

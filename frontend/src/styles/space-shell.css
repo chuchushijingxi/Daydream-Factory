@@ -1,0 +1,170 @@
+.space-account-copy {
+  display: block;
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+}
+.space-account-copy .xy-sidebar-menu-name {
+  display: block;
+}
+.space-account-subtitle {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--jm-muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+.space-menu-trigger {
+  gap: 8px;
+}
+.space-menu-current {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--jm-muted);
+}
+.space-submenu.xy-preferences-menu {
+  width: 304px;
+  max-width: calc(100vw - 24px);
+  max-height: min(560px, var(--radix-dropdown-menu-content-available-height), calc(100dvh - 24px));
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Use the same opaque panel, border, radius, shadow and motion as its parent. */
+  background: var(--jm-panel);
+  backdrop-filter: none;
+}
+.space-menu-entry {
+  display: contents;
+}
+.space-menu-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.space-menu-line > .space-menu-row {
+  flex: 1;
+  min-width: 0;
+}
+.space-menu-enter {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  margin-inline-end: 4px;
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--jm-border);
+  border-radius: 999px;
+  color: var(--jm-text);
+  font-size: 12px;
+  line-height: 18px;
+  outline: none;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease;
+}
+.space-menu-enter svg {
+  width: 12px;
+  height: 12px;
+}
+.space-menu-enter[data-highlighted] {
+  border-color: transparent;
+  background: var(--xy-menu-hover);
+}
+.xy-preferences-menu .xy-preferences-row.space-menu-row {
+  height: auto;
+  min-height: 36px;
+  gap: 8px;
+  padding-block: 8px;
+  align-items: center;
+}
+/* workspace.css loads later: keep the content-driven rows more specific than
+   the shared account menu's fixed 36px row, without changing that base menu. */
+.xy-preferences-menu .xy-preferences-row.space-menu-row:has(.space-menu-detail) {
+  min-height: 52px;
+}
+.space-menu-row[data-highlighted],
+.space-menu-trigger[data-state='open'] {
+  background: var(--xy-menu-hover);
+}
+.space-menu-check {
+  width: 14px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.space-menu-check svg {
+  width: 14px;
+  height: 14px;
+}
+.space-menu-copy {
+  flex: 1;
+  min-width: 0;
+}
+.space-menu-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  line-height: 18px;
+  font-weight: var(--font-weight-normal);
+}
+.space-menu-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.space-role-badge {
+  flex: none;
+  padding: 0 6px;
+  font-size: 10px;
+  line-height: 16px;
+}
+.space-menu-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin-top: 2px;
+  color: var(--jm-muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+.space-expired-label {
+  white-space: nowrap;
+  font-weight: var(--font-weight-normal);
+  color: var(--jm-warning);
+}
+.space-menu-back {
+  color: var(--jm-muted);
+}
+.space-notification-action {
+  margin-top: 16px;
+}
+@media (max-width: 640px) {
+  .xy-preferences-menu[data-space-panel='true'] {
+    width: min(304px, calc(100vw - 24px));
+  }
+  .xy-preferences-menu .xy-preferences-row.space-menu-row {
+    min-height: 44px;
+  }
+  .space-menu-enter {
+    height: 36px;
+  }
+  .xy-preferences-menu .xy-preferences-row.space-menu-back {
+    height: 44px;
+    min-height: 44px;
+  }
+  .space-menu-current {
+    max-width: 85px;
+  }
+}
+

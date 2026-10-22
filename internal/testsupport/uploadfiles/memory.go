@@ -13,6 +13,7 @@ import (
 	app "drama-agent/internal/application/upload"
 	"drama-agent/internal/domain/fault"
 	d "drama-agent/internal/domain/upload"
+	"drama-agent/internal/testsupport/spacefixture"
 )
 
 type Memory struct {
@@ -23,7 +24,7 @@ type Memory struct {
 
 func New() *app.Service {
 	m := &Memory{Files: map[string]d.File{}, Objects: map[string][]byte{}}
-	return &app.Service{Store: m, Objects: m}
+	return &app.Service{Store: m, Objects: m, Resolver: spacefixture.Personal{}, Access: spacefixture.Personal{}}
 }
 
 func (m *Memory) CreateUploadedFile(ctx context.Context, f d.File) error {
@@ -104,23 +105,23 @@ func (m *Memory) RemoveFile(ctx context.Context, id string, b d.Blob) error {
 
 func (m *Memory) DetectContentType(raw []byte) string { return http.DetectContentType(raw) }
 
-type ownedFiles struct {
+type spaceFiles struct {
 	m     *Memory
-	owner string
+	space string
 }
 
-func (m *Memory) ForUploadedFileOwner(owner string) ports.UploadedFileStore {
-	return ownedFiles{m, owner}
+func (m *Memory) ForUploadedFileSpace(space string) ports.UploadedFileStore {
+	return spaceFiles{m, space}
 }
-func (s ownedFiles) CreateUploadedFile(ctx context.Context, f d.File) error {
-	if s.owner == "" || f.OwnerID != s.owner {
+func (s spaceFiles) CreateUploadedFile(ctx context.Context, f d.File) error {
+	if s.space == "" || f.SpaceID != s.space {
 		return fault.ErrInvalid
 	}
 	return s.m.CreateUploadedFile(ctx, f)
 }
-func (s ownedFiles) UploadedFile(ctx context.Context, id string) (d.File, error) {
+func (s spaceFiles) UploadedFile(ctx context.Context, id string) (d.File, error) {
 	f, e := s.m.UploadedFile(ctx, id)
-	if e == nil && (s.owner == "" || f.OwnerID != s.owner) {
+	if e == nil && (s.space == "" || f.SpaceID != s.space) {
 		return d.File{}, fault.ErrNotFound
 	}
 	return f, e

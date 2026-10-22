@@ -354,7 +354,8 @@ export function createAdministrationFixture() {
           filters.direction === 'all' ||
           (filters.direction === 'acquired' && row.direction === 'add') ||
           (filters.direction === 'consumed' && ['deduct','refund'].includes(row.direction)) ||
-          (filters.direction === 'expired' && row.direction === 'expire'),
+          (filters.direction === 'expired' && row.direction === 'expire') ||
+          (filters.direction === 'reclaimed' && row.direction === 'reclaim'),
       );
       return { ...page(items, key), ...creditStats };
     },

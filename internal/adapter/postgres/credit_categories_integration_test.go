@@ -88,7 +88,7 @@ func TestCreditCategoriesPriorityRefundsAndConcurrentLimits(t *testing.T) {
 }
 
 func TestCreditHistoryUsesActualCompletionFiltersAndRefundFacts(t *testing.T) {
-	s, _ := identityDB(t)
+	s, conn := identityDB(t)
 	ctx := context.Background()
 	account := identity.New("history_account")
 	var earliest c.Entry
@@ -103,12 +103,15 @@ func TestCreditHistoryUsesActualCompletionFiltersAndRefundFacts(t *testing.T) {
 	}
 	projectID := identity.New("private_project")
 	completeID, pendingID, failedID := identity.New("charge"), identity.New("charge"), identity.New("charge")
-	project := p.Project{ID: projectID, OwnerID: account, Revision: 1, Title: "PRIVATE TITLE MUST NOT ENTER ANALYSIS", Runs: []p.Run{
-		{ID: completeID, Credit: &c.Charge{ID: completeID}, Status: p.RunCompleted},
-		{ID: identity.New("continuation"), Credit: &c.Charge{ID: completeID}, Status: p.RunCompleted},
-		{ID: pendingID, Credit: &c.Charge{ID: pendingID}, Status: p.RunRunning},
-		{ID: failedID, Credit: &c.Charge{ID: failedID}, Status: p.RunFailed},
+	project := p.Project{ID: projectID, SpaceID: account, CreatorID: account, OwnerID: account, Revision: 1, Title: "PRIVATE TITLE MUST NOT ENTER ANALYSIS", Runs: []p.Run{
+		{ID: completeID, Credit: &c.Charge{ID: completeID, AccountID: account, ActorID: account, DiscountPercent: 100}, Status: p.RunCompleted},
+		{ID: identity.New("continuation"), Credit: &c.Charge{ID: completeID, AccountID: account, ActorID: account, DiscountPercent: 100}, Status: p.RunCompleted},
+		{ID: pendingID, Credit: &c.Charge{ID: pendingID, AccountID: account, ActorID: account, DiscountPercent: 100}, Status: p.RunRunning},
+		{ID: failedID, Credit: &c.Charge{ID: failedID, AccountID: account, ActorID: account, DiscountPercent: 100}, Status: p.RunFailed},
 	}}
+	if _, err := conn.Exec(ctx, `INSERT INTO drama_catalog_v1.spaces(id,kind) VALUES($1,'personal') ON CONFLICT DO NOTHING`, account); err != nil {
+		t.Fatal(err)
+	}
 	if err := s.Create(ctx, project); err != nil {
 		t.Fatal(err)
 	}
@@ -260,7 +263,11 @@ func TestCreditLegacyFactsRemainUnclassifiedAndCannotBorrowCompletion(t *testing
 		t.Fatal("new legacy issuance accepted", err)
 	}
 	foreignID, chargeID := identity.New("private_project"), identity.New("foreign_charge")
-	if err = s.Create(ctx, p.Project{ID: foreignID, OwnerID: identity.New("other_owner"), Revision: 1, Title: "foreign private title", Runs: []p.Run{{ID: chargeID, Credit: &c.Charge{ID: chargeID}, Status: p.RunCompleted}}}); err != nil {
+	foreignOwner := identity.New("other_owner")
+	if _, err = conn.Exec(ctx, `INSERT INTO drama_catalog_v1.spaces(id,kind) VALUES($1,'personal')`, foreignOwner); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.Create(ctx, p.Project{ID: foreignID, SpaceID: foreignOwner, CreatorID: foreignOwner, OwnerID: foreignOwner, Revision: 1, Title: "foreign private title", Runs: []p.Run{{ID: chargeID, Credit: &c.Charge{ID: chargeID, AccountID: foreignOwner, ActorID: foreignOwner, DiscountPercent: 100}, Status: p.RunCompleted}}}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = s.Deduct(ctx, c.Change{AccountID: account, Amount: 10, OperationID: "generation:" + chargeID + ":deduct", Source: foreignID, Subject: account, Reason: "fixture"}); err != nil {

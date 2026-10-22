@@ -223,7 +223,7 @@ func TestP5HTTPPostgresActualEinoWireFullFlowAndEditableAssets(t *testing.T) {
 	s.Models.(*modelregistry.Registry).OptionsValue.Video = []ports.ModelOption{{ID: "free-video", Name: "免费视频能力夹具", MediaProfile: &md.MediaProfile{Durations: []float64{4, 12, 8}, DefaultDuration: 4}}}
 	files := uploadfiles.New()
 	s.Files = files
-	host, handler := httpapi.New(s, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	host.Files = files
 	defer host.Shutdown(ctx)
@@ -242,7 +242,7 @@ func TestP5HTTPPostgresActualEinoWireFullFlowAndEditableAssets(t *testing.T) {
 		}
 		return w.Body.Bytes()
 	}
-	file, e := files.ForActor(legacyHTTPActor).Upload(ctx, uploadapp.Input{Filename: "fictional-p5.txt", Data: []byte("林晚穿灰外套。\n客厅里有桌子，陈默坐在桌边。\n林晚把铜钥匙放到桌上，对陈默说：你自己决定。\n她松手停顿。")})
+	file, e := fixtureFiles(t, files, legacyHTTPActor).Upload(ctx, uploadapp.Input{Filename: "fictional-p5.txt", Data: []byte("林晚穿灰外套。\n客厅里有桌子，陈默坐在桌边。\n林晚把铜钥匙放到桌上，对陈默说：你自己决定。\n她松手停顿。")})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -367,7 +367,7 @@ func TestP5HTTPPostgresActualEinoWireFullFlowAndEditableAssets(t *testing.T) {
 		t.Fatal(err)
 	}
 	files.Thumbnails = imagethumbnail.FFmpeg{Settings: testconfig.Example().Media}
-	imageFile, err := files.ForActor(legacyHTTPActor).Upload(ctx, uploadapp.Input{Filename: "asset.png", ContentType: "image/png", Data: imageBytes.Bytes(), Thumbnail: &ports.ThumbnailOptions{MaxWidth: 8, MaxHeight: 8}})
+	imageFile, err := fixtureFiles(t, files, legacyHTTPActor).Upload(ctx, uploadapp.Input{Filename: "asset.png", ContentType: "image/png", Data: imageBytes.Bytes(), Thumbnail: &ports.ThumbnailOptions{MaxWidth: 8, MaxHeight: 8}})
 	if err != nil {
 		t.Fatal(err)
 	}

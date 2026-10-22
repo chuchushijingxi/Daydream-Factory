@@ -1,3 +1,5 @@
+import { useOptionalSpace } from '../../state/SpaceContext';
+import { TeamCreditsPage } from './TeamCreditsPage';
 import { useMemo, useState } from 'react';
 import { History } from 'lucide-react';
 import { useSession } from '../../state/SessionContext';
@@ -11,8 +13,10 @@ import type {
 import { Choice, Feedback, PageNavigation } from '../operations/controls';
 import { dateTime, formatInteger } from './credit-format';
 import { usePersonalCredits } from '../../features/credits/PersonalCredits';
+import { RechargeButton } from '../../features/payments/Recharge';
 import {
   creditCategoryLabel,
+  creditActorLabel,
   creditDirectionLabels,
   creditRecordTitle,
   creditSignedAmount,
@@ -57,7 +61,7 @@ export function Ledger({
   busy: boolean;
 }) {
   const { c } = useCatalogText();
-  const labels = { add: '新增', deduct: '扣减', refund: '返还', expire: '到期回收' };
+  const labels = { add: '新增', deduct: '扣减', refund: '返还', expire: '到期回收', reclaim: '退款扣回' };
   return (
     <>
       <div className="op-table-scroll" tabIndex={0} aria-label={c('积分流水')}>
@@ -78,11 +82,16 @@ export function Ledger({
                   <small>{c(creditCategoryLabel(x.category))}</small>
                 </td>
                 <td className="op-numeric">
-                  {['deduct', 'expire'].includes(x.direction) ? '−' : '＋'}
+                  {['deduct', 'expire', 'reclaim'].includes(x.direction) ? '−' : '＋'}
                   {formatInteger(x.amount)}
                 </td>
                 <td className="op-numeric">{formatInteger(x.balance)}</td>
-                <td>{creditSourceLabel(x.source, c)}</td>
+                <td>
+                  {creditSourceLabel(x.source, c)}
+                  {x.source.startsWith('payment-order:') && x.actorLabel.startsWith('payment:') ? (
+                    <small>{creditActorLabel(x, c)}</small>
+                  ) : null}
+                </td>
                 <td className="op-reason">{creditRecordTitle(x, c)}</td>
               </tr>
             ))}
@@ -127,9 +136,7 @@ export function CreditAnalysis({
             {formatInteger(value.summary.settledConsumed)}
             <small>{c('积分')}</small>
           </strong>
-          <p>
-            {c('待结算预扣 {amount} 积分', { amount: formatInteger(value.summary.pending) })}
-          </p>
+          <p>{c('待结算预扣 {amount} 积分', { amount: formatInteger(value.summary.pending) })}</p>
         </div>
         {total === 0n ? (
           <div className="personal-credit-analysis-empty">{c('暂无已结算消耗')}</div>
@@ -169,11 +176,15 @@ function rangeFilters(range: string) {
   return { start: start.toISOString(), end: new Date(now).toISOString() };
 }
 export function CreditsPage() {
+  const space = useOptionalSpace();
+  return space?.current?.kind === 'team' ? <TeamCreditsPage /> : <PersonalCreditsPage />;
+}
+function PersonalCreditsPage() {
   const { c } = useCatalogText();
   const { service, user } = useSession(),
     [page, setPage] = useState(''),
     [pageSize, setPageSize] = useState<CreditPageSize>('10'),
-    [direction, setDirection] = useState<'acquired' | 'consumed' | 'expired'>('acquired'),
+    [direction, setDirection] = useState<'acquired' | 'consumed' | 'expired' | 'reclaimed'>('acquired'),
     [category, setCategory] = useState<CreditFilters['category']>('all'),
     [range, setRange] = useState('all');
   const balance = usePersonalCredits();
@@ -219,6 +230,7 @@ export function CreditsPage() {
                 <span>{c('积分')}</span>
               </div>
             </div>
+            <RechargeButton />
           </div>
           <div className="personal-credit-categories">
             <article>
@@ -268,6 +280,7 @@ export function CreditsPage() {
                   { value: 'acquired', label: c('已获取') },
                   { value: 'consumed', label: c('已消耗') },
                   { value: 'expired', label: c('到期回收') },
+                  { value: 'reclaimed', label: c('退款扣回') },
                 ] as const
               ).map((tab, index) => (
                 <button
@@ -283,12 +296,12 @@ export function CreditsPage() {
                     const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
                     if (!keys.includes(event.key)) return;
                     event.preventDefault();
-                    const choices = ['acquired', 'consumed', 'expired'] as const;
+                    const choices = ['acquired', 'consumed', 'expired', 'reclaimed'] as const;
                     const next =
                       event.key === 'Home'
                         ? 0
                         : event.key === 'End'
-                          ? 2
+                          ? choices.length - 1
                           : (index + (event.key === 'ArrowRight' ? 1 : -1) + choices.length) %
                             choices.length;
                     change(() => setDirection(choices[next]));

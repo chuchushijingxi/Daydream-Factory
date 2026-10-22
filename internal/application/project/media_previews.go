@@ -32,7 +32,7 @@ func (s *Service) EpisodePreviews(ctx context.Context, p d.Project, v EpisodeVie
 	}
 	cursor := ""
 	for len(remaining) > 0 {
-		list, err := s.MediaTasks.List(ctx, mediaScope(p.ID), "video.generate", cursor, 100)
+		list, err := s.tasksForProject(p).List(ctx, mediaScope(p.ID), "video.generate", cursor, 100)
 		if err != nil {
 			return v, err
 		}
@@ -41,7 +41,7 @@ func (s *Service) EpisodePreviews(ctx context.Context, p d.Project, v EpisodeVie
 		for _, task := range list.Items {
 			ids = append(ids, task.ID)
 		}
-		snapshots, err := s.MediaTasks.Inputs(ctx, mediaScope(p.ID), ids)
+		snapshots, err := s.tasksForProject(p).Inputs(ctx, mediaScope(p.ID), ids)
 		if err != nil {
 			return v, err
 		}
@@ -92,8 +92,13 @@ func mediaThumbnailURL(project, task, output string) string {
 }
 
 func (s *Service) MediaThumbnail(ctx context.Context, id, task, output string) ([]byte, error) {
-	if _, err := s.Media(ctx, id, task); err != nil {
+	view, err := s.Media(ctx, id, task)
+	if err != nil {
 		return nil, err
 	}
-	return s.MediaTasks.Thumbnail(ctx, mediaScope(id), task, output)
+	p, err := s.mediaProject(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return s.mediaOutputThumbnail(ctx, p, view, output)
 }

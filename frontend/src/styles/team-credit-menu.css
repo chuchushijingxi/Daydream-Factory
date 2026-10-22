@@ -1,0 +1,23 @@
+/* 团队仅扩展顶栏的名称；弹层结构、流水和反馈完全沿用个人积分菜单。 */
+.team-credit-trigger .credit-trigger-amount {
+  flex-shrink: 0;
+}
+.team-credit-trigger > span:not(.team-credit-trigger-name) {
+  flex-shrink: 0;
+}
+.team-credit-trigger-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 个人菜单窄屏隐藏单位；团队入口始终保留团队名与分隔，仅省略长名称。 */
+.team-credit-trigger {
+  min-width: 0;
+}
+.xy-project-titlebar > .team-credit-trigger {
+  flex-shrink: 1;
+}
+.team-credit-trigger .credit-trigger-divider,
+.team-credit-trigger .team-credit-trigger-name {
+  display: block;
+}

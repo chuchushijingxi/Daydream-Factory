@@ -13,35 +13,40 @@ import (
 	"drama-agent/internal/application/modelconfig"
 	"drama-agent/internal/application/modelusage"
 	"drama-agent/internal/application/notifications"
+	paymentapp "drama-agent/internal/application/payment"
 	"drama-agent/internal/application/platform"
 	"drama-agent/internal/application/ports"
 	app "drama-agent/internal/application/project"
+	spaceapp "drama-agent/internal/application/spaces"
 	uploadapp "drama-agent/internal/application/upload"
 	d "drama-agent/internal/domain/project"
 )
 
 // Handler 只承担 HTTP 转换；任务生命周期由应用层 Workers 管理。
 type Handler struct {
-	MediaLibrary        *medialibrary.Service
-	Runtime             ports.RuntimeState
-	RequestsPerMinute   int
-	IPRequestsPerMinute int
-	StreamHeartbeat     time.Duration
-	StreamWriteTimeout  time.Duration
-	registry            *routes
-	Usage               *modelusage.Service
-	Authenticator       ports.SessionAuthenticator
-	Accounts            *accounts.Service
-	MailConfig          *mailconfig.Service
-	Credits             *creditsapp.Service
-	Gifts               *creditsapp.Gifts
-	Notifications       *notifications.Service
-	Platform            *platform.Service
-	routePolicies       map[string]string
-	Service             *app.Service
-	Configuration       *modelconfig.Service
-	Files               *uploadapp.Service
-	LimitMicroCNY       int64
+	Spaces                *spaceapp.Service
+	Payments              *paymentapp.Service
+	paymentNotifyMaxBytes int64
+	MediaLibrary          *medialibrary.Service
+	Runtime               ports.RuntimeState
+	RequestsPerMinute     int
+	IPRequestsPerMinute   int
+	StreamHeartbeat       time.Duration
+	StreamWriteTimeout    time.Duration
+	registry              *routes
+	Usage                 *modelusage.Service
+	Authenticator         ports.SessionAuthenticator
+	Accounts              *accounts.Service
+	MailConfig            *mailconfig.Service
+	Credits               *creditsapp.Service
+	Gifts                 *creditsapp.Gifts
+	Notifications         *notifications.Service
+	Platform              *platform.Service
+	routePolicies         map[string]string
+	Service               *app.Service
+	Configuration         *modelconfig.Service
+	Files                 *uploadapp.Service
+	LimitMicroCNY         int64
 	*app.Workers
 }
 
@@ -51,8 +56,12 @@ func New(service *app.Service, configuration *modelconfig.Service, demoDir strin
 	h.routePolicies = mux.policies
 	h.registry = mux
 	h.registerAccounts(mux)
+	h.registerSpaces(mux)
+	h.registerSpaceSharing(mux)
+	h.registerOperationsTeams(mux)
 	h.registerProfile(mux)
 	h.registerCredits(mux)
+	h.registerPayments(mux)
 	h.registerChargeQuotes(mux)
 	h.registerModelUsage(mux)
 	h.registerMailConfig(mux)
@@ -60,7 +69,7 @@ func New(service *app.Service, configuration *modelconfig.Service, demoDir strin
 	h.registerPlatform(mux)
 	mux.public().HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { write(w, 200, map[string]bool{"alive": true}) })
 	mux.HandleFunc("GET /api/status", func(w http.ResponseWriter, r *http.Request) {
-		options, err := service.ForActor(actor(r)).AvailableModels(r.Context())
+		options, err := h.projectService(r).AvailableModels(r.Context())
 		if err != nil {
 			fail(w, err)
 			return
@@ -72,6 +81,8 @@ func New(service *app.Service, configuration *modelconfig.Service, demoDir strin
 	h.registerAssetImages(mux)
 	h.registerProjectMedia(mux)
 	h.registerMediaLibrary(mux)
+	h.registerProjectEditing(mux)
+	h.registerProjectFiles(mux)
 	h.registerProjectCommands(mux)
 	h.registerStoryboard(mux)
 	mux.HandleFunc("GET /api/projects", h.list)
@@ -108,6 +119,11 @@ func New(service *app.Service, configuration *modelconfig.Service, demoDir strin
 			return
 		}
 		_, pattern := mux.mux.Handler(r)
+		// 未注册路由保持ServeMux的404/405，不把不存在的模拟入口变成鉴权入口。
+		if pattern == "" {
+			mux.mux.ServeHTTP(w, r)
+			return
+		}
 		if h.Runtime != nil && len(r.URL.Path) >= 5 && r.URL.Path[:5] == "/api/" {
 			ip, _, err := net.SplitHostPort(r.RemoteAddr)
 			if err != nil {
@@ -142,7 +158,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	choices := app.CreationChoices{Settings: input.Settings, StyleID: input.StyleID, PromptVersion: input.PromptVersion}
-	p, err := h.Service.ForActor(actor(r)).WithBillingBasis(input.BillingBasis).CreateFromFile(r.Context(), input.Title, input.FileID, h.LimitMicroCNY, choices)
+	p, err := h.projectService(r).WithBillingBasis(input.BillingBasis).CreateFromFile(r.Context(), input.Title, input.FileID, h.LimitMicroCNY, choices)
 	if err != nil {
 		fail(w, err)
 		return

@@ -4,11 +4,15 @@ import { ApiError } from './http-error';
 import { sessionBoundary, type SessionBoundary } from './session-boundary';
 import { sessionAudience, type SessionAudience } from './session-audience';
 import { translate } from '../contexts/translate';
+import { spaceSelection } from './space-selection';
+import type { ListFilter } from './spaces-types';
 export { ApiError } from './http-error';
 
 let writeSequence = 0;
 
-export type HttpRequestOptions = RequestInit & { authentication?: 'public' | 'protected' };
+export type HttpRequestOptions = RequestInit & {
+  authentication?: 'public' | 'protected';
+};
 
 // Native elements cannot set the shared request Header. This is only the
 // backend-defined surface selector; the HttpOnly Cookie still proves the login.
@@ -16,6 +20,8 @@ export function protectedResourceUrl(url: string, audience: SessionAudience = se
   if (!url.startsWith('/api/')) return url;
   const value = new URL(url, 'http://drama.invalid');
   value.searchParams.set('audience', audience);
+  if (audience === 'workspace' && spaceSelection.spaceId)
+    value.searchParams.set('space', spaceSelection.spaceId);
   return value.pathname + value.search + value.hash;
 }
 
@@ -31,14 +37,28 @@ export function createHttpClient(
     parse: (response: Response, check: () => void) => Promise<T>,
   ): Promise<T> {
     const epoch = boundary.epoch,
-      audience = sessionAudience();
+      audience = sessionAudience(),
+      spaceId = spaceSelection.spaceId,
+      spaceEpoch = spaceSelection.epoch;
+    // Identity/profile and platform-public reads survive a space switch; they do
+    // not belong to a workspace and must never turn switching into logout.
+    const scoped =
+      audience === 'workspace' &&
+      options?.authentication !== 'public' &&
+      !url.startsWith('/api/auth/') &&
+      !url.startsWith('/api/notifications');
     const controller = new AbortController();
     const abort = () => controller.abort();
     if (options?.signal?.aborted) controller.abort();
     options?.signal?.addEventListener('abort', abort, { once: true });
     const release = boundary.track(controller);
+    // Page-exit DELETE uses keepalive: let its release reach the server even if
+    // the next space has already mounted; still discard any late response.
+    const releaseSpace =
+      scoped && !options?.keepalive ? spaceSelection.track(controller) : () => {};
     const check = () => {
       boundary.assert(epoch);
+      if (scoped) spaceSelection.assert(spaceEpoch);
       if (audience !== sessionAudience())
         throw new ApiError(0, 'SESSION_CHANGED', translate('平台已变化，未采用原平台的请求结果。'));
       if (controller.signal.aborted)
@@ -49,6 +69,7 @@ export function createHttpClient(
       const { authentication, ...requestOptions } = options || {};
       const headers = new Headers(requestOptions.headers);
       headers.set('X-Drama-Audience', audience);
+      if (audience === 'workspace' && spaceId) headers.set('X-Drama-Space', spaceId);
       try {
         response = await fetchImpl(url, {
           ...requestOptions,
@@ -86,6 +107,7 @@ export function createHttpClient(
       return value;
     } finally {
       release();
+      releaseSpace();
       options?.signal?.removeEventListener('abort', abort);
     }
   }
@@ -94,9 +116,16 @@ export function createHttpClient(
       // Share identical default GET transport only while pending; writes and session changes split generations.
       const shared = options === undefined;
       if (options?.method && options.method !== 'GET') ++writeSequence;
-      const key = JSON.stringify([boundary.epoch, sessionAudience(), writeSequence, url]);
+      const key = JSON.stringify([
+        boundary.epoch,
+        sessionAudience(),
+        spaceSelection.spaceId,
+        spaceSelection.epoch,
+        writeSequence,
+        url,
+      ]);
       const pending = shared ? reads.get(key) : undefined;
-      if (pending) return pending.then(value => structuredClone(value) as T);
+      if (pending) return pending.then((value) => structuredClone(value) as T);
       const promise = consume<T>(url, options, async (response) => {
         const value = await response.json().catch(() => null);
         if (value === null)
@@ -109,9 +138,13 @@ export function createHttpClient(
       });
       if (shared) {
         reads.set(key, promise);
-        void promise.finally(() => { if (reads.get(key) === promise) reads.delete(key); }).catch(() => {});
+        void promise
+          .finally(() => {
+            if (reads.get(key) === promise) reads.delete(key);
+          })
+          .catch(() => {});
       }
-      return shared ? promise.then(value => structuredClone(value)) : promise;
+      return shared ? promise.then((value) => structuredClone(value)) : promise;
     },
     binary<T>(
       url: string,
@@ -130,9 +163,17 @@ export function createHttpClient(
           new Headers(options?.headers).get('Accept') === 'text/event-stream' &&
           !response.headers.get('Content-Type')?.startsWith('text/event-stream')
         )
-          throw new ApiError(response.status, 'PROGRAM_FAILED', translate('实时同步响应类型不正确。'));
+          throw new ApiError(
+            response.status,
+            'PROGRAM_FAILED',
+            translate('实时同步响应类型不正确。'),
+          );
         if (!response.body)
-          throw new ApiError(response.status, 'PROGRAM_FAILED', translate('响应没有可读取的数据流。'));
+          throw new ApiError(
+            response.status,
+            'PROGRAM_FAILED',
+            translate('响应没有可读取的数据流。'),
+          );
         const reader = response.body.getReader();
         try {
           for (;;) {
@@ -206,7 +247,11 @@ export function createApi(
         saved.stale ||
         saved.sourceVersion !== receipt.source?.version
       )
-        throw new ApiError(200, 'PROGRAM_FAILED', translate('提示词保存回执不完整，尚未确认服务端结果。'));
+        throw new ApiError(
+          200,
+          'PROGRAM_FAILED',
+          translate('提示词保存回执不完整，尚未确认服务端结果。'),
+        );
       return receipt;
     },
     startExtraction(id, payload) {
@@ -226,8 +271,8 @@ export function createApi(
     cancelTask(id, payload) {
       return request(projectPath(id, 'cancel'), post(payload));
     },
-    listProjects() {
-      return request('/api/projects');
+    listProjects(filter?: ListFilter) {
+      return request('/api/projects' + (filter ? '?' + new URLSearchParams({ filter }) : ''));
     },
     async deleteProject(id, payload) {
       const receipt = await request<Awaited<ReturnType<CatalogAPI['deleteProject']>>>(
@@ -240,7 +285,11 @@ export function createApi(
         typeof receipt.deletedAt !== 'string' ||
         !receipt.deletedAt
       ) {
-        throw new ApiError(200, 'PROGRAM_FAILED', translate('删除回执不完整，尚未确认服务端结果。'));
+        throw new ApiError(
+          200,
+          'PROGRAM_FAILED',
+          translate('删除回执不完整，尚未确认服务端结果。'),
+        );
       }
       return receipt;
     },
@@ -268,7 +317,11 @@ export function createApi(
         receipt.thumbnailUrl !==
           (options.thumbnail ? '/api/files/' + receipt.fileId + '/thumbnail' : null)
       )
-        throw new ApiError(201, 'PROGRAM_FAILED', translate('文件上传回执不完整，尚未确认服务端结果。'));
+        throw new ApiError(
+          201,
+          'PROGRAM_FAILED',
+          translate('文件上传回执不完整，尚未确认服务端结果。'),
+        );
       return receipt;
     },
     getFile(id) {
@@ -293,10 +346,14 @@ export function createApi(
         receipt.id !== id ||
         receipt.revision !== payload.revision + 1 ||
         image?.fileId !== payload.fileId ||
-        image.originalUrl !== '/api/files/' + payload.fileId + '/original' ||
-        image.thumbnailUrl !== '/api/files/' + payload.fileId + '/thumbnail'
+        image.originalUrl !== projectPath(id, 'files', payload.fileId, 'original') ||
+        image.thumbnailUrl !== projectPath(id, 'files', payload.fileId, 'thumbnail')
       ) {
-        throw new ApiError(200, 'PROGRAM_FAILED', translate('图片保存回执不完整，尚未确认服务端结果。'));
+        throw new ApiError(
+          200,
+          'PROGRAM_FAILED',
+          translate('图片保存回执不完整，尚未确认服务端结果。'),
+        );
       }
       return receipt;
     },

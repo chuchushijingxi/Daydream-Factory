@@ -34,7 +34,7 @@ func (s *Service) ReadProject(ctx context.Context, id string) (d.Project, error)
 // 删除只移除可见性，保留原文、调用账目和未知预留。
 // CAS 拒绝并发启动或修改后的陈旧删除请求。
 func (s *Service) DeleteProject(ctx context.Context, id string, revision uint64) (d.Project, error) {
-	p, err := s.Project(ctx, id)
+	p, err := s.editingProject(ctx, id)
 	if err != nil {
 		return p, err
 	}
@@ -51,5 +51,27 @@ func (s *Service) DeleteProject(ctx context.Context, id string, revision uint64)
 
 // ListProjects 通过摘要查询浏览项目，不展开原文或调用历史。
 func (s *Service) ListProjects(ctx context.Context) ([]ports.ProjectSummary, error) {
-	return s.Store.ListSummaries(ctx)
+	return s.ListProjectsFiltered(ctx, ports.ListAll)
+}
+func (s *Service) ListProjectsFiltered(ctx context.Context, filter ports.ListFilter) ([]ports.ProjectSummary, error) {
+	normalized, err := filter.Normalize()
+	if err != nil {
+		return nil, err
+	}
+	if s.scope == nil {
+		return s.Store.ListSummaries(ctx)
+	}
+	scope, err := s.resolveSpace(ctx)
+	if err != nil {
+		return nil, err
+	}
+	store := s.Store
+	if scoped, ok := store.(scopedProjects); ok {
+		store = scoped.ProjectStore
+	}
+	visible, ok := store.(ports.VisibleProjects)
+	if !ok {
+		return nil, fault.New("AUTH_REQUIRED", "项目可见性查询尚未组装")
+	}
+	return visible.ListVisibleSummaries(ctx, scope, normalized)
 }

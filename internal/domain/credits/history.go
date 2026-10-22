@@ -15,7 +15,7 @@ func (f HistoryFilter) Validate() error {
 	if f.Page < 1 || f.Page > 1000000 || f.PageSize < 1 || f.PageSize > 50 {
 		return fault.ErrInvalid
 	}
-	if f.Direction != "all" && f.Direction != "acquired" && f.Direction != "consumed" && f.Direction != "expired" {
+	if f.Direction != "all" && f.Direction != "acquired" && f.Direction != "consumed" && f.Direction != "expired" && f.Direction != "reclaimed" {
 		return fault.ErrInvalid
 	}
 	if f.Category != "all" && f.Category != Recharge && f.Category != Gift && f.Category != Legacy {

@@ -27,13 +27,13 @@ func TestProjectRedisStreamAndProgressCacheKeepOwnerBoundaries(t *testing.T) {
 	owner, other := identity.New("stream_owner"), identity.New("stream_other")
 	seedPostgresFixtureUser(t, owner, ports.RoleUser)
 	seedPostgresFixtureUser(t, other, ports.RoleUser)
-	p := d.Project{ID: identity.New("redis_project"), OwnerID: owner, Revision: 1, Title: "原项目", Runs: []d.Run{}}
+	p := d.Project{ID: identity.New("redis_project"), SpaceID: owner, CreatorID: owner, OwnerID: owner, Revision: 1, Title: "原项目", Runs: []d.Run{}}
 	if err := store.Create(ctx, p); err != nil {
 		t.Fatal(err)
 	}
 	cleanProjectContentRow(t, p)
 	service := &projectapp.Service{Store: store}
-	host, handler := httpapi.New(service, nil, t.TempDir(), 0)
+	host, handler := httpapi.New(configuredFixture(service), nil, t.TempDir(), 0)
 	host.Runtime = runtime
 	host.RequestsPerMinute = appconfig.Defaults().Redis.RequestsPerMinute
 	host.IPRequestsPerMinute = appconfig.Defaults().Redis.IPRequestsPerMinute

@@ -34,7 +34,7 @@ func TestSingleVisualPostgresInterfacesWithoutModelExecution(t *testing.T) {
 	store := openProjectContentPG(t)
 	s := &app.Service{Credits: store, Prices: &frozenFixturePrices{version: 1}, Store: interfaceNoExecutionStore{store}, Importer: scriptimport.Importer{}, Agent: interfaceOnlyAgent{}, Models: &modelregistry.Registry{Model: interfaceOnlyModel{}}}
 	p := createProjectContent(t, s, pgAssets())
-	host, handler := httpapi.New(s, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	defer host.Shutdown(context.Background())
 	request := func(suffix string, body any, want int) []byte {
@@ -136,7 +136,7 @@ func TestSingleVisualBrowserInterfacesWithoutModelExecution(t *testing.T) {
 	if err := store.Commit(context.Background(), p, p.Revision-1); err != nil {
 		t.Fatal(err)
 	}
-	host, handler := httpapi.New(s, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	defer host.Shutdown(context.Background())
 	server := &http.Server{Addr: addr, Handler: handler, ReadHeaderTimeout: 5 * time.Second}
@@ -177,7 +177,7 @@ func TestManualVisualPromptPostgresAPIRevisionIsolationAndReadOnly(t *testing.T)
 	s := &app.Service{Credits: store, Prices: &frozenFixturePrices{version: 1}, Store: interfaceNoExecutionStore{store}, Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: interfaceOnlyModel{}}}
 	p := createProjectContent(t, s, pgAssets())
 	before := d.Clone(p)
-	host, handler := httpapi.New(s, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	defer host.Shutdown(ctx)
 	post := func(suffix string, body any, want int) []byte {
@@ -235,7 +235,7 @@ func TestMergedPreparationVisualSourceLockPostgresAPI(t *testing.T) {
 	store := openProjectContentPG(t)
 	ctx := context.Background()
 	s := &app.Service{Credits: store, Prices: &frozenFixturePrices{version: 1}, Store: interfaceNoExecutionStore{store}, Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: interfaceOnlyModel{}}}
-	host, handler := httpapi.New(s, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	defer host.Shutdown(ctx)
 	for _, status := range []d.RunStatus{d.RunCompleted, d.RunFailed, d.RunCancelled} {
@@ -280,7 +280,7 @@ func TestHistoricalExtractionSourceReplacementDoesNotReuseOldCompletion(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	host, handler := httpapi.New(s, nil, "../../../demo", 0)
+	host, handler := httpapi.New(configuredFixture(s), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	defer host.Shutdown(ctx)
 	w := httptest.NewRecorder()

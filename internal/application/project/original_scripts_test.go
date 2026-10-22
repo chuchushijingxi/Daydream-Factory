@@ -131,6 +131,13 @@ func (f *uploadedSourceFixture) ReadOriginal(_ context.Context, id string) (ud.F
 	return ud.File{ID: id, Filename: f.filename}, append([]byte(nil), f.raw...), nil
 }
 
+func (f *uploadedSourceFixture) ContainerFile(ctx context.Context, space, id string) (ud.File, error) {
+	return f.File(ctx, id)
+}
+func (f *uploadedSourceFixture) ReadContainerFile(ctx context.Context, space, id string, thumbnail bool) (ud.File, []byte, error) {
+	return f.ReadOriginal(ctx, id)
+}
+
 type originalCommitFailure struct {
 	ports.ProjectStore
 	adopted, uncertain bool

@@ -28,7 +28,7 @@ type AssetView struct {
 	Image       *AssetImageView `json:"image"`
 }
 
-func assetView(a d.Asset) AssetView {
+func assetView(projectID string, a d.Asset) AssetView {
 	origin := a.Origin
 	if origin == "" {
 		origin = "model"
@@ -41,7 +41,7 @@ func assetView(a d.Asset) AssetView {
 		if origin == "" {
 			origin = "model"
 		}
-		looks = append(looks, LookView{ID: look.ID, Name: look.Name, Description: look.Description, Origin: origin, Image: assetImage(look.ImageFileID)})
+		looks = append(looks, LookView{ID: look.ID, Name: look.Name, Description: look.Description, Origin: origin, Image: projectAssetImage(projectID, look.ImageFileID)})
 	}
 	character := a.Character
 	if a.Kind == "character" && character == nil {
@@ -51,7 +51,7 @@ func assetView(a d.Asset) AssetView {
 		character = nil
 		looks = []LookView{}
 	}
-	return AssetView{ID: a.ID, Kind: a.Kind, Name: a.Name, Aliases: aliases, Description: a.Description, SourceIDs: source, Origin: origin, Character: character, Looks: looks, Image: assetImage(a.ImageFileID)}
+	return AssetView{ID: a.ID, Kind: a.Kind, Name: a.Name, Aliases: aliases, Description: a.Description, SourceIDs: source, Origin: origin, Character: character, Looks: looks, Image: projectAssetImage(projectID, a.ImageFileID)}
 }
 
 type VisualPromptView struct {
@@ -117,11 +117,11 @@ func view(p d.Project) map[string]any {
 	}
 	assets := []AssetView{}
 	for _, a := range p.Assets {
-		assets = append(assets, assetView(a))
+		assets = append(assets, assetView(p.ID, a))
 	}
 	prompts := []VisualPromptView{}
 	for _, v := range p.VisualPrompts {
 		prompts = append(prompts, VisualPromptView{Target: v.Target, Text: v.Text, SourceVersion: v.SourceVersion, ActionRef: v.ActionRef, Stale: v.Stale, Origin: v.Origin})
 	}
-	return map[string]any{"id": p.ID, "title": p.Title, "uploadedAt": p.UploadedAt, "revision": p.Revision, "source": map[string]any{"filename": p.ScriptSource.Filename, "version": p.ScriptSource.Version, "sha256": p.ScriptSource.SHA256, "spanCount": len(p.ScriptSource.Spans)}, "assets": assets, "run": run, "runs": runs, "outline": p.Outline, "settings": p.ProjectSettings, "style": p.Style, "visualPrompts": prompts, "catalogEditedByUser": p.CatalogEditedByUser, "usedOrReservedMicroCny": p.UsedMicroCNY(), "limitMicroCny": p.LimitMicroCNY}
+	return map[string]any{"id": p.ID, "spaceId": p.SpaceID, "ownerId": p.OwnerID, "creatorId": p.CreatorID, "title": p.Title, "uploadedAt": p.UploadedAt, "revision": p.Revision, "source": map[string]any{"filename": p.ScriptSource.Filename, "version": p.ScriptSource.Version, "sha256": p.ScriptSource.SHA256, "spanCount": len(p.ScriptSource.Spans)}, "assets": assets, "run": run, "runs": runs, "outline": p.Outline, "settings": p.ProjectSettings, "style": p.Style, "visualPrompts": prompts, "catalogEditedByUser": p.CatalogEditedByUser, "usedOrReservedMicroCny": p.UsedMicroCNY(), "limitMicroCny": p.LimitMicroCNY}
 }

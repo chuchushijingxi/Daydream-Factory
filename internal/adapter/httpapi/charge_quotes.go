@@ -18,7 +18,7 @@ func (h *Handler) registerChargeQuotes(mux *routes) {
 			fail(w, e)
 			return
 		}
-		v, e := h.Service.ForActor(actor(r)).QuoteFile(r.Context(), in.FileID, in.Settings)
+		v, e := h.projectService(r).QuoteFile(r.Context(), in.FileID, in.Settings)
 		if e != nil {
 			fail(w, e)
 			return
@@ -38,7 +38,7 @@ func (h *Handler) registerChargeQuotes(mux *routes) {
 			fail(w, fault.ErrInvalid)
 			return
 		}
-		v, e := h.Service.ForActor(actor(r)).Quote(r.Context(), r.PathValue("id"), in)
+		v, e := h.projectService(r).Quote(r.Context(), r.PathValue("id"), in)
 		if e != nil {
 			fail(w, e)
 			return

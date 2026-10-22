@@ -5,6 +5,7 @@ import (
 	"drama-agent/internal/testsupport/pgfixture"
 	"drama-agent/internal/testsupport/redisruntime"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -27,7 +28,7 @@ var legacyHTTPActor = ports.Actor{UserID: "legacy-http-fixture", Role: ports.Rol
 
 func legacyFileQuote(t *testing.T, service *app.Service, fileID string, settings d.ProjectSettings) string {
 	t.Helper()
-	quote, err := service.ForActor(legacyHTTPActor).QuoteFile(context.Background(), fileID, settings)
+	quote, err := fixtureProject(t, service, legacyHTTPActor).QuoteFile(context.Background(), fileID, settings)
 	if err != nil {
 		t.Fatal("fixture upload quotation", err)
 	}
@@ -36,7 +37,7 @@ func legacyFileQuote(t *testing.T, service *app.Service, fileID string, settings
 
 func legacyQuote(t *testing.T, service *app.Service, pID string, input app.QuoteInput) string {
 	t.Helper()
-	quote, err := service.ForActor(legacyHTTPActor).Quote(context.Background(), pID, input)
+	quote, err := fixtureProject(t, service, legacyHTTPActor).Quote(context.Background(), pID, input)
 	if err != nil {
 		t.Fatal("fixture quotation", err)
 	}
@@ -45,7 +46,12 @@ func legacyQuote(t *testing.T, service *app.Service, pID string, input app.Quote
 
 func quotedLegacyService(t *testing.T, service *app.Service, pID string, input app.QuoteInput) *app.Service {
 	t.Helper()
-	return service.ForActor(legacyHTTPActor).WithBillingBasis(legacyQuote(t, service, pID, input))
+	scoped := fixtureProject(t, service, legacyHTTPActor)
+	editing, err := scoped.AcquireEditing(context.Background(), pID)
+	if err != nil || !editing.Owned {
+		t.Fatal("fixture acquire editing", editing, err)
+	}
+	return scoped.WithBillingBasis(legacyQuote(t, service, pID, input))
 }
 
 func quoteProjectContent(t *testing.T, serverURL, projectID string, input app.QuoteInput) string {
@@ -91,6 +97,9 @@ func seedPostgresFixtureUser(t *testing.T, userID string, role ports.Role) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err = conn.Exec(ctx, `INSERT INTO drama_catalog_v1.spaces(id,kind) VALUES($1,'personal') ON CONFLICT(id) DO NOTHING`, userID); err != nil {
+		t.Fatal(err)
+	}
 	for _, audience := range []string{accounts.Workspace, accounts.Operations} {
 		redisruntime.SeedDigest(t, userID, audience, accounts.Digest(audience+":"+secret), role, time.Now().Add(time.Hour))
 	}
@@ -107,12 +116,20 @@ func withPostgresSession(t *testing.T, host *httpapi.Handler, next http.Handler,
 		t.Fatal(err)
 	}
 	t.Cleanup(store.Close)
+	// The account connection is a real read authority even when the project Store
+	// is decorated to pause/fail commits. Never replace that decorated writer.
+	if host.Service != nil && host.Service.EditorNames == nil {
+		host.Service.EditorNames = store
+	}
+	configureFixtureProject(host.Service)
+	configurePostgresFixtureEditing(t, host.Service)
 	service := &accounts.Service{Store: store}
 	host.Accounts, host.Authenticator = service, service
 	host.StreamHeartbeat = appconfig.StreamHeartbeat
 	host.StreamWriteTimeout = appconfig.StreamWriteTimeout
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		addSessionCookie(r, postgresFixtureToken(legacyHTTPActor.UserID, audience))
+		acquireLegacyFixtureEditing(next, r)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -120,12 +137,12 @@ func withPostgresSession(t *testing.T, host *httpapi.Handler, next http.Handler,
 func TestLegacyPostgresHTTPFixtureKeepsProductionAccessBoundaries(t *testing.T) {
 	store := openProjectContentPG(t)
 	service := &app.Service{Store: store, Importer: scriptimport.Importer{}}
-	p, err := service.ForActor(legacyHTTPActor).Create(context.Background(), "Owner fixture", "fixture.txt", []byte("完整的虚构原文"), 0)
+	p, err := fixtureProject(t, service, legacyHTTPActor).Create(context.Background(), "Owner fixture", "fixture.txt", []byte("完整的虚构原文"), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	cleanProjectContentRow(t, p)
-	host, raw := httpapi.New(service, nil, t.TempDir(), 0)
+	host, raw := httpapi.New(configuredFixture(service), nil, t.TempDir(), 0)
 	defer host.Shutdown(context.Background())
 	loggedIn := withPostgresSession(t, host, raw, accounts.Workspace)
 	seedPostgresFixtureUser(t, "legacy-http-other", ports.RoleUser)
@@ -148,10 +165,23 @@ func TestLegacyPostgresHTTPFixtureKeepsProductionAccessBoundaries(t *testing.T) 
 	request(raw, "/api/model-config", "legacy-http-other", accounts.Operations, 403)
 	request(raw, "/api/model-config", legacyHTTPActor.UserID, accounts.Workspace, 403)
 	foreignActor := ports.Actor{UserID: "legacy-http-other", Role: ports.RoleUser}
-	foreign, err := service.ForActor(foreignActor).Create(context.Background(), "Foreign fixture", "other.txt", []byte("另一用户的完整原文"), 0)
+	foreign, err := fixtureProject(t, service, foreignActor).Create(context.Background(), "Foreign fixture", "other.txt", []byte("另一用户的完整原文"), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	cleanProjectContentRow(t, foreign)
 	request(loggedIn, "/api/projects/"+foreign.ID, "", "", 404)
+	// 当前空间只影响列表/创建；按 ID 的读取以资源空间鉴权。
+	request(loggedIn, path+"?space=legacy-http-other", "", "", 200)
+	request(loggedIn, "/api/projects?space=legacy-http-other", "", "", 404)
+	body := strings.NewReader(fmt.Sprintf(`{"revision":%d}`, p.Revision))
+	changed := httptest.NewRequest("POST", "http://127.0.0.1:8787"+path+"/delete", body)
+	changed.Header.Set("X-Drama-Space", "legacy-http-other")
+	result := httptest.NewRecorder()
+	loggedIn.ServeHTTP(result, changed)
+	if result.Code != 409 || !strings.Contains(result.Body.String(), "SPACE_CHANGED") {
+		t.Fatalf("stale space write: %d %s", result.Code, result.Body.String())
+	}
+	request(loggedIn, path, "", "", 200)
+
 }

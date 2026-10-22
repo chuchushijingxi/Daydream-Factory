@@ -87,8 +87,13 @@ async function mount(
   httpRequests = [];
   globalThis.fetch = async (url) => {
     httpRequests.push(String(url));
+    const target = String(url).split('?')[0];
+    const personal = {id: fixture.user?.identity || 'fixture_operator', kind: 'personal', name: '个人空间', role: 'owner', memberCount: 1, memberLimit: 1, status: 'active', readOnly: false};
+    if (target === '/api/spaces') return Response.json([personal]);
+    if (target === '/api/invites/pending') return Response.json([]);
+    if (target === '/api/spaces/' + personal.id) return Response.json(personal);
     return Response.json(
-      url === '/api/projects'
+      target === '/api/projects'
         ? []
         : url === '/api/models'
           ? { analysis: [], image: [], video: [] }
@@ -161,7 +166,10 @@ test('operations sidebar starts expanded at every width and keeps an explicit co
 test('operations default task view, detail, shared filters and opaque paging request the selected server scope', async () => {
   await mount();
   assert.equal(document.querySelector('h1')?.textContent, '模型使用记录');
-  assert.equal(document.querySelectorAll('nav[aria-label="运营导航"] a').length, 9);
+  assert.equal(document.querySelectorAll('nav[aria-label="运营导航"] a').length, 12);
+  assert.equal(document.querySelector('nav[aria-label="运营导航"] a[href="#/operations/teams"]')?.textContent, '团队管理');
+  assert.equal(document.querySelectorAll('nav[aria-label="运营导航"] a[aria-label="支付管理"]').length, 1);
+  assert.equal(document.querySelectorAll('nav[aria-label="运营导航"] a[aria-label="支付异常"]').length, 0);
   assert.match(text(), /筛选范围 · 任务/);
   assert.match(text(), /¥1.320000123/);
   assert.match(text(), /另有待确认成本/);
@@ -279,9 +287,18 @@ test('workspace credit capsule loads recent records only when opened and preserv
     fixture.requests.some((r) => r.method === 'userWallet'),
     false,
   );
-  assert.equal(panel.querySelector('a')?.getAttribute('href'), '#/credits');
+  assert.ok(panel.querySelector('a[href="#/credits"]'));
+  assert.equal(panel.querySelector('a[href="#/payments/orders"]'), null);
   assert.equal(panel.querySelector('.credit-panel-categories'), null);
-  assert.doesNotMatch(panel.textContent || '', /充值积分|赠送及免费积分|开会员|开发票/);
+  // 逐文本节点断言：避免“充值”按钮与“积分记录”标题在 textContent 中拼接出“充值积分”。
+  const panelTextNodes = [...panel.querySelectorAll('*')]
+    .flatMap((el) =>
+      [...el.childNodes]
+        .filter((n) => n.nodeType === 3)
+        .map((n) => n.textContent ?? ''),
+    )
+    .join('\n');
+  assert.doesNotMatch(panelTextNodes, /充值积分|赠送及免费积分|开会员|开发票/);
   assert.equal(panel.querySelector('a svg'), null);
   assert.equal(panel.querySelector('li strong')?.textContent, '虚构变动 0');
   assert.match(panel.querySelector('time')?.textContent || '', /10\/17 09:00/);
@@ -1510,6 +1527,15 @@ test('ordinary users never query SMTP and a late operator settings read cannot p
 });
 test('usage page size and shared filters persist across independent task and call views', async () => {
   await mount();
+  const pagination = document.querySelector('nav[aria-label="分页"]')!;
+  assert.equal(button('每页条数').closest('nav'), pagination);
+  assert.deepEqual([...pagination.children].map((node) => node.getAttribute('aria-label') || node.textContent), [
+    '每页条数', '第 1 页 · 虚构夹具', '上一页', '下一页',
+  ]);
+  assert.doesNotMatch(text(), /统计范围与当前视角、筛选一致|读取于/);
+  await act(async () => button('下一页').click());
+  await flush();
+  assert.equal((fixture.requests.filter((request) => request.method === 'usage').at(-1)!.input as any).key, 'next');
   await act(async () =>
     button('每页条数').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })),
   );
@@ -1525,10 +1551,13 @@ test('usage page size and shared filters persist across independent task and cal
       .pageSize,
     '10',
   );
+  assert.equal((fixture.requests.filter((request) => request.method === 'usage').at(-1)!.input as any).key, '');
   assert.match(text(), /¥1.320000123/);
   await act(async () => button('详情 整剧解析 虚构用户 A').click());
   await flush();
   await act(async () => button('调用明细').click());
+  await flush();
+  await act(async () => button('下一页').click());
   await flush();
   await act(async () =>
     button('每页条数').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })),
@@ -1549,6 +1578,42 @@ test('usage page size and shared filters persist across independent task and cal
   assert.equal(query.pageSize, '50');
   assert.equal(query.key, '');
   assert.match(text(), /筛选范围 · 任务/);
+});
+test('usage merged pagination keeps the latest view and page size when an old page resolves late', async () => {
+  type Result = Awaited<ReturnType<typeof fixture.service.usage>>;
+  let release!: (value: Result) => void;
+  let oldPage!: Result;
+  await mount('/operations/usage', (f) => {
+    const read = f.service.usage.bind(f.service);
+    f.service.usage = async (...input) => {
+      const value = await read(...input);
+      if (input[0] === 'tasks' && input[2] === 'next' && input[3] === '20') {
+        oldPage = { ...value, summary: { ...value.summary, knownCostCny: '9999.99' } };
+        return new Promise((resolve) => { release = resolve; });
+      }
+      return value;
+    };
+  });
+  await act(async () => button('下一页').click());
+  await flush();
+  await act(async () => button('调用明细').click());
+  await flush();
+  await act(async () => button('每页条数').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+  await flush();
+  await act(async () => [...document.querySelectorAll<HTMLElement>('[role=menuitemradio]')].find((item) => item.textContent === '50 条 / 页')!.click());
+  await flush();
+  await act(async () => release(oldPage));
+  await flush();
+  assert.match(text(), /筛选范围 · 调用/);
+  assert.doesNotMatch(text(), /9999|9,999/);
+  assert.equal(button('每页条数').textContent, '50 条 / 页');
+  assert.equal(button('每页条数').closest('nav')?.getAttribute('aria-label'), '分页');
+  await act(async () => button('任务汇总').click());
+  await flush();
+  const query = fixture.requests.filter((request) => request.method === 'usage').at(-1)!.input as any;
+  assert.equal(query.view, 'tasks');
+  assert.equal(query.pageSize, '50');
+  assert.equal(query.key, '');
 });
 test('gift records localize in the balance popup and personal details without translating operator reasons or writing credits', async () => {
   const { default: i18n } = await import('../src/i18n');
@@ -1597,16 +1662,20 @@ test('operator ledger uses the same localized system reasons and retains custom 
     f.service.userWallet = async () => ({ ...f.wallet, ledger: { ...creditStats, items: [
       { identity:'gift-daily', at:'2026-10-19T02:00:00Z', direction:'add', category:'gift', amount:'60', balance:'60', reason:'daily-gift', source:'daily-gift', actorLabel:'fixture-user', originalDebit:null },
       { identity:'custom-adjust', at:'2026-10-19T02:00:00Z', direction:'add', category:'gift', amount:'60', balance:'120', reason:'运营说明 daily-gift 保持原文', source:'operations-adjustment', actorLabel:'fixture-operator', originalDebit:null },
+      { identity:'payment-add', at:'2026-10-20T02:00:00Z', direction:'add', category:'recharge', amount:'100', balance:'220', reason:'充值到账', source:'payment-order:PO20261020120000ABCDEFGHIJ', actorLabel:'payment:demo', originalDebit:null, originalAddition:null },
     ], previous:null, next:null, caption:'运营流水夹具' } });
   });
   await act(async () => button('余额与流水').click());
   await flush();
   const reasons = () => [...document.querySelectorAll('.op-reason')].map(el => el.textContent);
-  assert.deepEqual(reasons(), ['每日赠送', '运营说明 daily-gift 保持原文']);
+  assert.deepEqual(reasons(), ['每日赠送', '运营说明 daily-gift 保持原文', '充值到账']);
+  assert.match(document.querySelector('.op-reason')?.closest('table')?.textContent || '', /积分充值演示支付/);
+  assert.doesNotMatch(document.querySelector('.op-reason')?.closest('table')?.textContent || '', /payment:demo|创作生成/);
   try {
     await act(async () => i18n.changeLanguage('en'));
     await flush();
-    assert.deepEqual(reasons(), ['Daily bonus', '运营说明 daily-gift 保持原文']);
+    assert.deepEqual(reasons(), ['Daily bonus', '运营说明 daily-gift 保持原文', 'Recharge credited']);
+    assert.match(document.querySelector('.op-reason')?.closest('table')?.textContent || '', /Demo payment/);
     assert.match(document.querySelector('.op-reason')?.closest('table')?.textContent || '', /Operator adjustment/);
     assert.equal(fixture.requests.some(row => row.method === 'adjust'), false);
   } finally {
@@ -1671,7 +1740,7 @@ test('credit record labels filter rows while consumption analysis retains its ow
   );
   assert.equal(
     document.querySelectorAll('[role=tablist][aria-label="积分记录方向"] [role=tab]').length,
-    3,
+    4,
   );
   assert.equal(button('已获取').getAttribute('aria-selected'), 'true');
   assert.match(document.querySelector('.personal-credit-ledger')?.textContent || '', /充值记录/);
@@ -2160,6 +2229,9 @@ test('expired daily gifts have their own record filter and never become settled 
   assert.match(document.querySelector('.personal-credit-analysis')?.textContent||'',/暂无已结算消耗/);
   await act(async () => button('到期回收').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true})));
   await flush();
+  assert.equal(document.activeElement,button('退款扣回'));
+  await act(async () => button('退款扣回').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true})));
+  await flush();
   assert.equal(document.activeElement,button('已获取'));
 });
 
@@ -2198,4 +2270,34 @@ test('program generation reasons localize without replacing operator-entered rea
   });
   assert.deepEqual([...document.querySelectorAll('.personal-credit-reason strong')].map(item => item.textContent), ['创作生成', '生成未完成返还', 'generation']);
   assert.doesNotMatch(document.querySelector('.personal-credit-ledger')!.textContent!, /internal-|project_private/);
+});
+
+
+test('refund reclaim is a separate keyboard reachable negative record without consuming credits', async () => {
+  const scopes: string[] = [];
+  await mount('/credits', f => {
+    f.service.myLedger = async (_key, filters) => {
+      scopes.push(filters?.direction || 'all');
+      return { ...creditStats, items: filters?.direction === 'reclaimed' ? [{
+        identity: 'refund-reclaim', at: '2026-10-20T04:00:00Z', direction: 'reclaim', category: 'recharge',
+        amount: '500', rechargeAmount: '500', giftAmount: '0', legacyAmount: '0', balance: '600',
+        reason: '充值退款扣回', source: 'payment-order:PO20261020120000ABCDEFGHIJ', actorLabel: 'operator',
+        originalDebit: null, originalAddition: 'original-add',
+      }] : [], previous: null, next: null, caption: '扣回夹具' };
+    };
+  });
+  await act(async () => button('已获取').dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true })));
+  await flush();
+  assert.equal(document.activeElement, button('退款扣回'));
+  assert.equal(button('退款扣回').getAttribute('aria-selected'), 'true');
+  assert.equal(scopes.at(-1), 'reclaimed');
+  const ledger = document.querySelector('.personal-credit-ledger')!;
+  assert.match(ledger.textContent || '', /充值退款扣回/);
+  assert.match(ledger.textContent || '', /−500/);
+  assert.doesNotMatch(ledger.textContent || '', /创作生成|original-add|payment-order:/);
+  assert.equal(document.querySelector('.credit-record-amount')?.getAttribute('data-direction'), 'reclaim');
+  assert.match(document.querySelector('.personal-credit-analysis')?.textContent || '', /暂无已结算消耗/);
+  await act(async () => button('退款扣回').dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true })));
+  await flush();
+  assert.equal(document.activeElement, button('已获取'));
 });

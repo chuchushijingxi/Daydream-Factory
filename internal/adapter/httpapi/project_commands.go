@@ -10,7 +10,7 @@ import (
 
 func (h *Handler) registerProjectCommands(mux *routes) {
 	mux.HandleFunc("GET /api/models", func(w http.ResponseWriter, r *http.Request) {
-		options, err := h.Service.ForActor(actor(r)).AvailableModels(r.Context())
+		options, err := h.projectService(r).AvailableModels(r.Context())
 		if err != nil {
 			fail(w, err)
 			return
@@ -33,7 +33,7 @@ func (h *Handler) registerProjectCommands(mux *routes) {
 			fail(w, err)
 			return
 		}
-		p, err := h.Service.ForActor(actor(r)).SaveSettings(r.Context(), r.PathValue("id"), body.Revision, body.ProjectSettings)
+		p, err := h.projectService(r).SaveSettings(r.Context(), r.PathValue("id"), body.Revision, body.ProjectSettings)
 		respond(w, p, err, 200)
 	})
 	mux.HandleFunc("POST /api/projects/{id}/style", func(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +46,7 @@ func (h *Handler) registerProjectCommands(mux *routes) {
 			fail(w, err)
 			return
 		}
-		p, err := h.Service.ForActor(actor(r)).SaveStyle(r.Context(), r.PathValue("id"), body.Revision, body.StyleID, body.Version)
+		p, err := h.projectService(r).SaveStyle(r.Context(), r.PathValue("id"), body.Revision, body.StyleID, body.Version)
 		respond(w, p, err, 200)
 	})
 	for _, pattern := range []string{"POST /api/projects/{id}/assets", "POST /api/projects/{id}/assets/{assetId}"} {
@@ -59,7 +59,7 @@ func (h *Handler) registerProjectCommands(mux *routes) {
 				fail(w, err)
 				return
 			}
-			p, err := h.Service.ForActor(actor(r)).SaveAsset(r.Context(), r.PathValue("id"), body.Revision, r.PathValue("assetId"), body.Asset)
+			p, err := h.projectService(r).SaveAsset(r.Context(), r.PathValue("id"), body.Revision, r.PathValue("assetId"), body.Asset)
 			status := 200
 			if r.PathValue("assetId") == "" {
 				status = 201
@@ -73,7 +73,7 @@ func (h *Handler) registerProjectCommands(mux *routes) {
 			fail(w, err)
 			return
 		}
-		p, err := h.Service.ForActor(actor(r)).DeleteAsset(r.Context(), r.PathValue("id"), rev, r.PathValue("assetId"))
+		p, err := h.projectService(r).DeleteAsset(r.Context(), r.PathValue("id"), rev, r.PathValue("assetId"))
 		respond(w, p, err, 200)
 	})
 	for _, pattern := range []string{"POST /api/projects/{id}/assets/{assetId}/looks", "POST /api/projects/{id}/assets/{assetId}/looks/{lookId}"} {
@@ -86,7 +86,7 @@ func (h *Handler) registerProjectCommands(mux *routes) {
 				fail(w, err)
 				return
 			}
-			p, err := h.Service.ForActor(actor(r)).SaveLook(r.Context(), r.PathValue("id"), body.Revision, r.PathValue("assetId"), r.PathValue("lookId"), body.Look)
+			p, err := h.projectService(r).SaveLook(r.Context(), r.PathValue("id"), body.Revision, r.PathValue("assetId"), r.PathValue("lookId"), body.Look)
 			status := 200
 			if r.PathValue("lookId") == "" {
 				status = 201
@@ -100,7 +100,7 @@ func (h *Handler) registerProjectCommands(mux *routes) {
 			fail(w, err)
 			return
 		}
-		p, err := h.Service.ForActor(actor(r)).DeleteLook(r.Context(), r.PathValue("id"), rev, r.PathValue("assetId"), r.PathValue("lookId"))
+		p, err := h.projectService(r).DeleteLook(r.Context(), r.PathValue("id"), rev, r.PathValue("assetId"), r.PathValue("lookId"))
 		respond(w, p, err, 200)
 	})
 	mux.HandleFunc("POST /api/projects/{id}/outline-runs", h.startContentTask)
@@ -114,7 +114,7 @@ func (h *Handler) registerProjectCommands(mux *routes) {
 				fail(w, err)
 				return
 			}
-			p, err := h.Service.ForActor(actor(r)).SaveVisualPrompt(r.Context(), r.PathValue("id"), body.Revision, d.VisualTarget{AssetID: r.PathValue("assetId"), LookID: r.PathValue("lookId")}, body.Text)
+			p, err := h.projectService(r).SaveVisualPrompt(r.Context(), r.PathValue("id"), body.Revision, d.VisualTarget{AssetID: r.PathValue("assetId"), LookID: r.PathValue("lookId")}, body.Text)
 			respond(w, p, err, 200)
 		})
 	}
@@ -131,11 +131,11 @@ func (h *Handler) startContentTask(w http.ResponseWriter, r *http.Request) {
 	}
 	var p d.Project
 	if strings.HasSuffix(r.URL.Path, "/outline-runs") {
-		p, err = h.Service.ForActor(actor(r)).WithBillingBasis(basis).StartOutline(r.Context(), r.PathValue("id"), rev)
+		p, err = h.projectService(r).WithBillingBasis(basis).StartOutline(r.Context(), r.PathValue("id"), rev)
 	} else if r.PathValue("assetId") != "" {
-		p, err = h.Service.ForActor(actor(r)).WithBillingBasis(basis).StartSingleVisual(r.Context(), r.PathValue("id"), rev, d.VisualTarget{AssetID: r.PathValue("assetId"), LookID: r.PathValue("lookId")})
+		p, err = h.projectService(r).WithBillingBasis(basis).StartSingleVisual(r.Context(), r.PathValue("id"), rev, d.VisualTarget{AssetID: r.PathValue("assetId"), LookID: r.PathValue("lookId")})
 	} else {
-		p, err = h.Service.ForActor(actor(r)).WithBillingBasis(basis).StartVisual(r.Context(), r.PathValue("id"), rev)
+		p, err = h.projectService(r).WithBillingBasis(basis).StartVisual(r.Context(), r.PathValue("id"), rev)
 	}
 	if err != nil {
 		fail(w, err)

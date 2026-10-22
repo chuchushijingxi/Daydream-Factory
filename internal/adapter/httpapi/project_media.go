@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -16,7 +17,8 @@ func mediaLinks(v app.MediaView) app.MediaView {
 		for i := range v.Result.Files {
 			f := &v.Result.Files[i]
 			f.ContentURL = "/api/projects/" + v.ProjectID + "/media-tasks/" + v.ID + "/outputs/" + f.ID + "/file"
-			if v.Status == "succeeded" && f.ContentType == "video/mp4" {
+			f.ThumbnailURL = ""
+			if v.Status == "succeeded" && (f.ContentType == "video/mp4" || strings.HasPrefix(f.ContentType, "image/")) {
 				f.ThumbnailURL = "/api/projects/" + v.ProjectID + "/media-tasks/" + v.ID + "/outputs/" + f.ID + "/thumbnail"
 			}
 		}
@@ -32,7 +34,7 @@ func (h *Handler) registerProjectMedia(mux *routes) {
 			fail(w, err)
 			return
 		}
-		items, err := h.Service.ForActor(actor(r)).StartImageBatch(r.Context(), r.PathValue("id"), in.Commands)
+		items, err := h.projectService(r).StartImageBatch(r.Context(), r.PathValue("id"), in.Commands)
 		if err != nil {
 			fail(w, err)
 			return
@@ -51,7 +53,7 @@ func (h *Handler) registerProjectMedia(mux *routes) {
 		write(w, 202, map[string]any{"items": out})
 	})
 	mux.HandleFunc("GET /api/projects/{id}/media-tasks/{taskId}/outputs/{mediaId}/thumbnail", func(w http.ResponseWriter, r *http.Request) {
-		body, err := h.Service.ForActor(actor(r)).MediaThumbnail(r.Context(), r.PathValue("id"), r.PathValue("taskId"), r.PathValue("mediaId"))
+		body, err := h.projectService(r).MediaThumbnail(r.Context(), r.PathValue("id"), r.PathValue("taskId"), r.PathValue("mediaId"))
 		if err != nil {
 			fail(w, err)
 			return
@@ -67,7 +69,7 @@ func (h *Handler) registerProjectMedia(mux *routes) {
 			fail(w, err)
 			return
 		}
-		v, err := h.Service.ForActor(actor(r)).StartMedia(r.Context(), r.PathValue("id"), in)
+		v, err := h.projectService(r).StartMedia(r.Context(), r.PathValue("id"), in)
 		if err != nil {
 			fail(w, err)
 			return
@@ -84,7 +86,7 @@ func (h *Handler) registerProjectMedia(mux *routes) {
 				return
 			}
 		}
-		v, err := h.Service.ForActor(actor(r)).ListMedia(r.Context(), r.PathValue("id"), r.URL.Query().Get("cursor"), limit, r.URL.Query().Get("kind"))
+		v, err := h.projectService(r).ListMedia(r.Context(), r.PathValue("id"), r.URL.Query().Get("cursor"), limit, r.URL.Query().Get("kind"))
 		if err != nil {
 			fail(w, err)
 			return
@@ -95,7 +97,7 @@ func (h *Handler) registerProjectMedia(mux *routes) {
 		write(w, 200, v)
 	})
 	mux.HandleFunc("GET /api/projects/{id}/media-tasks/{taskId}", func(w http.ResponseWriter, r *http.Request) {
-		v, err := h.Service.ForActor(actor(r)).Media(r.Context(), r.PathValue("id"), r.PathValue("taskId"))
+		v, err := h.projectService(r).Media(r.Context(), r.PathValue("id"), r.PathValue("taskId"))
 		if err != nil {
 			fail(w, err)
 			return
@@ -108,7 +110,7 @@ func (h *Handler) registerProjectMedia(mux *routes) {
 			fail(w, err)
 			return
 		}
-		v, err := h.Service.ForActor(actor(r)).CancelMedia(r.Context(), r.PathValue("id"), r.PathValue("taskId"), rev)
+		v, err := h.projectService(r).CancelMedia(r.Context(), r.PathValue("id"), r.PathValue("taskId"), rev)
 		if err != nil {
 			fail(w, err)
 			return
@@ -124,11 +126,11 @@ func (h *Handler) registerProjectMedia(mux *routes) {
 			fail(w, err)
 			return
 		}
-		p, err := h.Service.ForActor(actor(r)).AdoptMedia(r.Context(), r.PathValue("id"), r.PathValue("taskId"), in.OutputID, in.Revision)
+		p, err := h.projectService(r).AdoptMedia(r.Context(), r.PathValue("id"), r.PathValue("taskId"), in.OutputID, in.Revision)
 		respond(w, p, err, 200)
 	})
 	mux.HandleFunc("GET /api/projects/{id}/media-tasks/{taskId}/outputs/{mediaId}/file", func(w http.ResponseWriter, r *http.Request) {
-		body, meta, err := h.Service.ForActor(actor(r)).MediaFile(r.Context(), r.PathValue("id"), r.PathValue("taskId"), r.PathValue("mediaId"))
+		body, meta, err := h.projectService(r).MediaFile(r.Context(), r.PathValue("id"), r.PathValue("taskId"), r.PathValue("mediaId"))
 		if err != nil {
 			fail(w, err)
 			return

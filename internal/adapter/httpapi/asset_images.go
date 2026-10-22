@@ -3,6 +3,7 @@ package httpapi
 import (
 	d "drama-agent/internal/domain/project"
 	"net/http"
+	"net/url"
 )
 
 type AssetImageView struct {
@@ -17,6 +18,17 @@ func assetImage(fileID string) *AssetImageView {
 	}
 	base := "/api/files/" + fileID
 	return &AssetImageView{FileID: fileID, OriginalURL: base + "/original", ThumbnailURL: base + "/thumbnail"}
+}
+
+// 项目页面的已引用文件沿容器读取，选择器仍使用文件自身的独立权限。
+func projectAssetImage(projectID, fileID string) *AssetImageView {
+	image := assetImage(fileID)
+	if image == nil {
+		return nil
+	}
+	base := "/api/projects/" + url.PathEscape(projectID) + "/files/" + url.PathEscape(fileID)
+	image.OriginalURL, image.ThumbnailURL = base+"/original", base+"/thumbnail"
+	return image
 }
 
 type LookView struct {
@@ -39,7 +51,7 @@ func (h *Handler) registerAssetImages(mux *routes) {
 				return
 			}
 			target := d.VisualTarget{AssetID: r.PathValue("assetId"), LookID: r.PathValue("lookId")}
-			p, err := h.Service.ForActor(actor(r)).SaveImage(r.Context(), r.PathValue("id"), body.Revision, target, body.FileID)
+			p, err := h.projectService(r).SaveImage(r.Context(), r.PathValue("id"), body.Revision, target, body.FileID)
 			respond(w, p, err, http.StatusOK)
 		})
 	}
