@@ -32,6 +32,9 @@ Milvus 3.0.3 (Apache-2.0) and NSQ 1.3.0 (MIT) have their Go products rebuilt
 using the pinned source and independent dependency locks in deploy/.
 Their containers retain original Go/dependency licenses under
 /usr/share/licenses/milvus-rebuild/ and /usr/share/licenses/nsq/ respectively.
+etcd 3.5.33 (Apache-2.0), which stores Milvus metadata, is rebuilt from its
+pinned source with upstream's own dependency lock; its container retains the
+etcd, Go and dependency licenses under /usr/share/licenses/etcd/.
 
 The media container builds separate FFmpeg 9.0.2 tools with libx264
 under GPL-2.0-or-later, and libwebp 1.6.0 tools under their BSD-style license.

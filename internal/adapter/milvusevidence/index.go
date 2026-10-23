@@ -31,9 +31,27 @@ type Index struct {
 	client               *http.Client
 }
 
+// privateHost accepts only this machine (a loopback IP) or a single-label
+// container service name such as "milvus" on the internal Compose network;
+// domain names and routable IPs are rejected so paragraphs never leave it.
+func privateHost(host string) bool {
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.IsLoopback()
+	}
+	if host == "" || len(host) > 63 || host[0] == '-' || host[len(host)-1] == '-' {
+		return false
+	}
+	for _, r := range host {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '-' {
+			return false
+		}
+	}
+	return true
+}
+
 func New(endpoint, collection string, embedder ports.Embedder, settings ...appconfig.Evidence) (*Index, error) {
 	u, err := url.Parse(endpoint)
-	if err != nil || u.Scheme != "http" || net.ParseIP(u.Hostname()) == nil || !net.ParseIP(u.Hostname()).IsLoopback() || u.User != nil || u.RawQuery != "" || u.Fragment != "" || strings.Trim(u.Path, "/") != "" || collection == "" || embedder == nil || embedder.Dimension() <= 0 {
+	if err != nil || u.Scheme != "http" || !privateHost(u.Hostname()) || u.User != nil || u.RawQuery != "" || u.Fragment != "" || strings.Trim(u.Path, "/") != "" || collection == "" || embedder == nil || embedder.Dimension() <= 0 {
 		return nil, fmt.Errorf("local Milvus endpoint, collection and embedder are required")
 	}
 	var options appconfig.Evidence

@@ -7,7 +7,7 @@
 ```sh
 docker compose version
 docker compose ps -a
-docker compose logs --tail=100 config-init database-init frontend backend media embedding postgres redis minio nsq milvus
+docker compose logs --tail=100 config-init database-init frontend backend media embedding postgres redis minio nsq milvus etcd
 # 仅在启用了额外 worker 时查看。
 docker compose --profile workers logs --tail=100 task-worker
 ```
@@ -22,14 +22,15 @@ docker compose --profile workers logs --tail=100 task-worker
 | 页面没有可选分析模型 | 模型是否已启用、连接密钥和容量是否有效、计价配置是否保存；项目是否选择了该分析模型 |
 | 提示价格未配置或积分不足 | 检查站内积分价格、账号余额和限免有效期；厂商账户余额独立检查 |
 | 真实图片/视频模型不可用 | 当前只接入本地 Mock；给真实媒体厂商预设填 Key 也不会使其变为可执行任务 |
-| 任务一直排队或检索不可用 | 查看 backend、embedding、NSQ、Milvus 及额外 worker 日志，确认更新时一起重建了共享网络的服务 |
+| 任务一直排队或检索不可用 | 查看 backend、embedding、NSQ、Milvus、etcd 及额外 worker 日志；NSQ 与额外 worker 共用 backend 网络，更新时须一起重建 |
 | 缩略图或 Mock 视频生成失败 | 查看 media 日志并确认其健康；后端和 worker 通过 `http://media:8790` 调用媒体服务 |
 
 可从当前 backend 的网络中检查依赖：
 
 ```sh
 docker compose exec backend curl -fsS http://127.0.0.1:4151/ping
-docker compose exec backend curl -fsS http://127.0.0.1:9091/healthz
+docker compose exec backend curl -fsS http://milvus:9091/healthz
+docker compose exec backend curl -fsS http://etcd:2379/health
 docker compose exec backend curl -fsS http://media:8790/healthz
 docker compose exec backend curl -fsS http://embedding:8791/v1/identity
 ```

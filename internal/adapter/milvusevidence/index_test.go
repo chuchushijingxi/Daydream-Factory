@@ -271,3 +271,19 @@ func TestActualMilvusLocalBGEIsolationRebuildAndPagination(t *testing.T) {
 	}
 	t.Logf("owned test collection %s; learned BGE512, source/project isolation, rebuild and pagination verified", s.collection)
 }
+
+func TestEndpointStaysOnThisMachineOrTheComposeNetwork(t *testing.T) {
+	for _, endpoint := range []string{"http://127.0.0.1:19530", "http://[::1]:19530", "http://milvus:19530", "http://milvus-index:19530/"} {
+		if _, err := New(endpoint, "fixture", &vectorFixture{}); err != nil {
+			t.Fatal(endpoint, err)
+		}
+	}
+	for _, endpoint := range []string{
+		"https://milvus:19530", "http://milvus.example.com:19530", "http://10.0.0.8:19530", "http://8.8.8.8:19530",
+		"http://Milvus:19530", "http://-milvus:19530", "http://user@milvus:19530", "http://milvus:19530/v2", "http://milvus:19530?x=1",
+	} {
+		if _, err := New(endpoint, "fixture", &vectorFixture{}); err == nil {
+			t.Fatal("accepted", endpoint)
+		}
+	}
+}

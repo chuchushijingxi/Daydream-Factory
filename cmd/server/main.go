@@ -47,6 +47,7 @@ func main() {
 	trustedProxies := flag.String("trusted-proxies", "", "comma-separated CIDRs whose X-Real-IP is trusted for per-IP limits (container deployment trusts the frontend proxy network)")
 	mediaEndpoint := flag.String("media-endpoint", "", "media service URL (container deployment: http://media:8790); empty runs FFmpeg/libwebp on this host")
 	embeddingEndpoint := flag.String("embedding-endpoint", "", "embedding service URL (container deployment: http://embedding:8791); empty runs the local Python model on this host")
+	evidenceEndpoint := flag.String("evidence-endpoint", "", "Milvus URL (container deployment: http://milvus:19530); empty uses the configured local address")
 	flag.Parse()
 	proxies, err := httpapi.ParseTrustedProxies(*trustedProxies)
 	if err != nil {
@@ -60,6 +61,9 @@ func main() {
 	cfg.HTTP.Address = *listen
 	cfg.Media.Endpoint = *mediaEndpoint
 	cfg.Evidence.EmbeddingEndpoint = *embeddingEndpoint
+	if *evidenceEndpoint != "" {
+		cfg.Evidence.Endpoint = *evidenceEndpoint
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.StartupTimeout)
 	defer cancel()
 	readOnly := cfg.ReadOnly

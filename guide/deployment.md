@@ -57,7 +57,7 @@ docker run --rm --network none --user 0 \
 
 Compose 自动生成私有基础设施凭据，并在空数据库创建基础设置和这一个运营账号。[初始化 SQL](../deploy/init.sql) 从代码中的表结构和种子生成，不包含开发者账号、项目、上传、用量、邮件或业务流水。数据库已有任何用户时不再添加公开初始化账号，重复运行部署脚本不重置已有密码或业务数据，也不删除数据卷。
 
-系统由四个应用镜像组成：后端镜像 `daydream-backend` 只含 Go 程序（API、任务 worker 与初始化工具）；前端镜像 `daydream-frontend` 用 nginx 提供工作台页面，并把 `/api/` 转发给后端；媒体服务 `daydream-media` 提供 FFmpeg/libwebp 缩略图与视频处理；检索服务 `daydream-embedding` 用 ONNX Runtime 常驻加载离线 BGE CPU 模型生成检索向量，PyTorch 只在构建时用于导出模型并校验向量一致，不进入运行镜像。浏览器只访问前端发布的 `8787` 端口，后端、媒体与检索服务都不向宿主机发布端口。配套服务为 PostgreSQL 17、Redis 8、Milvus 3.0.3、NSQ 1.3.0 和 [PGSTY Silo](https://github.com/pgsty/silo) S3 对象存储。Milvus 与 NSQ 的 Go 程序使用 Go 1.26.10 和独立依赖锁重建，Milvus 原生库保持同一上游版本。
+系统由四个应用镜像组成：后端镜像 `daydream-backend` 只含 Go 程序（API、任务 worker 与初始化工具）；前端镜像 `daydream-frontend` 用 nginx 提供工作台页面，并把 `/api/` 转发给后端；媒体服务 `daydream-media` 提供 FFmpeg/libwebp 缩略图与视频处理；检索服务 `daydream-embedding` 用 ONNX Runtime 常驻加载离线 BGE CPU 模型生成检索向量，PyTorch 只在构建时用于导出模型并校验向量一致，不进入运行镜像。浏览器只访问前端发布的 `8787` 端口，后端、媒体与检索服务都不向宿主机发布端口。配套服务为 PostgreSQL 17、Redis 8、Milvus 3.0.3（元数据存于独立的 etcd 3.5.33）、NSQ 1.3.0 和 [PGSTY Silo](https://github.com/pgsty/silo) S3 对象存储。Milvus、etcd 与 NSQ 的 Go 程序使用 Go 1.26.10 重建（Milvus 与 NSQ 使用独立依赖锁，etcd 沿用上游依赖锁），Milvus 原生库保持同一上游版本。
 
 基础设施原凭据保存在 `runtime-config` 卷，模型/SMTP 原加密密钥保存在 `app-data` 卷；业务数据使用独立卷。请按[维护指南](maintenance.md#备份与恢复)配套备份，不用删卷处理启动问题。
 
@@ -79,7 +79,7 @@ backend 已内置任务 worker。如需额外 worker，可选择启用，不对�
 sh deploy.sh --profile workers
 ```
 
-脚本支持在 `sh deploy.sh` 后传入 Compose 全局参数，例如 `--profile workers`、`-p` 项目名或 `-f` 覆盖文件。脚本始终先切换到源码根目录，`-f` 的相对路径也按该目录解释；需要时使用绝对路径。使用自定义参数时，后续启动、更新、备份和恢复都要沿用同一组参数，并核对卷名。NSQ、Milvus 和额外 worker 共用 backend 的网络命名空间，更新时须一起重建，详见[维护指南](maintenance.md#运行与更新)。
+脚本支持在 `sh deploy.sh` 后传入 Compose 全局参数，例如 `--profile workers`、`-p` 项目名或 `-f` 覆盖文件。脚本始终先切换到源码根目录，`-f` 的相对路径也按该目录解释；需要时使用绝对路径。使用自定义参数时，后续启动、更新、备份和恢复都要沿用同一组参数，并核对卷名。NSQ 和额外 worker 共用 backend 的网络命名空间，更新时须一起重建；Milvus 与其元数据 etcd 独立运行，不随 backend 重启，详见[维护指南](maintenance.md#运行与更新)。
 
 ### 自建空库
 

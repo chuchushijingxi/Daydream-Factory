@@ -1,0 +1,42 @@
+# syntax=docker/dockerfile:1
+# etcd 3.5.33 for Milvus metadata — the same release Milvus 3.0.3 embeds — rebuilt
+# with the pinned Go toolchain from upstream's own dependency lock.
+# Running it as its own container (the official Milvus Compose layout) means a
+# leader is already elected before Milvus starts, so Milvus never races etcd's
+# startup election on restart.
+FROM golang:1.26.9-bookworm@sha256:d9c68c2c51161e12fd77e4c6320687c9cd86e1af1e3ad6e6cd63ff970641453c AS build
+ENV GOTOOLCHAIN=go1.26.10 GOTELEMETRY=off CGO_ENABLED=0
+ARG GOPROXY=https://proxy.golang.org,direct
+WORKDIR /src
+# v3.5.33 commit 9f4b125405c7fbd92e2c9cbb5235feffe1904a1d; reject changed archives.
+ADD --checksum=sha256:4bd8f588fb65033c23f6fac9b9a5ff4812ae2b6f77359fbe6d0eb2f1803d1d50 \
+    https://codeload.github.com/etcd-io/etcd/tar.gz/v3.5.33 /tmp/etcd.tar.gz
+RUN tar -xzf /tmp/etcd.tar.gz --strip-components=1 -C /src && rm /tmp/etcd.tar.gz
+WORKDIR /src/server
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    go build -mod=readonly -trimpath -buildvcs=false \
+      -ldflags="-s -w -X=go.etcd.io/etcd/api/v3/version.GitSHA=9f4b125" -o /out/etcd . \
+    && mkdir -p /out/licenses \
+    && cp /src/LICENSE /out/licenses/etcd-LICENSE \
+    && cp "$(go env GOROOT)/LICENSE" /out/licenses/Go-LICENSE \
+    && go list -deps -f '{{if .Module}}{{.Module.Path}} {{.Module.Dir}}{{end}}' . > /tmp/modules \
+    && sort -u /tmp/modules | while read -r module directory; do \
+           [ -n "$module" ] || continue; \
+           target="/out/licenses/$(printf '%s' "$module" | tr '/' '_')"; \
+           mkdir -p "$target"; \
+           find "$directory" -maxdepth 1 -type f \
+             \( -iname 'LICENSE*' -o -iname 'NOTICE*' -o -iname 'COPYING*' \) \
+             -exec cp {} "$target/" \;; \
+       done
+
+FROM alpine:3.23@sha256:85fe1e81d6758c208f3e1eed4338a1997e19d4be002d4dd32d3100c9a8c010a0
+LABEL org.opencontainers.image.source="https://github.com/etcd-io/etcd" \
+      org.opencontainers.image.revision="9f4b125405c7fbd92e2c9cbb5235feffe1904a1d" \
+      org.opencontainers.image.version="3.5.33-go1.26.10"
+# Apply available security revisions to the pinned base's runtime packages.
+RUN apk upgrade --no-cache && mkdir -p /etcd
+COPY --from=build /out/etcd /usr/local/bin/etcd
+COPY --from=build /out/licenses/ /usr/share/licenses/etcd/
+EXPOSE 2379
+CMD ["etcd"]
