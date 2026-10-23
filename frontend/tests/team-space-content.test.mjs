@@ -118,24 +118,6 @@ test('removing sharing verifies the command receipt then rereads current server 
     globalThis.fetch = previous;
   }
 });
-test('editing release uses DELETE keepalive and does not silently accept an unknown receipt', async () => {
-  const previous = globalThis.fetch;
-  let call;
-  try {
-    globalThis.fetch = async (url, options) => {
-      call = { url, options };
-      return Response.json({ released: true });
-    };
-    await sharedResourceApi.release('project /');
-    assert.equal(call.options.method, 'DELETE');
-    assert.equal(call.options.keepalive, true);
-    assert.equal(call.url, '/api/projects/project%20%2F/editing');
-    globalThis.fetch = async () => Response.json({ owned: false });
-    await assert.rejects(sharedResourceApi.release('project'), (e) => e.code === 'PROGRAM_FAILED');
-  } finally {
-    globalThis.fetch = previous;
-  }
-});
 test('independent creation assets require their own protected route and real list metadata', async () => {
   const previous = globalThis.fetch;
   let seen = '';

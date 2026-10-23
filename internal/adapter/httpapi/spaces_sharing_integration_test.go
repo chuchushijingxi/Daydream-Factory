@@ -26,7 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func TestSpaceSharingEditingAndReferencedFilesHTTP(t *testing.T) {
+func TestSpaceSharingAndReferencedFilesHTTP(t *testing.T) {
 	ctx := context.Background()
 	store := openProjectContentPG(t)
 	runtime := redisruntime.Connect(t)
@@ -38,7 +38,7 @@ func TestSpaceSharingEditingAndReferencedFilesHTTP(t *testing.T) {
 	seedPostgresFixtureUser(t, operator, ports.RoleOperator)
 	objects := uploadfiles.New().Objects
 	files := &uploadapp.Service{Store: store, Objects: objects, Resolver: store, Access: store}
-	host, handler := httpapi.New(&projectapp.Service{Store: store, Resolver: store, Access: store, Files: files, Editing: runtime, EditorNames: store}, nil, t.TempDir(), 0)
+	host, handler := httpapi.New(&projectapp.Service{Store: store, Resolver: store, Access: store, Files: files}, nil, t.TempDir(), 0)
 	host.Authenticator = &accounts.Service{Store: store}
 	host.Spaces = &spaceapp.Service{Store: store, Resolver: store, Limiter: runtime, Credits: store, CreditQueries: store, AllocationQueries: store, CreditUpdates: store}
 	host.Files, host.Runtime = files, runtime
@@ -137,40 +137,11 @@ func TestSpaceSharingEditingAndReferencedFilesHTTP(t *testing.T) {
 		t.Fatal("edit grant gave sharing management", access)
 	}
 	request("PUT", share, recipient, team.ID, spaceapp.ShareInput{Grantee: manager, Permission: spaces.Read}, 403)
-	var editor projectapp.EditingView
-	decode(request("POST", path+"/editing", creator, team.ID, nil, 200), &editor)
-	if !editor.Owned || editor.UserID != creator || editor.Username == "" {
-		t.Fatal("creator did not acquire editor", editor)
-	}
-	decode(request("POST", path+"/editing", recipient, team.ID, nil, 200), &editor)
-	if editor.Owned || editor.UserID != creator {
-		t.Fatal("lease was stolen", editor)
-	}
-	denied := request("POST", path+"/delete", recipient, team.ID, map[string]uint64{"revision": 1}, 409)
-	if !strings.Contains(denied.Body.String(), "PROJECT_EDITING_BY_OTHER") {
-		t.Fatal("write was not rejected by lease", denied.Body.String())
-	}
-	request("DELETE", path+"/editing", recipient, team.ID, nil, 200)
-	decode(request("PUT", path+"/editing", creator, team.ID, nil, 200), &editor)
-	if !editor.Owned {
-		t.Fatal("another user released creator's lease")
-	}
-	request("DELETE", path+"/editing", creator, team.ID, nil, 200)
-	decode(request("POST", path+"/editing", recipient, team.ID, nil, 200), &editor)
-	if !editor.Owned {
-		t.Fatal("released lease was not acquired")
-	}
 	request("DELETE", share, creator, creator, map[string]string{"grantee": recipient}, 200)
 	request("GET", path, recipient, team.ID, nil, 404)
 	request("GET", path+"/files/"+referenced.ID+"/original", recipient, team.ID, nil, 404)
 	request("POST", path+"/delete", recipient, team.ID, map[string]uint64{"revision": 1}, 404)
-	// 撤权页面仍能无条件回执式释放自己的租约，不泄露资源事实。
-	request("DELETE", path+"/editing", recipient, team.ID, nil, 200)
 	request("PUT", share, creator, creator, spaceapp.ShareInput{Grantee: recipient, Permission: spaces.Edit}, 200)
-	decode(request("POST", path+"/editing", recipient, team.ID, nil, 200), &editor)
-	if !editor.Owned {
-		t.Fatal("revoked editor did not release its lease")
-	}
 
 	// N6：只改本fixture团队的到期事实；不替换全局时间，真实余额0使内容只读。
 	balance, err := store.Balance(ctx, team.ID)

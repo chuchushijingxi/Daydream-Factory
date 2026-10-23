@@ -23,7 +23,7 @@ func commandStatus(code string) int {
 		return 503
 	case "RUNTIME_UNAVAILABLE", "SPACE_UNAVAILABLE", "SPACE_COMMIT_UNKNOWN":
 		return 503
-	case "LEASE_LOST", "PROJECT_EDITING_BY_OTHER":
+	case "LEASE_LOST":
 		return 409
 	case "PLATFORM_SETTINGS_INVALID", "INVALID_PLATFORM_LOGO":
 		return 400

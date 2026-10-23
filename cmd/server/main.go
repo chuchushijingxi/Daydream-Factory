@@ -114,7 +114,7 @@ func main() {
 		}
 		return runtimeState.LimitModel(model, protocol, endpoint, key), nil
 	}}
-	service := &app.Service{Resolver: store, Access: store, Credits: store, Prices: configuration, Discounts: store, Editing: runtimeState, EditorNames: store, Store: store, Agent: einoagent.New(), Models: configuration, Importer: scriptimport.Importer{}, Authorize: app.UserInitiatedExecution, ReceiptTimeout: cfg.Project.ReceiptTimeout, TransportRetryInterval: cfg.Project.TransportRetryInterval}
+	service := &app.Service{Resolver: store, Access: store, Credits: store, Prices: configuration, Discounts: store, Store: store, Agent: einoagent.New(), Models: configuration, Importer: scriptimport.Importer{}, Authorize: app.UserInitiatedExecution, ReceiptTimeout: cfg.Project.ReceiptTimeout, TransportRetryInterval: cfg.Project.TransportRetryInterval}
 	if !readOnly {
 		service.Evidence = configuredEvidence(cfg.Evidence)
 	}

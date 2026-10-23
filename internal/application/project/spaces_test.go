@@ -87,8 +87,7 @@ func TestProjectCommitRechecksPermissionAndKeepsCreator(t *testing.T) {
 		t.Fatal(err)
 	}
 	access := &projectAccess{permission: spaces.Edit}
-	leases := &editingMemory{owner: ports.ProjectEditor{UserID: "editor", SessionID: "test"}}
-	service := (&Service{Store: store, Resolver: access, Access: access, Editing: leases}).ForScope(ports.SpaceScope{SpaceID: p.SpaceID, UserID: "editor"}).WithEditingSession("test")
+	service := (&Service{Store: store, Resolver: access, Access: access}).ForScope(ports.SpaceScope{SpaceID: p.SpaceID, UserID: "editor"})
 	read, err := service.Project(ctx, p.ID)
 	if err != nil {
 		t.Fatal(err)

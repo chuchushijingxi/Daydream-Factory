@@ -17,9 +17,6 @@ type Service struct {
 	Credits                ports.CreditLedger
 	Prices                 ports.CreditPrices
 	Discounts              ports.CreditDiscounts
-	Editing                ports.ProjectEditing
-	EditorNames            ports.ProjectEditorNames
-	editingSession         string
 	agentUserID            string
 	billingBasis           string
 	scope                  *ports.SpaceScope

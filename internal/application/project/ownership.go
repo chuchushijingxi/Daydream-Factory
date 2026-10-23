@@ -68,9 +68,6 @@ func (s *Service) editingProject(ctx context.Context, id string) (d.Project, err
 	if err == nil {
 		err = s.requireProject(ctx, p, spaces.Edit)
 	}
-	if err == nil {
-		err = s.requireEditing(ctx, p)
-	}
 	if err != nil {
 		return d.Project{}, err
 	}
@@ -145,9 +142,6 @@ func (s scopedProjects) Commit(ctx context.Context, p d.Project, revision uint64
 		return err
 	}
 	if err = s.service.requireProject(ctx, current, spaces.Edit); err != nil {
-		return err
-	}
-	if err = s.service.requireEditing(ctx, current); err != nil {
 		return err
 	}
 	if current.SpaceID != p.SpaceID {

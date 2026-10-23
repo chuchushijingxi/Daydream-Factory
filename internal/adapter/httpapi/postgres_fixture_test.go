@@ -46,12 +46,7 @@ func legacyQuote(t *testing.T, service *app.Service, pID string, input app.Quote
 
 func quotedLegacyService(t *testing.T, service *app.Service, pID string, input app.QuoteInput) *app.Service {
 	t.Helper()
-	scoped := fixtureProject(t, service, legacyHTTPActor)
-	editing, err := scoped.AcquireEditing(context.Background(), pID)
-	if err != nil || !editing.Owned {
-		t.Fatal("fixture acquire editing", editing, err)
-	}
-	return scoped.WithBillingBasis(legacyQuote(t, service, pID, input))
+	return fixtureProject(t, service, legacyHTTPActor).WithBillingBasis(legacyQuote(t, service, pID, input))
 }
 
 func quoteProjectContent(t *testing.T, serverURL, projectID string, input app.QuoteInput) string {
@@ -116,20 +111,13 @@ func withPostgresSession(t *testing.T, host *httpapi.Handler, next http.Handler,
 		t.Fatal(err)
 	}
 	t.Cleanup(store.Close)
-	// The account connection is a real read authority even when the project Store
-	// is decorated to pause/fail commits. Never replace that decorated writer.
-	if host.Service != nil && host.Service.EditorNames == nil {
-		host.Service.EditorNames = store
-	}
 	configureFixtureProject(host.Service)
-	configurePostgresFixtureEditing(t, host.Service)
 	service := &accounts.Service{Store: store}
 	host.Accounts, host.Authenticator = service, service
 	host.StreamHeartbeat = appconfig.StreamHeartbeat
 	host.StreamWriteTimeout = appconfig.StreamWriteTimeout
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		addSessionCookie(r, postgresFixtureToken(legacyHTTPActor.UserID, audience))
-		acquireLegacyFixtureEditing(next, r)
 		next.ServeHTTP(w, r)
 	})
 }

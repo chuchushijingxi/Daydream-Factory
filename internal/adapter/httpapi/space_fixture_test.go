@@ -60,11 +60,8 @@ func fixtureProject(t *testing.T, s *app.Service, a ports.Actor) *app.Service {
 	configureFixtureProject(s)
 	if _, ok := s.Resolver.(spacefixture.Personal); !ok {
 		seedPostgresFixtureUser(t, a.UserID, a.Role)
-		configurePostgresFixtureEditing(t, s)
-	} else {
-		configureMemoryFixtureEditing(s)
 	}
-	return s.ForScope(ports.SpaceScope{SpaceID: a.UserID, UserID: a.UserID}).WithEditingSession(fixtureEditingSession(postgresFixtureToken(a.UserID, "workspace")))
+	return s.ForScope(ports.SpaceScope{SpaceID: a.UserID, UserID: a.UserID})
 }
 func fixtureFiles(t *testing.T, s *uploadapp.Service, a ports.Actor) *uploadapp.Service {
 	t.Helper()

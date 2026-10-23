@@ -8,12 +8,6 @@ export type ProjectPermissions = {
   access: 1 | 2;
   canShare: boolean;
 };
-export type ProjectEditing = {
-  userId: string;
-  username: string;
-  expiresAt: string | null;
-  owned: boolean;
-};
 export type Sharing = {
   spaceId: string;
   resourceKind: 'project' | 'canvas';
@@ -54,27 +48,6 @@ export const sharedResourceApi = {
     )
       throw invalid();
     return v;
-  },
-  async editing(id: string, method: 'POST' | 'PUT'): Promise<ProjectEditing> {
-    const v = await http.json<ProjectEditing>(projectPath(id) + '/editing', { method });
-    if (
-      !v ||
-      typeof v.userId !== 'string' ||
-      typeof v.username !== 'string' ||
-      typeof v.owned !== 'boolean' ||
-      (v.owned && (!v.userId || !v.expiresAt)) ||
-      (v.expiresAt !== null &&
-        (typeof v.expiresAt !== 'string' || !Number.isFinite(Date.parse(v.expiresAt))))
-    )
-      throw invalid();
-    return v;
-  },
-  async release(id: string) {
-    const v = await http.json<{ released: boolean }>(projectPath(id) + '/editing', {
-      method: 'DELETE',
-      keepalive: true,
-    });
-    if (v?.released !== true) throw invalid();
   },
   async members(space: string): Promise<{ userId: string; name: string }[]> {
     const rows = await http.json<{ userId: string; name: string }[]>(

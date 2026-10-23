@@ -84,7 +84,7 @@ func TestFaultWorkerProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	scoped := pausedProjectStore{ProjectStore: store, id: os.Getenv("DRAMA_P3_TEST_PROJECT"), boundary: os.Getenv("DRAMA_P3_PAUSE"), gate: os.Getenv("DRAMA_P3_GATE")}
-	service := &app.Service{Resolver: store, Access: store, EditorNames: store, Credits: store, Prices: &frozenFixturePrices{version: 1}, Authorize: freeAuthorization, Store: scoped, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: model}}
+	service := &app.Service{Resolver: store, Access: store, Credits: store, Prices: &frozenFixturePrices{version: 1}, Authorize: freeAuthorization, Store: scoped, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: model}}
 	host, handler := httpapi.New(configuredFixture(service), nil, "../../../demo", 0)
 	handler = withPostgresSession(t, host, handler, "workspace")
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -188,7 +188,7 @@ func TestRealProcessKillAndTCPFailureRecovery(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer store.Close()
-			service := &app.Service{Resolver: store, Access: store, EditorNames: store, Credits: store, Prices: &frozenFixturePrices{version: 1}, Authorize: freeAuthorization, Store: store, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: &protocolModel{}}}
+			service := &app.Service{Resolver: store, Access: store, Credits: store, Prices: &frozenFixturePrices{version: 1}, Authorize: freeAuthorization, Store: store, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Models: &modelregistry.Registry{Model: &protocolModel{}}}
 			p, err := fixtureProject(t, service, legacyHTTPActor).Create(ctx, "P3本地故障验证:"+scenario, "fault.txt", []byte("祖父把铜钥匙交给小雨。\n另一把铜钥匙放在门边。"), 0)
 			if err != nil {
 				t.Fatal(err)

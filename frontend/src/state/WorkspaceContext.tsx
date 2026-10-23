@@ -1,6 +1,6 @@
 import { useOptionalSpace } from './SpaceContext';
-import { useProjectEditing } from './useProjectEditing';
-import type { ProjectPermissions, ProjectEditing } from '../api/shared-resource';
+import { useProjectPermissions } from './useProjectPermissions';
+import type { ProjectPermissions } from '../api/shared-resource';
 import { ApiError } from '../api/client';
 import { sessionBoundary } from '../api/session-boundary';
 import { useStoryboardAutosave, type ShotDraft } from './useStoryboardAutosave';
@@ -24,7 +24,6 @@ type WorkspaceState = {
   toggleTheme: () => void;
   projects: ProjectRow[];
   projectPermissions: ProjectPermissions | null;
-  editing: ProjectEditing | null;
   projectReadOnlyReason: string;
   canShare: boolean;
   refreshProjectPermissions: () => Promise<void>;
@@ -97,16 +96,15 @@ export function WorkspaceProvider({
   const pathRef = useRef(pathname);
   pathRef.current = pathname;
 
-  const projectEditing = useProjectEditing(
+  const projectAccess = useProjectPermissions(
     projectId,
     load === 'workspace' &&
       (!space || space.ready) &&
       currentProject?.id === projectId &&
       (!space || currentProject.spaceId === space.spaceId),
-    serviceStatus?.readOnly === true,
   );
   useEffect(() => {
-    if (!projectEditing.denied) return;
+    if (!projectAccess.denied) return;
     ++sequence.current;
     setProject(null);
     setSource(null);
@@ -115,14 +113,14 @@ export function WorkspaceProvider({
     setBusy(false);
     setError(c('无权限访问该项目。'));
     if (space) void space.refresh().catch(() => {});
-  }, [projectEditing.denied]);
+  }, [projectAccess.denied]);
   const status = serviceStatus
     ? {
         ...serviceStatus,
         readOnly:
           serviceStatus.readOnly ||
           Boolean(space?.current?.readOnly) ||
-          Boolean(projectId && projectEditing.readOnly),
+          Boolean(projectId && projectAccess.readOnly),
       }
     : null;
   const refreshModels = async () => {
@@ -180,7 +178,7 @@ export function WorkspaceProvider({
       if (ticket === sequence.current) setBusy(false);
     }
   };
-  const autosave = useStoryboardAutosave(status, refreshCurrentProject, projectEditing.canWrite);
+  const autosave = useStoryboardAutosave(status, refreshCurrentProject);
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('theme', theme);
@@ -313,15 +311,14 @@ export function WorkspaceProvider({
         theme,
         toggleTheme: () => setTheme((v) => (v === 'dark' ? 'light' : 'dark')),
         projects,
-        projectPermissions: projectEditing.permissions,
-        editing: projectEditing.editing,
+        projectPermissions: projectAccess.permissions,
         projectReadOnlyReason: serviceStatus?.readOnly
           ? c('当前服务只读。')
           : space?.current?.readOnly
             ? c('团队已只读，内容可查看和下载。')
-            : projectEditing.reason,
-        canShare: projectEditing.permissions?.canShare === true,
-        refreshProjectPermissions: projectEditing.refresh,
+            : projectAccess.reason,
+        canShare: projectAccess.permissions?.canShare === true,
+        refreshProjectPermissions: projectAccess.refresh,
         currentProject,
         source,
         status,

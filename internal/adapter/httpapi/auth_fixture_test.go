@@ -25,10 +25,8 @@ func (fixtureAuthenticator) Authenticate(_ context.Context, token string) (ports
 func authenticatedFixture(h *httpapi.Handler, next http.Handler) http.Handler {
 	h.Authenticator = fixtureAuthenticator{}
 	configureFixtureProject(h.Service)
-	configureMemoryFixtureEditing(h.Service)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		addSessionCookie(r, authenticatedFixtureToken)
-		acquireLegacyFixtureEditing(next, r)
 		next.ServeHTTP(w, r)
 	})
 }

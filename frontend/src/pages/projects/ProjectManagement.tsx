@@ -1,4 +1,3 @@
-import { sharedResourceApi } from '../../api/shared-resource';
 import { useRef, useState } from 'react';
 import { Check, Minus } from 'lucide-react';
 import { api } from '../../api/client.ts';
@@ -76,15 +75,8 @@ export function useProjectManagement() {
       // 不获取新修订、不重发。
       for (const p of candidates) {
         if (p.effectiveAccess !== 2) throw new Error(c('无权删除该项目。'));
-        const lease = await sharedResourceApi.editing(p.id, 'POST');
-        if (!lease.owned)
-          throw new Error(c('{name} 正在编辑，未删除项目。', { name: lease.username }));
-        try {
-          await api.deleteProject(p.id, { revision: p.revision });
-          removed++;
-        } finally {
-          await sharedResourceApi.release(p.id);
-        }
+        await api.deleteProject(p.id, { revision: p.revision });
+        removed++;
 
         setSelected((prev) => {
           const next = new Set(prev);

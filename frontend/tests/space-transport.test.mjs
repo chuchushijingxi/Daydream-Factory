@@ -115,7 +115,7 @@ test('profile reads survive selection and keepalive release is sent but its late
   const leaving = createHttpClient(async (_url, options) => {
     signal = options.signal;
     return release.promise;
-  }, new SessionBoundary()).json('/api/projects/p/editing', {
+  }, new SessionBoundary()).json('/api/uploads/u', {
     method: 'DELETE',
     keepalive: true,
   });

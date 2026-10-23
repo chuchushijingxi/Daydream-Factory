@@ -85,8 +85,7 @@ const button = (name: string) =>
   [...document.querySelectorAll<HTMLButtonElement>('button')].find(
     (b) => b.textContent?.trim() === name || b.getAttribute('aria-label') === name,
   )!;
-// 继续核对内容写入/生成；编辑协调另经正式租约端口，仍完整记录在requests。
-const writes = () => fixture.requests.filter((r) => r.method === 'POST' && !r.path.endsWith('/editing'));
+const writes = () => fixture.requests.filter((r) => r.method === 'POST');
 async function mount(scenario = 'normal', route = '/playlet/p5_free/production?episodeId=ep_upper', wrapFetch?: (base: typeof globalThis.fetch) => typeof globalThis.fetch) {
   if (root) await act(() => root!.unmount());
   sessionBoundary.reset();

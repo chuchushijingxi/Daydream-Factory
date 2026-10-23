@@ -82,7 +82,7 @@ func New(service *app.Service, configuration *modelconfig.Service, demoDir strin
 	h.registerAssetImages(mux)
 	h.registerProjectMedia(mux)
 	h.registerMediaLibrary(mux)
-	h.registerProjectEditing(mux)
+	h.registerProjectPermissions(mux)
 	h.registerProjectFiles(mux)
 	h.registerProjectCommands(mux)
 	h.registerStoryboard(mux)

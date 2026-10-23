@@ -143,13 +143,7 @@ func mediaFixture(t *testing.T) (*Service, *taskapp.Runtime, d.Project, appconfi
 	p, _ = p5Change(t, s, p, map[string]any{"op": "createScene", "episodeId": "e1", "value": p5Scene(p.Storyboard.Index.Episodes[0])})
 	sc := p.Storyboard.Scenes[0]
 	p, _ = p5Change(t, s, p, map[string]any{"op": "createShot", "sceneId": sc.ID, "value": p5Shot(p.Storyboard.Index.Episodes[0])})
-	s.Editing = redisruntime.ConnectDatabase(t, cfg.Database.URL)
-	s.EditorNames = store
-	scoped := s.ForScope(ports.SpaceScope{SpaceID: p.SpaceID, UserID: p.CreatorID}).WithEditingSession("isolated-media-session:" + p.ID)
-	if view, err := scoped.AcquireEditing(ctx, p.ID); err != nil || !view.Owned {
-		t.Fatal("isolated fixture editing lease", view, err)
-	}
-	t.Cleanup(func() { _ = scoped.ReleaseEditing(context.Background(), p.ID) })
+	scoped := s.ForScope(ports.SpaceScope{SpaceID: p.SpaceID, UserID: p.CreatorID})
 	return scoped, rt, p, cfg
 }
 

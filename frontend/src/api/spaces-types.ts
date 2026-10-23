@@ -184,9 +184,3 @@ export type ProjectPermissions = {
   access: ResourceAccess;
   canShare: boolean;
 };
-export type ProjectEditing = {
-  userId: string;
-  username: string;
-  expiresAt: string | null;
-  owned: boolean;
-};

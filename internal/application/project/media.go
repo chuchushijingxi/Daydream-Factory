@@ -208,9 +208,6 @@ func (s *Service) startMedia(ctx context.Context, p d.Project, in MediaCommand, 
 	if err := s.requireProject(ctx, p, spaces.Edit); err != nil {
 		return MediaView{}, err
 	}
-	if err := s.requireEditing(ctx, p); err != nil {
-		return MediaView{}, err
-	}
 	id := p.ID
 	old, err := s.tasksForProject(p).GetByCommand(ctx, mediaScope(id), in.CommandID)
 	if err == nil {
@@ -280,9 +277,6 @@ func (s *Service) startMedia(ctx context.Context, p d.Project, in MediaCommand, 
 	}{prompt, ratio, options.Resolution, options.DurationSeconds})
 	meta, _ := json.Marshal(MediaContext{FillMissingImage: fillMissing, Credit: charge, Request: in, SourceVersion: p.ScriptSource.Version, InputDigest: digest})
 	tasks := s.tasksForProject(p)
-	if err := s.requireEditing(ctx, p); err != nil {
-		return MediaView{}, err
-	}
 	v, err := tasks.Submit(ctx, taskapp.Command{RequirePermit: charge != nil, ScopeID: mediaScope(id), CommandID: in.CommandID, Operation: kind + ".generate", ModelID: in.ModelID, Input: input, CallerContext: meta, ActiveKey: d.Digest(in.Target)})
 	if err != nil {
 		var f *fault.Error
@@ -375,9 +369,6 @@ func (s *Service) CancelMedia(ctx context.Context, id, taskID string, revision u
 		return MediaView{}, err
 	}
 	if _, err := s.Media(ctx, id, taskID); err != nil {
-		return MediaView{}, err
-	}
-	if err = s.requireEditing(ctx, p); err != nil {
 		return MediaView{}, err
 	}
 	v, err := s.tasksForProject(p).Cancel(ctx, mediaScope(id), taskID, revision)

@@ -73,7 +73,7 @@ func contentService(t *testing.T, store *postgres.Store, model ports.Model) *app
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &app.Service{Resolver: store, Access: store, EditorNames: store, Credits: store, Prices: &frozenFixturePrices{version: 1}, Store: store, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Styles: styles, Authorize: freeAuthorization, Models: &modelregistry.Registry{Model: model}}
+	return &app.Service{Resolver: store, Access: store, Credits: store, Prices: &frozenFixturePrices{version: 1}, Store: store, Agent: einoagent.New(), Importer: scriptimport.Importer{}, Styles: styles, Authorize: freeAuthorization, Models: &modelregistry.Registry{Model: model}}
 }
 
 func createProjectContent(t *testing.T, s *app.Service, assets []d.Asset) d.Project {

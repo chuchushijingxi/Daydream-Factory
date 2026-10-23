@@ -1,8 +1,6 @@
 package httpapi
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"net/http"
 	"net/url"
 	"strings"
@@ -42,18 +40,8 @@ func requestScope(r *http.Request) ports.SpaceScope {
 	return ports.SpaceScope{UserID: actor(r).UserID, SpaceID: ports.RequestedSpace(r.Context())}
 }
 func (h *Handler) projectService(r *http.Request) *app.Service {
-	return h.Service.ForScope(requestScope(r)).WithEditingSession(projectEditingSession(r))
+	return h.Service.ForScope(requestScope(r))
 }
 func (h *Handler) fileService(r *http.Request) *uploadapp.Service {
 	return h.Files.ForScope(requestScope(r))
-}
-
-// 编辑租约绑定已经认证的登录会话；Redis只保存不可逆摘要，不接收客户端自称的sessionId。
-func projectEditingSession(r *http.Request) string {
-	token := sessionToken(r)
-	if token == "" {
-		return ""
-	}
-	sum := sha256.Sum256([]byte(token))
-	return hex.EncodeToString(sum[:])
 }

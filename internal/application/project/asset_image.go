@@ -39,9 +39,6 @@ func (s *Service) saveKnownImage(ctx context.Context, p d.Project, revision uint
 	if err := s.requireProject(ctx, p, spaces.Edit); err != nil {
 		return p, err
 	}
-	if err := s.requireEditing(ctx, p); err != nil {
-		return p, err
-	}
 	if p.Revision != revision {
 		return p, fault.ErrConflict
 	}

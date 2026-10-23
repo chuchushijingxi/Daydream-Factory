@@ -3,7 +3,7 @@ export function createStoryboardFixture() {
   const copy = (v) => structuredClone(v),
     requests = [],
     mediaTasks = [];
-  let mediaCounter = 0, editorOwned = false;
+  let mediaCounter = 0;
   const mediaModels = {
     image: [
       {
@@ -445,12 +445,6 @@ export function createStoryboardFixture() {
     requests.push({ path, method, body: copy(body) });
     if (path === '/api/projects/p5_free/permissions' && method === 'GET')
       return Response.json({spaceId: project.spaceId, ownerId: project.ownerId, creatorId: project.creatorId, access: readOnly ? 1 : 2, canShare: false});
-    if (path === '/api/projects/p5_free/editing') {
-      if (method === 'DELETE') { editorOwned = false; return Response.json({released: true}); }
-      if (readOnly) return fail('SERVICE_READ_ONLY', '免费夹具当前只读', 403);
-      if (method === 'POST') editorOwned = true;
-      return Response.json({userId: editorOwned ? project.ownerId : '', username: editorOwned ? '虚构编辑者' : '', expiresAt: editorOwned ? new Date(Date.now()+90000).toISOString() : null, owned: editorOwned});
-    }
     if (path === '/api/status')
       return Response.json({
         readOnly,

@@ -55,12 +55,3 @@ func (t *spaceTx) DeleteResourceShare(ctx context.Context, kind, id, grantee str
 	_, err := t.tx.Exec(ctx, `DELETE FROM drama_catalog_v1.space_shares WHERE space_id=$1 AND resource_kind=$2 AND resource_id=$3 AND grantee=$4`, t.id, kind, id, grantee)
 	return err
 }
-
-func (s *Store) ProjectEditorName(ctx context.Context, user string) (string, error) {
-	var name string
-	err := s.pool.QueryRow(ctx, `SELECT username FROM drama_catalog_v1.users WHERE id=$1`, user).Scan(&name)
-	if errors.Is(err, pgx.ErrNoRows) {
-		err = fault.ErrNotFound
-	}
-	return name, err
-}

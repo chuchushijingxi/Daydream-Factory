@@ -28,23 +28,20 @@ const complete = (d: ShotDraft) =>
 export function useStoryboardAutosave(
   status: ServiceStatus | null,
   refresh: (id: string) => Promise<unknown>,
-  canWrite: (projectId: string) => boolean,
 ) {
   const drafts = useRef(new Map<string, ShotDraft>()),
     [version, update] = useState(0),
     [saving, setSaving] = useState('');
   const running = useRef(false),
     refreshRef = useRef(refresh),
-    statusRef = useRef(status),
-    writeRef = useRef(canWrite);
+    statusRef = useRef(status);
   refreshRef.current = refresh;
   statusRef.current = status;
-  writeRef.current = canWrite;
   const changed = () => update((n) => n + 1);
   useEffect(() => {
     if (running.current || !status?.capabilities.storyboard || status.readOnly) return;
     const entry = [...drafts.current].find(
-      ([, d]) => draftChanged(d) && !d.conflict && complete(d) && writeRef.current(d.projectId),
+      ([, d]) => draftChanged(d) && !d.conflict && complete(d),
     );
     if (!entry) return;
     const timer = setTimeout(() => void persist(entry[0]), 600);
@@ -59,8 +56,7 @@ export function useStoryboardAutosave(
       !draftChanged(current) ||
       !complete(current) ||
       !statusRef.current ||
-      statusRef.current.readOnly ||
-      !writeRef.current(current.projectId)
+      statusRef.current.readOnly
     )
       return;
     const submitted = structuredClone(current),
