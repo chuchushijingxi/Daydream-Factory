@@ -38,11 +38,30 @@ redis.call('DEL',KEYS[2]);
 	if err != nil {
 		return false, unavailable()
 	}
-	if current, _ := s.boot.Load().(string); current != boot {
+	// Replacing a login needs no fsync: Redis always holds exactly one digest per
+	// audience, so even a lost write leaves a single valid login.
+	if current, _ := s.boot.Load().(string); !s.durable.Load() && current != boot {
 		_, _ = s.DeleteSessionDigest(ctx, id, audience, digest)
 		return false, unavailable()
 	}
 	return n == 1, nil
+}
+
+// persistRevocation returns once Redis has fsynced the preceding revocation to
+// its AOF, so a crash right afterwards cannot bring the session back.
+func (s *Store) persistRevocation(ctx context.Context) error {
+	if !s.durable.Load() {
+		return nil
+	}
+	wait := max(s.settings.OperationTimeout*3/4, time.Second)
+	reply, err := s.client.Do(ctx, "WAITAOF", 1, 0, wait.Milliseconds()).Slice()
+	if err != nil || len(reply) != 2 {
+		return unavailable()
+	}
+	if local, ok := reply[0].(int64); !ok || local < 1 {
+		return unavailable()
+	}
+	return nil
 }
 
 func (s *Store) Authenticate(ctx context.Context, token string) (ports.Actor, error) {
@@ -65,7 +84,7 @@ func (s *Store) Authenticate(ctx context.Context, token string) (ports.Actor, er
 	if json.Unmarshal(raw, &current) != nil {
 		return ports.Actor{}, unavailable()
 	}
-	if boot, _ := s.boot.Load().(string); current.Boot != boot {
+	if boot, _ := s.boot.Load().(string); !s.durable.Load() && current.Boot != boot {
 		return ports.Actor{}, fault.New("SESSION_REVOKED", "会话服务已重启，请重新登录")
 	}
 	if subtle.ConstantTimeCompare([]byte(current.Digest), []byte(digest)) != 1 {
@@ -96,7 +115,7 @@ func (s *Store) SetSessionsDisabled(ctx context.Context, id string, disabled boo
 	if err != nil {
 		return unavailable()
 	}
-	return nil
+	return s.persistRevocation(ctx)
 }
 
 func (s *Store) DeleteSession(ctx context.Context, token string) (bool, error) {
@@ -114,6 +133,11 @@ func (s *Store) DeleteSessionDigest(ctx context.Context, id, audience, digest st
 	if err != nil {
 		return false, unavailable()
 	}
+	if n == 1 {
+		if err = s.persistRevocation(ctx); err != nil {
+			return false, err
+		}
+	}
 	return n == 1, nil
 }
 
@@ -123,6 +147,11 @@ local b=redis.call('DEL',KEYS[2]);
 return a+b*2`, []string{s.sessionKey(id, a.Workspace), s.sessionKey(id, a.Operations)}).Int()
 	if err != nil {
 		return nil, unavailable()
+	}
+	if n != 0 {
+		if err = s.persistRevocation(ctx); err != nil {
+			return nil, err
+		}
 	}
 	out := []string{}
 	if n&1 != 0 {

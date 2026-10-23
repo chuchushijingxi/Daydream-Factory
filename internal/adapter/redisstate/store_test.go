@@ -349,7 +349,7 @@ func TestCapacityFailureCarriesKnownNotSentEvidence(t *testing.T) {
 	}
 }
 
-func TestRedisRestartDoesNotRevivePersistedSessions(t *testing.T) {
+func TestRedisRestartKeepsSessionsOnlyWithDurableRevocations(t *testing.T) {
 	container := os.Getenv("DRAMA_TEST_REDIS_RESTART_CONTAINER")
 	if container == "" {
 		t.Skip("explicit isolated Redis restart opt-in")
@@ -363,27 +363,31 @@ func TestRedisRestartDoesNotRevivePersistedSessions(t *testing.T) {
 	}
 	s := fixture(t)
 	ctx := context.Background()
-	secret := a.RandomToken()
-	token := "restart-user.workspace." + secret
-	if _, err = s.PutSession(ctx, "restart-user", a.Workspace, a.Digest("workspace:"+secret), ports.RoleUser, time.Now().Add(time.Hour)); err != nil {
-		t.Fatal(err)
+	login := func(user string) string {
+		secret := a.RandomToken()
+		if _, err := s.PutSession(ctx, user, a.Workspace, a.Digest("workspace:"+secret), ports.RoleUser, time.Now().Add(time.Hour)); err != nil {
+			t.Fatal(err)
+		}
+		return user + ".workspace." + secret
 	}
-	if _, err = s.Authenticate(ctx, token); err != nil {
+	kept, loggedOut, disabled := login("restart-kept"), login("restart-logout"), login("restart-disabled")
+	if deleted, err := s.DeleteSession(ctx, loggedOut); err != nil || !deleted {
+		t.Fatal("logout", deleted, err)
+	}
+	if err = s.SetSessionsDisabled(ctx, "restart-disabled", true); err != nil {
 		t.Fatal(err)
 	}
 	if err = s.MarkScheduleReady(ctx); err != nil {
 		t.Fatal(err)
 	}
+	durable := s.durable.Load()
 	if output, err := exec.Command("docker", "restart", container).CombinedOutput(); err != nil {
 		t.Fatal(err, string(output))
 	}
 	deadline := time.Now().Add(5 * time.Second)
 	for {
-		_, err = s.Authenticate(ctx, token)
-		if err == nil {
-			t.Fatal("persisted session authorized after Redis restart")
-		}
-		if code(err) == "SESSION_REVOKED" {
+		_, err = s.Authenticate(ctx, kept)
+		if code(err) != "RUNTIME_UNAVAILABLE" {
 			break
 		}
 		if time.Now().After(deadline) {
@@ -391,10 +395,21 @@ func TestRedisRestartDoesNotRevivePersistedSessions(t *testing.T) {
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
-	if _, err = s.PutSession(ctx, "restart-user", a.Workspace, a.Digest("workspace:"+secret), ports.RoleUser, time.Now().Add(time.Hour)); err != nil {
-		t.Fatal(err)
+	if durable {
+		// AOF keeps the login; fsynced revocations stay revoked across the restart.
+		if err != nil {
+			t.Fatal("durable session lost on Redis restart", err)
+		}
+		if _, err = s.Authenticate(ctx, loggedOut); code(err) != "SESSION_REVOKED" {
+			t.Fatal("logged-out session revived", err)
+		}
+		if _, err = s.Authenticate(ctx, disabled); code(err) != "ACCOUNT_DISABLED" {
+			t.Fatal("disabled account revived", err)
+		}
+	} else if code(err) != "SESSION_REVOKED" {
+		t.Fatal("without AOF a persisted session must not survive a Redis restart", err)
 	}
-	if _, err = s.Authenticate(ctx, token); err != nil {
+	if _, err = s.Authenticate(ctx, login("restart-new")); err != nil {
 		t.Fatal("new login after restart rejected", err)
 	}
 	if ready, err := s.ScheduleReady(ctx); err != nil || ready {

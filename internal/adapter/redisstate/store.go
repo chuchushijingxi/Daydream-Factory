@@ -26,6 +26,10 @@ type Store struct {
 	sub      *redis.PubSub
 	closed   bool
 	boot     atomic.Value
+	// durable reports Redis AOF persistence. With AOF, sessions survive a Redis
+	// restart and revocations wait for fsync; without it, sessions are fenced
+	// to the Redis process because an RDB snapshot could restore revoked ones.
+	durable atomic.Bool
 }
 
 var _ ports.RuntimeState = (*Store)(nil)
@@ -48,17 +52,24 @@ func Open(ctx context.Context, settings appconfig.Redis) (*Store, error) {
 	}
 	s := &Store{prefix: "{" + settings.Namespace + "}:", settings: settings, watches: make(map[string]map[chan struct{}]struct{})}
 	c := redis.NewClient(&redis.Options{Addr: settings.Address, Password: settings.Password, DialTimeout: settings.DialTimeout, ReadTimeout: settings.OperationTimeout, WriteTimeout: settings.OperationTimeout, MaxRetries: -1, ContextTimeoutEnabled: true, ClientName: settings.Namespace, OnConnect: func(ctx context.Context, conn *redis.Conn) error {
-		info, err := conn.Info(ctx, "server").Result()
+		info, err := conn.Info(ctx, "server", "persistence").Result()
 		if err != nil {
 			return err
 		}
+		boot := ""
 		for _, line := range strings.Split(info, "\n") {
-			if strings.HasPrefix(line, "run_id:") {
-				s.boot.Store(strings.TrimSpace(strings.TrimPrefix(line, "run_id:")))
-				return nil
+			line = strings.TrimSpace(line)
+			if value, ok := strings.CutPrefix(line, "run_id:"); ok {
+				boot = value
+			} else if value, ok := strings.CutPrefix(line, "aof_enabled:"); ok {
+				s.durable.Store(value == "1")
 			}
 		}
-		return fmt.Errorf("Redis server identity unavailable")
+		if boot == "" {
+			return fmt.Errorf("Redis server identity unavailable")
+		}
+		s.boot.Store(boot)
+		return nil
 	}})
 	if err := c.Ping(ctx).Err(); err != nil {
 		_ = c.Close()
