@@ -39,6 +39,7 @@
 !demo/assets/**
 !scripts/
 !scripts/setup-local-embedding.py
+!scripts/export-embedding-onnx.py
 !scripts/fetch-misans.py
 !deploy/
 !deploy/**

@@ -21,6 +21,10 @@ import (
 //go:embed embed.py
 var worker string
 
+// ModelFiles are the runtime files hashed into the index identity, in order;
+// deploy/embedding/server.py hashes the same list.
+var ModelFiles = []string{"model.onnx", "config.json", "tokenizer.json"}
+
 type Embedder struct {
 	python, model, identity string
 	settings                appconfig.Evidence
@@ -40,7 +44,7 @@ func New(python, folder string, settings ...appconfig.Evidence) (*Embedder, erro
 	}
 	h := sha256.New()
 	h.Write([]byte(worker))
-	for _, name := range []string{"model.safetensors", "config.json", "tokenizer.json", "tokenizer_config.json", "special_tokens_map.json", "vocab.txt"} {
+	for _, name := range ModelFiles {
 		f, e := os.Open(filepath.Join(folder, name))
 		if e != nil {
 			return nil, fmt.Errorf("local BGE model file %s is missing", name)

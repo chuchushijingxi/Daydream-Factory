@@ -1,17 +1,26 @@
-"""Offline BGE inference. No downloads, external APIs, truncation or remote code.
+"""Offline BGE inference with ONNX Runtime. No downloads, external APIs, truncation or remote code.
 
 The backend's local mode runs this file once per batch over stdin/stdout; the
 embedding service imports load() and embed() and keeps the model loaded. Both
-hash this file into the index identity, so they always agree.
+hash this file into the index identity, so they always agree. model.onnx is
+exported from the pinned weights by scripts/export-embedding-onnx.py, which
+also proves parity with the original PyTorch model.
 """
 import json
+import os
 import sys
 
-import torch
-from transformers import AutoModel, AutoTokenizer
+import numpy as np
+import onnxruntime
+from tokenizers import Tokenizer
 
 QUERY_PREFIX = "为这个句子生成表示以用于检索相关文章："
 CAPACITY_EXCEEDED = "EMBEDDING_CAPACITY_EXCEEDED"
+
+
+class Model:
+    def __init__(self, session, limit):
+        self.session, self.limit = session, limit
 
 
 def validate(texts):
@@ -20,11 +29,17 @@ def validate(texts):
 
 
 def load(folder):
-    tokenizer = AutoTokenizer.from_pretrained(folder, local_files_only=True, trust_remote_code=False)
-    model = AutoModel.from_pretrained(folder, local_files_only=True, trust_remote_code=False,
-                                      use_safetensors=True).eval().to("cpu")
-    torch.set_num_threads(2)
-    return tokenizer, model
+    tokenizer = Tokenizer.from_file(os.path.join(folder, "tokenizer.json"))
+    tokenizer.no_truncation()
+    tokenizer.enable_padding(pad_id=0, pad_token="[PAD]", pad_type_id=0)
+    with open(os.path.join(folder, "config.json"), encoding="utf-8") as config:
+        limit = json.load(config)["max_position_embeddings"]
+    options = onnxruntime.SessionOptions()
+    options.intra_op_num_threads = 2
+    options.inter_op_num_threads = 1
+    session = onnxruntime.InferenceSession(os.path.join(folder, "model.onnx"), options,
+                                           providers=["CPUExecutionProvider"])
+    return tokenizer, Model(session, limit)
 
 
 def embed(tokenizer, model, texts, query):
@@ -32,13 +47,18 @@ def embed(tokenizer, model, texts, query):
     validate(texts)
     if query:
         texts = [QUERY_PREFIX + text for text in texts]
-    inputs = tokenizer(texts, padding=True, truncation=False, return_tensors="pt")
-    if inputs["input_ids"].shape[1] > model.config.max_position_embeddings:
+    encodings = tokenizer.encode_batch(texts)
+    if len(encodings[0].ids) > model.limit:
         return None
-    with torch.inference_mode():
-        vectors = model(**inputs).last_hidden_state[:, 0]
-        vectors = torch.nn.functional.normalize(vectors, p=2, dim=1)
-    return vectors.tolist()
+    inputs = {
+        "input_ids": np.array([e.ids for e in encodings], dtype=np.int64),
+        "attention_mask": np.array([e.attention_mask for e in encodings], dtype=np.int64),
+        "token_type_ids": np.array([e.type_ids for e in encodings], dtype=np.int64),
+    }
+    (vectors,) = model.session.run(["cls"], inputs)
+    # Same as torch.nn.functional.normalize(p=2, eps=1e-12).
+    norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+    return (vectors / np.maximum(norms, 1e-12)).tolist()
 
 
 def main():

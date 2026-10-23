@@ -1,0 +1,8 @@
+# Build-time only: export the pinned BGE weights to ONNX and prove parity with PyTorch.
+# Not installed in the embedding runtime image.
+torch==2.14.1+cpu
+transformers==5.20.2
+onnx==1.23.2
+onnxruntime==1.31.0
+tokenizers==0.23.3
+numpy==2.5.4

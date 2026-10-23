@@ -21,7 +21,7 @@ func TestCompleteIndexStillRequiresRunnableLocalEncoder(t *testing.T) {
 		t.Run(mode, func(t *testing.T) {
 			folder := t.TempDir()
 			python := filepath.Join(folder, "python")
-			for _, name := range []string{"model.safetensors", "config.json", "tokenizer.json", "tokenizer_config.json", "special_tokens_map.json", "vocab.txt"} {
+			for _, name := range localembedding.ModelFiles {
 				if err := os.WriteFile(filepath.Join(folder, name), []byte("fictional model files; never loaded"), 0600); err != nil {
 					t.Fatal(err)
 				}
@@ -30,7 +30,7 @@ func TestCompleteIndexStillRequiresRunnableLocalEncoder(t *testing.T) {
 			if mode == "non-executable" {
 				permission = 0600
 			}
-			if err := os.WriteFile(python, []byte("#!/bin/sh\necho 'ModuleNotFoundError: no module named torch' >&2\nexit 1\n"), permission); err != nil {
+			if err := os.WriteFile(python, []byte("#!/bin/sh\necho 'ModuleNotFoundError: no module named onnxruntime' >&2\nexit 1\n"), permission); err != nil {
 				t.Fatal(err)
 			}
 			encoder, err := localembedding.New(python, folder)

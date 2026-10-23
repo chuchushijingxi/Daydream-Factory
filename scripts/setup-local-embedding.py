@@ -1,8 +1,14 @@
 """Download pinned public BAAI weights only. Never reads or sends project text.
 
+Host setup (the Compose image does the same in its export stage). The runtime
+venv carries ONNX Runtime only; PyTorch lives in a throwaway export venv:
+
 uv venv --python 3.12 .data/evidence-embedding/runtime
-uv pip install --python .data/evidence-embedding/runtime/bin/python -r deploy/embedding-requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu --require-hashes
+uv pip install --python .data/evidence-embedding/runtime/bin/python -r deploy/embedding-requirements.txt --require-hashes
 python3 scripts/setup-local-embedding.py
+uv venv --python 3.12 .data/evidence-embedding/export
+uv pip install --python .data/evidence-embedding/export/bin/python -r deploy/embedding-export-requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu --require-hashes
+.data/evidence-embedding/export/bin/python scripts/export-embedding-onnx.py .data/evidence-embedding/model
 """
 import hashlib
 import json

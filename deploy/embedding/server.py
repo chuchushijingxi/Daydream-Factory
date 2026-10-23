@@ -16,8 +16,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import embed  # noqa: E402  (shared inference code)
 
-MODEL_FILES = ["model.safetensors", "config.json", "tokenizer.json", "tokenizer_config.json",
-               "special_tokens_map.json", "vocab.txt"]
+# Must match localembedding.ModelFiles in embed.go.
+MODEL_FILES = ["model.onnx", "config.json", "tokenizer.json"]
 DIMENSION = 512
 MAX_BODY = 1 << 20
 

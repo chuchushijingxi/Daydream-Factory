@@ -15,6 +15,8 @@ Provider icons from LobeHub retain their MIT license in
 
 The embedding container downloads BAAI/bge-small-zh-v1.5 at revision
 7999e1d3359715c523056ef9478215996d62a620. Its model card declares MIT.
+The weights are converted to ONNX (model.onnx) at build time without changes
+to their values; vector parity with the original model is checked during export.
 See deploy/licenses/bge-small-zh-v1.5-LICENSE and that container's model folder.
 Model source: https://huggingface.co/BAAI/bge-small-zh-v1.5
 Other software dependencies retain their respective licenses.

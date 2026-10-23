@@ -135,7 +135,7 @@ func TestVisualPostgresBrokenEncoderWithCompleteIndexNeverCallsTextModel(t *test
 	if err = os.WriteFile(python, []byte("fictional non-executable worker"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"model.safetensors", "config.json", "tokenizer.json", "tokenizer_config.json", "special_tokens_map.json", "vocab.txt"} {
+	for _, name := range localembedding.ModelFiles {
 		if err = os.WriteFile(filepath.Join(folder, name), []byte("fictional weights"), 0600); err != nil {
 			t.Fatal(err)
 		}

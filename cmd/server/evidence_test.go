@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"drama-agent/internal/adapter/appconfig"
+	"drama-agent/internal/adapter/localembedding"
 	"drama-agent/internal/application/ports"
 	"drama-agent/internal/domain/fault"
 )
@@ -24,7 +25,7 @@ func TestConfiguredEvidenceMissingResourcesDoNotFailServerAssembly(t *testing.T)
 				}
 			}
 			if scenario == "endpoint" {
-				for _, name := range []string{"model.safetensors", "config.json", "tokenizer.json", "tokenizer_config.json", "special_tokens_map.json", "vocab.txt"} {
+				for _, name := range localembedding.ModelFiles {
 					if err := os.WriteFile(filepath.Join(folder, name), []byte("fictional; never loaded"), 0600); err != nil {
 						t.Fatal(err)
 					}
@@ -39,7 +40,7 @@ func TestConfiguredEvidenceMissingResourcesDoNotFailServerAssembly(t *testing.T)
 			if !errors.As(err, &unavailable) || unavailable.Code != "EVIDENCE_UNAVAILABLE" {
 				t.Fatal("visual use did not report unavailable resources", err)
 			}
-			want := map[string]string{"python": "Python is missing", "weights": "model.safetensors is missing", "endpoint": "Milvus endpoint"}[scenario]
+			want := map[string]string{"python": "Python is missing", "weights": "model.onnx is missing", "endpoint": "Milvus endpoint"}[scenario]
 			if !strings.Contains(err.Error(), want) {
 				t.Fatal("wrong initialization failure", err)
 			}

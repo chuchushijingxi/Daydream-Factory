@@ -1,3 +1,4 @@
-# CPU-only local BGE inference; no remote generation service.
-torch==2.14.1+cpu
-transformers==5.20.2
+# CPU-only local BGE inference with ONNX Runtime; no PyTorch, no remote generation service.
+onnxruntime==1.31.0
+tokenizers==0.23.3
+numpy==2.5.4
